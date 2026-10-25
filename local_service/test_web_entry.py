@@ -1,6 +1,7 @@
 """Verify website navigation without opening local APIs to remote websites."""
 import http.client
 import json
+import select
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 import tempfile
@@ -80,6 +81,29 @@ class WebEntryTests(unittest.TestCase):
         self.assertEqual(self.request('/documents')[0], 200)
         self.assertEqual(self.request('/local-api/status', **{'X-Workbench-Token': 'old-token'})[0], 403)
         self.assertEqual(self.request('/local-api/status')[0], 200)
+
+    def test_rejected_post_consumes_the_body_before_closing(self):
+        body = b'{"folder":"not-authorized"}'
+        connection = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=3)
+        try:
+            connection.putrequest('POST', '/local-api/index')
+            connection.putheader('Origin', 'https://example.invalid')
+            connection.putheader('X-Workbench-Token', 'test-token')
+            connection.putheader('Content-Type', 'application/json')
+            connection.putheader('Content-Length', str(len(body)))
+            connection.endheaders()
+            # A response before the pending bytes arrive would close a socket
+            # with unread data and can produce WSAECONNABORTED on Windows.
+            ready, _, _ = select.select([connection.sock], [], [], 0.1)
+            self.assertEqual(ready, [])
+            connection.send(body)
+            response = connection.getresponse()
+            self.assertEqual(response.status, 403)
+            self.assertIn('只接受工作台本机页面', response.read().decode('utf-8'))
+            self.assertFalse(self.index.status()['running'])
+            self.assertEqual(self.index.root, '')
+        finally:
+            connection.close()
 
 
 if __name__ == '__main__':

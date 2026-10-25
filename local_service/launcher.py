@@ -92,6 +92,27 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
         def handle_request(self):
             if self.headers.get('Host', '') != urlsplit(origin).netloc:
                 return self.reply(403, {'error': '主机校验失败。'})
+            # Read a bounded POST body before returning an authentication error.
+            # Closing with unread request bytes can reset the connection on
+            # Windows before the client receives the intended 403 response.
+            raw_body = b''
+            if self.command == 'POST':
+                try:
+                    length = int(self.headers.get('Content-Length', '0'))
+                except ValueError:
+                    return self.reply(400, {'error': '请求长度无效。'})
+                if length < 0 or length > 8192:
+                    return self.reply(413, {'error': '请求内容过大。'})
+                previous_timeout = self.connection.gettimeout()
+                try:
+                    self.connection.settimeout(5)
+                    raw_body = self.rfile.read(length)
+                except (OSError, TimeoutError):
+                    return self.reply(400, {'error': '请求内容未完整接收。'})
+                finally:
+                    self.connection.settimeout(previous_timeout)
+                if len(raw_body) != length:
+                    return self.reply(400, {'error': '请求内容未完整接收。'})
             path = urlsplit(self.path).path
             if self.command == 'GET' and path in {'/', '/index.html', '/' + APP_HTML, '/documents'}:
                 # Only the dedicated document page accepts a user-clicked link
@@ -126,12 +147,9 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
             try:
                 body = {}
                 if self.command == 'POST':
-                    length = int(self.headers.get('Content-Length', '0'))
-                    if length < 0 or length > 8192:
-                        return self.reply(413, {'error': '请求内容过大。'})
                     if self.headers.get_content_type() != 'application/json':
                         return self.reply(415, {'error': '请求格式不正确。'})
-                    body = json.loads(self.rfile.read(length) or b'{}')
+                    body = json.loads(raw_body or b'{}')
                     if not isinstance(body, dict):
                         raise ValueError('请求格式不正确。')
                 if path == '/local-api/status':
