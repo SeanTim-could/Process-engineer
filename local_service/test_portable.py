@@ -13,7 +13,7 @@ from launcher import APP_HTML, runtime_path
 class PortableTests(unittest.TestCase):
     def test_frozen_app_prefers_the_html_beside_the_executable(self):
         with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
+            root = Path(folder).resolve()
             bundle = root / '_internal'
             bundle.mkdir()
             external = root / APP_HTML

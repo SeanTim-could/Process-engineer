@@ -14,7 +14,7 @@ from launcher import make_handler
 class WebEntryTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.base = Path(self.temp.name)
+        self.base = Path(self.temp.name).resolve()
         self.html = self.base / 'app.html'
         self.html.write_text("<html><head><meta content=\"connect-src 'none'\"></head></html>")
         self.index = DocumentIndex(self.base / 'cache.dat')

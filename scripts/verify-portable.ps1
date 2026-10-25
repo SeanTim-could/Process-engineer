@@ -13,7 +13,7 @@ $previousPath = $env:PATH
 $previousLocalData = $env:LOCALAPPDATA
 $process = $null
 try {
-    $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+    $env:PATH = "$env:SystemRoot\System32"
     $env:LOCALAPPDATA = Join-Path $testRoot 'test-user-data'
     if (Get-Command python, py -ErrorAction SilentlyContinue) {
         throw 'Python must be absent from PATH during this verification.'
@@ -61,6 +61,10 @@ Download **Workbench-Windows-x64** from this run's Artifacts and extract the ent
 "@
     if ($env:GITHUB_STEP_SUMMARY) { Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $summary }
     Write-Output 'Portable verification passed without Python on PATH.'
+} catch {
+    $diagnostic = $_.Exception.Message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+    Write-Output "::error title=Portable runtime validation::$diagnostic"
+    throw
 } finally {
     if ($process -and !$process.HasExited) { Stop-Process -Id $process.Id -Force }
     $env:PATH = $previousPath

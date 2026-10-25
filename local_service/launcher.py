@@ -184,7 +184,10 @@ def main(argv=None):
             print(json.dumps({'ok': False, 'error': str(error)}, ensure_ascii=True))
             return 1
     if importlib.util.find_spec('pythoncom') is None or importlib.util.find_spec('win32com') is None:
-        print('缺少 pywin32。请先运行“安装本地检索依赖.bat”。')
+        if getattr(sys, 'frozen', False):
+            print('便携包运行组件缺失，请完整解压并保留 _internal 文件夹。')
+        else:
+            print('缺少 pywin32。请先运行“安装本地检索依赖.bat”。')
         return 1
     html = runtime_path()
     if not html.is_file():
@@ -201,7 +204,7 @@ def main(argv=None):
         return 1
     print('工艺工程师工作台已启动：' + origin)
     print('请保留此窗口。关闭窗口会停止文档检索，浏览器内已保存的生产数据不会删除。')
-    print('首次迁移请先从原网页“完整备份”，再在新地址“恢复备份”。')
+    print('仅检索文档无需迁移生产数据。如需在本机使用生产数据，请先从网站完整备份再在本机恢复。')
     print('读取停住时，请查看 Office 的授权、密码或文件打开提示。取消将在当前文件结束后生效。')
     if not args.no_browser:
         documents = args.documents or bool(getattr(sys, 'frozen', False))

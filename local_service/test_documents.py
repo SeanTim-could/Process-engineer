@@ -23,7 +23,7 @@ def identity(data, decrypt=False):
 class IndexTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.base = Path(self.temp.name)
+        self.base = Path(self.temp.name).resolve()
         self.root = self.base / 'docs'
         self.root.mkdir()
         self.calls = []

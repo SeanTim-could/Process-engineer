@@ -2,6 +2,7 @@
 import importlib.util
 import importlib.metadata
 import json
+import os
 from pathlib import Path
 import platform
 import shutil
@@ -72,7 +73,10 @@ def main():
                '--hidden-import', 'pywintypes', '--hidden-import', 'win32timezone',
                '--hidden-import', 'tkinter', '--hidden-import', 'tkinter.filedialog',
                str(root / 'local_service' / 'launcher.py')]
-    subprocess.run(command, check=True)
+    build_result = subprocess.run(command, check=True, capture_output=True,
+                                  text=True, encoding='utf-8', errors='replace')
+    print(build_result.stdout)
+    print(build_result.stderr)
     distribution = build / 'dist' / 'ProcessEngineerWorkbench'
     for name in ('便携版使用说明.txt', '启动本地检索.bat', '启动工程师工作台.html',
                  '本地检索网站接入说明.md', 'THIRD-PARTY-NOTICES.txt'):
@@ -97,12 +101,20 @@ def main():
     return 0
 
 
+def report_failure(message):
+    print(message)
+    if os.environ.get('GITHUB_ACTIONS'):
+        escaped = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+        print('::error title=Portable build::' + escaped)
+
+
 if __name__ == '__main__':
     try:
         raise SystemExit(main())
-    except subprocess.CalledProcessError:
-        print('打包失败，请查看上方日志。未生成可分发的新版本。')
+    except subprocess.CalledProcessError as error:
+        output = '\n'.join(str(value) for value in (error.stdout, error.stderr) if value)
+        report_failure('打包失败，未生成可分发的新版本。\n' + output[-16000:])
         raise SystemExit(1)
     except Exception as error:
-        print('打包未完成：' + str(error))
+        report_failure('打包未完成：' + str(error))
         raise SystemExit(1)
