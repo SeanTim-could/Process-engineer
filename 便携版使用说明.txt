@@ -3,6 +3,9 @@
 使用者无需安装 Python、pywin32 或 Node.js。
 电脑仍需安装桌面版 Microsoft Office，并具备读取所选文档的权限。
 
+下载：在工作台网站的“文档检索”页点击“下载 Windows 便携启动器”。
+无需登录 GitHub，也无需单独向别人索取压缩包。
+
 1. 将整个便携包解压到一个文件夹，不要只复制 EXE。
 2. 双击 ProcessEngineerWorkbench.exe，或“启动本地检索.bat”。
 3. 保留启动窗口。在自动打开的浏览器页面选择文件夹、建立索引、搜索关键词。

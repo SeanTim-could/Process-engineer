@@ -1,6 +1,7 @@
 """Run on Windows to produce a portable Office companion, including Python."""
 import importlib.util
 import importlib.metadata
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -94,6 +95,9 @@ def main():
     archive = shutil.make_archive(str(build / 'Workbench-Windows-Portable'), 'zip',
                                   root_dir=distribution.parent, base_dir=distribution.name)
     verify_archive(archive)
+    with Path(archive).open('rb') as source:
+        checksum = hashlib.file_digest(source, 'sha256').hexdigest()
+    Path(archive + '.sha256').write_text(checksum + '  ' + Path(archive).name + '\n', encoding='ascii')
     print('\n打包完成：' + archive)
     print('本包包含 Python 及 pywin32，使用者无需安装 Python。必须完整解压并保留 _internal 目录。')
     print('Microsoft Office 及文档访问权限仍需在目标电脑验证。')

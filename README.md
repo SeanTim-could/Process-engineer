@@ -42,9 +42,11 @@
 
 ## 网站与本机文档检索
 
-网站的“文档检索”页可打开独立的本机检索窗口。普通使用者先从仓库 **Actions → Windows portable launcher → 成功的构建 → Artifacts** 下载 **Workbench-Windows-x64**，完整解压后双击 **ProcessEngineerWorkbench.exe**，无需安装 Python。保留启动窗口，再在网站点击 **打开本机文档检索**。每个人仍需 Windows、桌面版 Microsoft Office 及自己的文档权限。详见 [本地检索网站接入说明](本地检索网站接入说明.md)。
+网站的“文档检索”页提供 **下载 Windows 便携启动器** 和 **打开本机文档检索** 两个按钮。普通使用者可直接从网站下载安装包，完整解压后双击 **ProcessEngineerWorkbench.exe**，无需安装 Python或登录 GitHub。保留启动窗口，再点击 **打开本机文档检索**。每个人仍需 Windows、桌面版 Microsoft Office 及自己的文档权限。详见 [本地检索网站接入说明](本地检索网站接入说明.md)。
 
-**Code → Download ZIP 是源码包，不是免安装 Python 的便携版。** 向同事分发时请发送构建产物的完整 ZIP，保留 `_internal` 目录。
+**Code → Download ZIP 是源码包，不是免安装 Python 的便携版。** 公开下载链接是 [最新版 Windows 便携启动器](https://github.com/SeanTim-could/Process-engineer/releases/latest/download/Workbench-Windows-Portable.zip)，可直接分享此链接。解压后请保留 `_internal` 目录。
+
+发布到 `main` 的相关更新会在通过 Windows 构建与运行验证后自动发布 GitHub Release，网站的固定下载链接会指向最新成功发布的版本。构建失败时保留上一版下载。Release 文件不受 Actions 构建产物 30 天保留期限的限制。
 
 本机启动器和它使用的本地 HTML 需要单独更新，不会随网站更新而自动替换。这个本机服务固定使用 8765 端口；做静态网页预览时请选用其他端口。
 
