@@ -9,14 +9,50 @@ import secrets
 import sys
 import webbrowser
 from urllib.parse import urlsplit
-from document_index import DocumentIndex
+from document_index import DocumentIndex, protect
 
 PORT = 8765
 APP_HTML = '启动工程师工作台.html'
 
 
 def runtime_path():
+    if getattr(sys, 'frozen', False):
+        external = Path(sys.executable).resolve().parent / APP_HTML
+        if external.is_file():
+            return external
     return Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent.parent)) / APP_HTML
+
+
+def check_runtime():
+    """Exercise bundled dependencies without opening Office or user documents."""
+    import pythoncom
+    import tkinter
+    import win32com.client
+
+    pythoncom.CoInitialize()
+    try:
+        probe = b'Workbench portable runtime check'
+        if protect(protect(probe), decrypt=True) != probe:
+            raise RuntimeError('Windows 索引加密自检失败。')
+        tcl = tkinter.Tcl()
+        tcl_version = tcl.eval('info patchlevel')
+        html = runtime_path()
+        if not html.is_file() or '<html' not in html.read_text('utf-8').lower():
+            raise RuntimeError('工作台网页资源缺失。')
+        frozen = bool(getattr(sys, 'frozen', False))
+        bundled_modules = False
+        if frozen:
+            bundle = Path(sys._MEIPASS).resolve()
+            bundled_modules = all(Path(module.__file__).resolve().is_relative_to(bundle)
+                                  for module in (pythoncom, tkinter, win32com.client))
+            if not bundled_modules:
+                raise RuntimeError('运行组件未完整包含在便携包中。')
+        return {'ok': True, 'frozen': frozen, 'bundled_modules': bundled_modules,
+                'python': sys.version.split()[0], 'tcl': tcl_version,
+                'com_runtime': True, 'dpapi': True, 'html': True,
+                'office_documents_tested': False}
+    finally:
+        pythoncom.CoUninitialize()
 
 
 def choose_folder():
@@ -134,10 +170,19 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
 def main(argv=None):
     parser = argparse.ArgumentParser(description='工艺工程师工作台本机服务')
     parser.add_argument('--documents', action='store_true', help='启动后直接打开文档检索')
+    parser.add_argument('--no-browser', action='store_true', help='只启动服务，不自动打开浏览器')
+    parser.add_argument('--self-test', action='store_true', help='检查运行组件，不打开文档或启动服务')
     args = parser.parse_args(argv)
     if sys.platform != 'win32':
         print('本地文档检索启动器需要 Windows。双击 HTML 仍可使用原有工作台。')
         return 1
+    if args.self_test:
+        try:
+            print(json.dumps(check_runtime(), ensure_ascii=True))
+            return 0
+        except Exception as error:
+            print(json.dumps({'ok': False, 'error': str(error)}, ensure_ascii=True))
+            return 1
     if importlib.util.find_spec('pythoncom') is None or importlib.util.find_spec('win32com') is None:
         print('缺少 pywin32。请先运行“安装本地检索依赖.bat”。')
         return 1
@@ -158,7 +203,9 @@ def main(argv=None):
     print('请保留此窗口。关闭窗口会停止文档检索，浏览器内已保存的生产数据不会删除。')
     print('首次迁移请先从原网页“完整备份”，再在新地址“恢复备份”。')
     print('读取停住时，请查看 Office 的授权、密码或文件打开提示。取消将在当前文件结束后生效。')
-    webbrowser.open(origin + ('/documents' if args.documents else ''))
+    if not args.no_browser:
+        documents = args.documents or bool(getattr(sys, 'frozen', False))
+        webbrowser.open(origin + ('/documents' if documents else ''))
     try:
         server.serve_forever(poll_interval=0.5)
     except KeyboardInterrupt:

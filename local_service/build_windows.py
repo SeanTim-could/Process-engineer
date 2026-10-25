@@ -1,10 +1,50 @@
 """Run on Windows to produce a portable Office companion, including Python."""
 import importlib.util
 import importlib.metadata
+import json
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import sys
+from zipfile import ZipFile
+
+
+def copy_runtime_licenses(destination):
+    destination.mkdir(parents=True, exist_ok=True)
+    python_license = Path(sys.base_prefix) / 'LICENSE.txt'
+    if not python_license.is_file():
+        raise RuntimeError('未找到当前 Python 的 LICENSE.txt，请使用完整的 Windows Python 安装环境打包。')
+    shutil.copy2(python_license, destination / 'Python-LICENSE.txt')
+    packages = []
+    for metadata in importlib.metadata.distributions():
+        package = metadata.metadata['Name']
+        packages.append({'name': package, 'version': metadata.version})
+        for file in metadata.files or []:
+            if 'license' in file.name.lower() or file.name.lower().startswith('copying'):
+                source = Path(metadata.locate_file(file))
+                if source.is_file():
+                    name = package + '-' + str(file).replace('\\', '-').replace('/', '-')
+                    shutil.copy2(source, destination / name)
+    tcl = Path(sys.base_prefix) / 'tcl'
+    if tcl.is_dir():
+        for source in tcl.rglob('license*'):
+            if source.is_file():
+                name = 'TclTk-' + str(source.relative_to(tcl)).replace('\\', '-').replace('/', '-')
+                shutil.copy2(source, destination / name)
+    return sorted(packages, key=lambda item: item['name'].lower())
+
+
+def verify_archive(archive):
+    required = {'ProcessEngineerWorkbench/ProcessEngineerWorkbench.exe',
+                f'ProcessEngineerWorkbench/_internal/python{sys.version_info.major}{sys.version_info.minor}.dll',
+                'ProcessEngineerWorkbench/启动本地检索.bat',
+                'ProcessEngineerWorkbench/启动工程师工作台.html',
+                'ProcessEngineerWorkbench/便携版使用说明.txt',
+                'ProcessEngineerWorkbench/build-info.json'}
+    with ZipFile(archive) as package:
+        if package.testzip() is not None or not required.issubset(package.namelist()):
+            raise RuntimeError('便携包校验失败，未得到完整的 EXE 及运行组件。')
 
 
 def main():
@@ -21,6 +61,8 @@ def main():
     root = Path(__file__).resolve().parent.parent
     build = root / 'Windows-Build'
     build.mkdir(exist_ok=True)
+    archive_path = build / 'Workbench-Windows-Portable.zip'
+    archive_path.unlink(missing_ok=True)
     command = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir',
                '--console', '--name', 'ProcessEngineerWorkbench',
                '--distpath', str(build / 'dist'), '--workpath', str(build / 'work'),
@@ -32,33 +74,25 @@ def main():
                str(root / 'local_service' / 'launcher.py')]
     subprocess.run(command, check=True)
     distribution = build / 'dist' / 'ProcessEngineerWorkbench'
-    for name in ('本地文档检索说明.txt', 'THIRD-PARTY-NOTICES.txt'):
+    for name in ('便携版使用说明.txt', '启动本地检索.bat', '启动工程师工作台.html',
+                 '本地检索网站接入说明.md', 'THIRD-PARTY-NOTICES.txt'):
         shutil.copy2(root / name, distribution / name)
     shutil.copytree(root / 'licenses', distribution / 'licenses', dirs_exist_ok=True)
-    licenses = distribution / 'licenses' / 'windows-runtime'
-    licenses.mkdir(parents=True, exist_ok=True)
-    python_license = Path(sys.base_prefix) / 'LICENSE.txt'
-    if not python_license.is_file():
-        raise RuntimeError('未找到当前 Python 的 LICENSE.txt，请使用完整的 Windows Python 安装环境打包。')
-    shutil.copy2(python_license, licenses / 'Python-LICENSE.txt')
-    for package in ('pywin32', 'pyinstaller'):
-        metadata = importlib.metadata.distribution(package)
-        for file in metadata.files or []:
-            if 'license' in file.name.lower() or file.name.lower().startswith('copying'):
-                source = Path(metadata.locate_file(file))
-                if source.is_file():
-                    name = package + '-' + str(file).replace('\\', '-').replace('/', '-')
-                    shutil.copy2(source, licenses / name)
-    tcl = Path(sys.base_prefix) / 'tcl'
-    if tcl.is_dir():
-        for source in tcl.rglob('license*'):
-            if source.is_file():
-                name = 'TclTk-' + str(source.relative_to(tcl)).replace('\\', '-').replace('/', '-')
-                shutil.copy2(source, licenses / name)
+    packages = copy_runtime_licenses(distribution / 'licenses' / 'windows-runtime')
+    result = subprocess.run([str(distribution / 'ProcessEngineerWorkbench.exe'), '--self-test'],
+                            check=True, capture_output=True, text=True, encoding='utf-8')
+    runtime = json.loads(result.stdout)
+    if not runtime.get('ok') or not runtime.get('frozen'):
+        raise RuntimeError('EXE 未通过内置运行时自检。')
+    info = {'architecture': platform.machine(), 'python': platform.python_version(),
+            'build_environment_packages': packages, 'runtime_verification': runtime}
+    (distribution / 'build-info.json').write_text(json.dumps(info, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     archive = shutil.make_archive(str(build / 'Workbench-Windows-Portable'), 'zip',
                                   root_dir=distribution.parent, base_dir=distribution.name)
+    verify_archive(archive)
     print('\n打包完成：' + archive)
-    print('先解压，在当前电脑以及另一台未安装 Python 的 Windows 电脑上测试 exe、索引、搜索与打开原文件。')
+    print('本包包含 Python 及 pywin32，使用者无需安装 Python。必须完整解压并保留 _internal 目录。')
+    print('Microsoft Office 及文档访问权限仍需在目标电脑验证。')
     print('确认公司授权读取正常后，再发送整个 ZIP 给同事；不能只发送 exe。')
     return 0
 
