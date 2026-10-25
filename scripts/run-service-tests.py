@@ -13,6 +13,10 @@ def main():
     result = unittest.TextTestRunner(stream=output, verbosity=2).run(suite)
     report = output.getvalue()
     print(report, end='')
+    if os.environ.get('GITHUB_ACTIONS'):
+        for test, trace in result.failures + result.errors:
+            diagnostic = (str(test) + '\n' + trace).replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+            print('::error title=Local service test::' + diagnostic)
     summary = os.environ.get('GITHUB_STEP_SUMMARY')
     if summary:
         with Path(summary).open('a', encoding='utf-8') as target:
