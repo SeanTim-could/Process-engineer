@@ -8,6 +8,7 @@ on:
       - '.github/workflows/windows-portable.yml'
       - 'local_service/**'
       - 'scripts/verify-portable.ps1'
+      - 'scripts/run-service-tests.py'
       - 'licenses/**'
       - 'THIRD-PARTY-NOTICES.txt'
       - '*.html'
@@ -18,6 +19,7 @@ on:
       - '.github/workflows/windows-portable.yml'
       - 'local_service/**'
       - 'scripts/verify-portable.ps1'
+      - 'scripts/run-service-tests.py'
       - 'licenses/**'
       - 'THIRD-PARTY-NOTICES.txt'
       - '*.html'
@@ -54,7 +56,7 @@ jobs:
       - name: Install build dependencies
         run: python -m pip install --requirement local_service/requirements-windows-build.txt
       - name: Test local service
-        run: python -m unittest discover -s local_service -v
+        run: python scripts/run-service-tests.py
       - name: Build portable application
         run: python local_service/build_windows.py
       - name: Verify EXE without Python on PATH
