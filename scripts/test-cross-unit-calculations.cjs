@@ -5,6 +5,7 @@ const fs=require('node:fs/promises');
 const nativeFs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
+const {execFileSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..');
 const artifacts=process.env.WORKBENCH_TEST_ARTIFACTS??path.join(os.tmpdir(),'process-engineer-inspect');
 const site='https://seantim-could.github.io/Process-engineer/workbench.html';
@@ -51,7 +52,9 @@ const values=(d,key,group='P')=>d.points.filter(p=>p.group===group&&Object.hasOw
  const errors=[];
  try{
   const context=await browser.newContext({viewport:{width:1440,height:1100},acceptDownloads:true});
-  const html=await fs.readFile(path.join(root,'启动工程师工作台.html'));
+  // Calculation fixtures exercise an isolated workspace without contacting the
+  // deployed account project. The complete login flow has its own browser suite.
+  const html=execFileSync('python',['-c',"import importlib.util,pathlib,sys; p=pathlib.Path(sys.argv[1]); spec=importlib.util.spec_from_file_location('auth_sync',p/'scripts/sync-account-auth.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);sys.stdout.buffer.write(m.render((p/'启动工程师工作台.html').read_text(),{'enabled':False,'url':'','publicKey':''}).encode('utf-8'))",root],{maxBuffer:8*1024*1024});
   await context.route('https://seantim-could.github.io/Process-engineer/**',r=>r.fulfill({contentType:'text/html; charset=utf-8',body:html}));
   const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(site);await fixture(p);
   const legacy=await save(p,{label:'原有本装置公式',expression:ref('流量')+' * 2'});

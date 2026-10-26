@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -11,6 +11,7 @@ on:
       - 'scripts/sync-account-auth.py'
       - 'scripts/test-managed-accounts.cjs'
       - 'scripts/test-auth-config.py'
+      - 'scripts/check-account-service.py'
       - 'supabase/**'
       - '.github/workflows/frontend-checks.yml'
   pull_request:
@@ -22,6 +23,7 @@ on:
       - 'scripts/sync-account-auth.py'
       - 'scripts/test-managed-accounts.cjs'
       - 'scripts/test-auth-config.py'
+      - 'scripts/check-account-service.py'
       - 'supabase/**'
       - '.github/workflows/frontend-checks.yml'
 
@@ -49,6 +51,8 @@ jobs:
           python3 scripts/test-auth-config.py
       - name: Check account service types
         run: npx --yes deno@2.9.6 check supabase/functions/workbench-accounts/index.ts
+      - name: Verify the configured account service without signing in
+        run: python3 scripts/check-account-service.py
       - name: Install isolated browser test dependencies
         run: |
           npm install --prefix "$RUNNER_TEMP/workbench-browser-tests" --no-save --package-lock=false playwright@1.62.1

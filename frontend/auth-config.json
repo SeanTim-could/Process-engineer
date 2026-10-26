@@ -1,5 +1,5 @@
 {
-  "enabled": false,
-  "url": "",
-  "publicKey": ""
+  "enabled": true,
+  "url": "https://edfvegskicolbnnrbuld.supabase.co",
+  "publicKey": "sb_publishable_follC-N3FfiZLBo5U7EWVg_MANuirih"
 }
