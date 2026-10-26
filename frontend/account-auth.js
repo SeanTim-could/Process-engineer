@@ -48,6 +48,26 @@ var AccountAuth = (() => {
   }
   async function account(action,body={}){return raw("/functions/v1/workbench-accounts","POST",{action,...body},await token());}
   async function flush(){await Ei();await T$;}
+  async function exportLegacy(){
+    if(identity?.role!=="admin"||identity.must_change_password)throw new Error("仅管理员可迁移旧版数据。");
+    const state=await new Promise((resolve,reject)=>{
+      const request=indexedDB.open("process-studio-offline-v1");
+      // Abort creation if this browser has no pre-login database. Nothing is
+      // written to the legacy store or to the current account's workspace.
+      request.onupgradeneeded=()=>request.transaction.abort();
+      request.onerror=()=>reject(new Error("当前浏览器未发现旧版本机数据。"));
+      request.onsuccess=()=>{
+        const db=request.result;
+        if(!db.objectStoreNames.contains("state")){db.close();reject(new Error("旧版数据格式不受支持。"));return;}
+        const transaction=db.transaction("state","readonly"),get=transaction.objectStore("state").get("workspace");
+        let workspace;
+        get.onsuccess=()=>{workspace=get.result;};
+        transaction.oncomplete=()=>{db.close();workspace?.state?resolve(workspace.state):reject(new Error("当前浏览器未发现旧版本机数据。"));};
+        transaction.onerror=()=>{db.close();reject(new Error("无法读取旧版本机数据，请保留当前浏览器数据后重试。"));};
+      };
+    });
+    N$({format:"process-studio-offline",version:1,exportedAt:new Date().toISOString(),state},"工程师工作台_旧版本机备份.json");
+  }
   async function leave(){
     await flush();
     const old=session?.access_token;
@@ -63,6 +83,9 @@ var AccountAuth = (() => {
       if(next.length<12||!/[A-Za-z]/.test(next)||!/[0-9]/.test(next))throw new Error("新密码至少12位，并包含字母和数字。");
       if(next!==repeat)throw new Error("两次输入的新密码不一致。");
       await account("change-password",{currentPassword:old,newPassword:next});
+      // Password updates may revoke the previous Supabase session. Establish
+      // the new session before reading the profile or opening local data.
+      accept(await raw("/auth/v1/token?grant_type=password","POST",{email:identity.employee_id+"@workbench.invalid",password:next}));
       await profile();bindWorkspace();notify({...identity});onDone?.();
     }catch(e){setError(e.message);}finally{setBusy(false);}}
     return h("form",{onSubmit:submit,className:"account-form"},
@@ -109,6 +132,7 @@ var AccountAuth = (() => {
         h("td",null,!row.active?"已停用":row.must_change_password?"待修改密码":"正常"),h("td",null,actions));
     });
     return h("div",{className:"account-admin"},h("h2",null,"账号管理"),h("p",{className:"muted"},"由你创建账号、绑定姓名和工号，并发放初始密码。"),
+      h("section",{className:"account-issued"},h("b",null,"迁移启用登录前的数据"),h("p",{className:"small"},"旧版数据仍保留在原浏览器。导出备份后，可用工作台顶部“恢复备份”迁入当前账号。"),h("button",{className:"button small-button",disabled:busy,onClick:()=>exportLegacy().catch(e=>setError(e.message))},"导出旧版本机备份")),
       h("form",{className:"account-create",onSubmit:e=>{e.preventDefault();run("create",{name,employeeId:id});}},
         h(Field,{label:"新账号姓名",value:name,onChange:setName,autoComplete:"off"}),h(Field,{label:"新账号工号",value:id,onChange:setId,autoComplete:"off"}),
         h("button",{className:"button primary",disabled:busy},"创建并生成初始密码")),

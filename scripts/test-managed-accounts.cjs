@@ -19,12 +19,13 @@ const json=(data,status=200)=>new Response(status===204?null:JSON.stringify(data
 async function provider(url,options={}){
  const u=new URL(url),method=options.method??'GET',headers=new Headers(options.headers),body=options.body?JSON.parse(options.body):{};
  const bearer=headers.get('Authorization')?.replace(/^Bearer /,'');const service=bearer===serviceKey&&headers.get('apikey')===serviceKey;
- const user=[...users.values()].find(u=>bearer==='access-'+u.id);
+ const suffix=own=>own.generation?':'+own.generation:'';
+ const user=[...users.values()].find(u=>bearer==='access-'+u.id+suffix(u));
  const match=param=>{const value=u.searchParams.get(param);return value?.startsWith('eq.')?value.slice(3):null;};
  audits.push({path:u.pathname,method,service});
  if(u.pathname==='/auth/v1/token'){
-  const own=u.searchParams.get('grant_type')==='refresh_token'?[...users.values()].find(v=>body.refresh_token==='refresh-'+v.id):[...users.values()].find(v=>v.email===body.email&&v.password===body.password);
-  return own&&!own.banned?json({access_token:'access-'+own.id,refresh_token:'refresh-'+own.id,expires_in:3600,user:{id:own.id,email:own.email}}):json({error:'Invalid credentials'},400);
+  const own=u.searchParams.get('grant_type')==='refresh_token'?[...users.values()].find(v=>body.refresh_token==='refresh-'+v.id+suffix(v)):[...users.values()].find(v=>v.email===body.email&&v.password===body.password);
+  return own&&!own.banned?json({access_token:'access-'+own.id+suffix(own),refresh_token:'refresh-'+own.id+suffix(own),expires_in:3600,user:{id:own.id,email:own.email}}):json({error:'Invalid credentials'},400);
  }
  if(u.pathname==='/auth/v1/user')return user&&!user.banned?json({id:user.id,email:user.email}):json({error:'Invalid JWT'},401);
  if(u.pathname==='/auth/v1/logout')return json(null,204);
@@ -36,7 +37,7 @@ async function provider(url,options={}){
   }
   const id=u.pathname.split('/').at(-1),own=users.get(id);if(!own)return json({},404);
   if(method==='DELETE'){users.delete(id);profiles.delete(id);return json({});}
-  if(body.password)own.password=body.password;if(body.ban_duration)own.banned=body.ban_duration!=='none';return json({id});
+  if(body.password){own.password=body.password;own.generation=(own.generation??0)+1;}if(body.ban_duration)own.banned=body.ban_duration!=='none';return json({id});
  }
  if(u.pathname==='/rest/v1/workbench_profiles'){
   const id=match('id'),employee=match('employee_id');
@@ -92,7 +93,15 @@ const findings=[];
   await login('admin',initial);await p.getByRole('button',{name:'账号管理',exact:true}).waitFor();
   await p.waitForFunction(()=>document.querySelector('.offline-bar')?.textContent.includes('管理员甲'));
   await call('/api/workspace','PUT',{action:'focus',unit:'mmp2',month:'2026-10',text:'管理员自己的记录'});
+  const old=(await call('/api/offline/backup')).data;
+  old.state.focusNotes={'mmp2:2026-10':{text:'启用登录前的记录',updatedAt:new Date().toISOString()}};
+  await p.evaluate(state=>new Promise((resolve,reject)=>{const r=indexedDB.open('process-studio-offline-v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('state');r.onerror=reject;r.onsuccess=()=>{const db=r.result,t=db.transaction('state','readwrite');t.objectStore('state').put({revision:7,state},'workspace');t.oncomplete=()=>{db.close();resolve()};t.onerror=reject}}),old.state);
   await p.getByRole('button',{name:'账号管理',exact:true}).click();
+  const downloadPromise=p.waitForEvent('download');await p.getByRole('button',{name:'导出旧版本机备份',exact:true}).click();
+  const download=await downloadPromise;const legacyFile=path.join(temp,'legacy-backup.json');await download.saveAs(legacyFile);
+  const legacy=JSON.parse(await fs.readFile(legacyFile,'utf8'));assert.equal(legacy.state.focusNotes['mmp2:2026-10'].text,'启用登录前的记录');
+  assert.equal((await call('/api/offline/backup')).data.state.focusNotes['mmp2:2026-10'].text,'管理员自己的记录');
+  const oldRevision=await p.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open('process-studio-offline-v1');r.onerror=reject;r.onsuccess=()=>{const db=r.result,t=db.transaction('state','readonly'),g=t.objectStore('state').get('workspace');g.onsuccess=()=>resolve(g.result.revision);t.oncomplete=()=>db.close()}}));assert.equal(oldRevision,7);
   await p.getByRole('textbox',{name:'新账号姓名',exact:true}).fill('员工乙');await p.getByRole('textbox',{name:'新账号工号',exact:true}).fill('e002');
   await p.getByRole('button',{name:'创建并生成初始密码',exact:true}).click();await p.locator('.account-issued code').waitFor();
   const issued=await p.locator('.account-issued code').innerText();assert(issued.length>=12);
@@ -114,6 +123,7 @@ const findings=[];
   const adminBackup=(await call('/api/offline/backup')).data;assert.equal(adminBackup.state.focusNotes['mmp2:2026-10'].text,'管理员自己的记录');
   const migration=await call('/api/offline/restore','POST',staffBackup);assert(migration.ok);assert.equal((await call('/api/personal')).data.profile.employeeId,'admin');
   findings.push('Actual browser login, administrator issuance, mandatory first change, logout and re-login work; accounts use separate databases in one browser, profiles cannot impersonate another employee, and imported backups cannot replace the authenticated identity.');
+  findings.push('Password changes replace revoked sessions; administrators can export pre-login local data without altering its revision or the active workspace.');
   assert(externalRequests.every(headers=>!JSON.stringify(headers).includes(serviceKey)));assert.deepEqual(errors,[]);
   await p.getByRole('button',{name:'退出登录',exact:true}).click();await p.getByRole('heading',{name:'登录你的工作台'}).waitFor();await p.setViewportSize({width:390,height:844});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await p.screenshot({path:path.join(temp,'login-mobile.png')});
