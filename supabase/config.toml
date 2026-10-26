@@ -1,0 +1,10 @@
+[auth]
+enable_signup = false
+
+[auth.email]
+enable_signup = false
+
+[functions.workbench-accounts]
+# The function validates the actual user JWT with Auth and checks the protected
+# profile on every request. This also supports Supabase publishable API keys.
+verify_jwt = false

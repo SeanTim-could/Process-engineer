@@ -1,0 +1,11 @@
+.account-login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 15% 5%,#dff5e9,transparent 55%),#f5f9fc}
+.account-form{display:flex;flex-direction:column;gap:16px;background:white;border:1px solid #dae7e2;padding:32px;border-radius:22px;box-shadow:0 16px 60px #264c3b12;width:min(100%,440px)}
+.account-form h1,.account-form h2,.account-form p{margin:0}.account-form h1{font-size:27px;color:#244435}.account-brand{color:#087f5b;font-size:13px;font-weight:700;letter-spacing:2px}
+.account-form input,.account-create input{width:100%;padding:11px 12px;margin-top:7px;border:1px solid #d9e4df;border-radius:9px;background:#fff;color:#244435}
+.account-form .form-label{font-size:13px;color:#42574c}.account-form .button.primary{padding:12px 18px}.account-form input:focus-visible{outline:2px solid #087f5b;outline-offset:2px}
+.account-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:20px;background:#193c3755;backdrop-filter:blur(4px)}
+.account-dialog{position:relative;width:min(900px,100%);max-height:90dvh;overflow:auto;background:#fff;border-radius:20px;padding:24px;color:#244435;box-shadow:0 20px 80px #12332930}
+.account-close{float:right}.account-dialog .account-form{box-shadow:none;border:0;margin:auto;padding:16px}.account-admin h2{margin:0 0 10px}.account-admin .muted{line-height:1.7}
+.account-create{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:12px;margin:24px 0}.account-issued{background:#effaf4;border:1px solid #b7e4ce;padding:18px;border-radius:12px;margin:18px 0;overflow-wrap:anywhere}.account-issued code{user-select:all;color:#164b35}
+.account-admin .table-wrap{margin-top:20px}.account-admin .data-table{width:100%}.account-admin .data-table small{display:block;color:#66796f}.account-admin button{white-space:normal}
+@media(max-width:600px){.account-login{padding:16px}.account-form{padding:24px;width:100%}.account-overlay{padding:10px}.account-dialog{padding:18px}.account-create{grid-template-columns:1fr}.account-admin .button-row{flex-direction:column;align-items:stretch}}
