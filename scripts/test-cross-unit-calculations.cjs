@@ -126,6 +126,12 @@ const values=(d,key,group='P')=>d.points.filter(p=>p.group===group&&Object.hasOw
   report.push('Complete backup/restore preserves cross-device formula identities and computed results.');
   // Actual editor flow: choose a remote device, insert a metric, preview and save.
   await p.reload();await p.getByRole('button',{name:'数据中心',exact:true}).click();
+  await p.getByRole('button',{name:'编辑公式跨装置含量折算',exact:true}).click();
+  const anchorChooser=p.getByRole('combobox',{name:'公式主LIMS时间轴',exact:true});
+  await anchorChooser.locator('option').filter({hasText:'B重命名'}).waitFor({state:'attached'});
+  const selectedAnchor=JSON.parse(await anchorChooser.inputValue());
+  assert.equal(selectedAnchor.datasetId,'ds_unit_b');assert.equal(selectedAnchor.group,'SP 955');
+  await p.getByRole('button',{name:'取消',exact:true}).click();
   await p.getByRole('button',{name:'新增计算指标',exact:true}).click();
   const chooser=p.getByRole('combobox',{name:'公式引用装置',exact:true});await chooser.waitFor();await chooser.selectOption('b');
   await p.getByRole('combobox',{name:'公式引用数据分组',exact:true}).selectOption('production');
