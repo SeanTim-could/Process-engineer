@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -14,6 +14,7 @@ on:
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
       - 'scripts/test-web-entry.cjs'
+      - 'scripts/test-general-labels.cjs'
       - 'assets/**'
       - 'supabase/**'
       - '.github/workflows/frontend-checks.yml'
@@ -29,6 +30,7 @@ on:
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
       - 'scripts/test-web-entry.cjs'
+      - 'scripts/test-general-labels.cjs'
       - 'assets/**'
       - 'supabase/**'
       - '.github/workflows/frontend-checks.yml'
@@ -72,3 +74,4 @@ jobs:
           node scripts/test-cross-unit-calculations.cjs
           node scripts/test-managed-accounts.cjs
           node scripts/test-web-entry.cjs
+          node scripts/test-general-labels.cjs
