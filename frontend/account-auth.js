@@ -10,11 +10,16 @@ var AccountAuth = (() => {
   function store(value){session=value;try{value?sessionStorage.setItem(sessionKey,JSON.stringify(value)):sessionStorage.removeItem(sessionKey);}catch{}}
   function accept(value){store({access_token:value.access_token,refresh_token:value.refresh_token,expires_at:value.expires_at??Math.floor(Date.now()/1000)+value.expires_in});}
   async function raw(path,method="GET",body,token) {
-    const r=await nativeFetch(config.url+path,{method,cache:"no-store",headers:{apikey:config.publicKey,
-      ...(token?{Authorization:"Bearer "+token}:{}),"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body)});
-    const data=await r.json().catch(()=>({}));
-    if(!r.ok){const error=new Error(r.status===429?"操作过于频繁，请稍后重试。":data.error_description??data.error??data.message??"账号服务暂时不可用。");error.status=r.status;throw error;}
-    return data;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+    try{
+      const r=await nativeFetch(config.url+path,{method,cache:"no-store",signal:controller.signal,headers:{apikey:config.publicKey,
+        ...(token?{Authorization:"Bearer "+token}:{}),"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body)});
+      const data=await r.json().catch(()=>({}));
+      if(controller.signal.aborted)throw new Error("Account request timed out");
+      if(!r.ok){const error=new Error(r.status===429?"操作过于频繁，请稍后重试。":data.error_description??data.error??data.message??"账号服务暂时不可用。");error.status=r.status;throw error;}
+      return data;
+    }catch(error){if(controller.signal.aborted)throw new Error("账号服务连接超时，请检查网络后重试。");throw error;}
+    finally{clearTimeout(timer);}
   }
   async function token(){
     if(!session?.access_token)throw new Error("请先登录。");
@@ -25,9 +30,10 @@ var AccountAuth = (() => {
   }
   async function profile(){
     const access=await token();
-    const user=await raw("/auth/v1/user","GET",undefined,access);
-    const rows=await raw("/rest/v1/workbench_profiles?id=eq."+encodeURIComponent(user.id)+"&select=id,display_name,employee_id,role,active,must_change_password","GET",undefined,access);
-    if(!rows[0]?.active)throw Object.assign(new Error("账号未启用，请联系管理员。"),{status:403});
+    // The protected table's RLS verifies the JWT and returns only its active
+    // owner's row. No additional sequential Auth /user round-trip is needed.
+    const rows=await raw("/rest/v1/workbench_profiles?select=id,display_name,employee_id,role,active,must_change_password&limit=2","GET",undefined,access);
+    if(!Array.isArray(rows)||rows.length!==1||!rows[0]?.active)throw Object.assign(new Error("账号未启用，请联系管理员。"),{status:403});
     identity=rows[0];return identity;
   }
   function storageKey(){

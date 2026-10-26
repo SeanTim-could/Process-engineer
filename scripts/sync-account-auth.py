@@ -10,7 +10,7 @@ HTML=ROOT/'启动工程师工作台.html'
 START='/* managed-accounts:start */'
 END='/* managed-accounts:end */'
 
-def render(html,config):
+def normalize_config(config):
     if set(config)!={'enabled','url','publicKey'} or type(config['enabled']) is not bool:
         raise ValueError('Invalid account configuration')
     key=config['publicKey']
@@ -35,6 +35,11 @@ def render(html,config):
             raise ValueError('The public project key is required')
         origin=f'{url.scheme}://{url.netloc}'
         config={**config,'url':origin}
+    return config
+
+def render(html,config):
+    config=normalize_config(config)
+    origin=config['url'] if config['enabled'] else ''
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     js=base64.b64decode(match[2]).decode()
     module=(ROOT/'frontend/account-auth.js').read_text()

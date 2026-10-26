@@ -35,6 +35,18 @@ class PublicAccountConfiguration(unittest.TestCase):
         self.assertIn("connect-src 'self' https://fixture.supabase.co;",result)
         self.assertEqual(result.count('id="managed-accounts-style"'),1)
 
+    def test_web_build_rejects_private_keys_before_writing(self):
+        spec=importlib.util.spec_from_file_location('web_build',ROOT/'scripts/build-web.py')
+        web=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(web)
+        original=(ROOT/'启动工程师工作台.html').read_bytes()
+        with self.assertRaises(ValueError):web.build(self.config(publicKey='sb_secret_fixture'))
+        self.assertEqual((ROOT/'启动工程师工作台.html').read_bytes(),original)
+
+    def test_origin_is_normalized_for_shared_website_sessions(self):
+        config=sync.normalize_config(self.config(url='https://fixture.supabase.co/'))
+        self.assertEqual(config['url'],'https://fixture.supabase.co')
+
     def test_checked_in_configuration_is_current(self):
         config=json.loads((ROOT/'frontend/auth-config.json').read_text())
         self.assertEqual(sync.render(self.html,config),self.html)

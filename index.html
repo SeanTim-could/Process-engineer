@@ -1,12 +1,64 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="refresh" content="0; url=./启动工程师工作台.html">
-  <title>工艺工程师工作台</title>
-</head>
-<body>
-  <a href="./启动工程师工作台.html">点击进入工作台</a>
-</body>
-</html>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src &#x27;self&#x27; https://edfvegskicolbnnrbuld.supabase.co; form-action 'none'; base-uri 'none'">
+<title>登录 · 工艺工程师工作台</title><link rel="preconnect" href="https://edfvegskicolbnnrbuld.supabase.co" crossorigin><style>.account-login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 15% 5%,#dff5e9,transparent 55%),#f5f9fc}
+.account-form{display:flex;flex-direction:column;gap:16px;background:white;border:1px solid #dae7e2;padding:32px;border-radius:22px;box-shadow:0 16px 60px #264c3b12;width:min(100%,440px)}
+.account-form h1,.account-form h2,.account-form p{margin:0}.account-form h1{font-size:27px;color:#244435}.account-brand{color:#087f5b;font-size:13px;font-weight:700;letter-spacing:2px}
+.account-form input,.account-create input{width:100%;padding:11px 12px;margin-top:7px;border:1px solid #d9e4df;border-radius:9px;background:#fff;color:#244435}
+.account-form .form-label{font-size:13px;color:#42574c}.account-form .button.primary{padding:12px 18px}.account-form input:focus-visible{outline:2px solid #087f5b;outline-offset:2px}
+.account-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:20px;background:#193c3755;backdrop-filter:blur(4px)}
+.account-dialog{position:relative;width:min(900px,100%);max-height:90dvh;overflow:auto;background:#fff;border-radius:20px;padding:24px;color:#244435;box-shadow:0 20px 80px #12332930}
+.account-close{float:right}.account-dialog .account-form{box-shadow:none;border:0;margin:auto;padding:16px}.account-admin h2{margin:0 0 10px}.account-admin .muted{line-height:1.7}
+.account-create{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:12px;margin:24px 0}.account-issued{background:#effaf4;border:1px solid #b7e4ce;padding:18px;border-radius:12px;margin:18px 0;overflow-wrap:anywhere}.account-issued code{user-select:all;color:#164b35}
+.account-admin .table-wrap{margin-top:20px}.account-admin .data-table{width:100%}.account-admin .data-table small{display:block;color:#66796f}.account-admin button{white-space:normal}
+@media(max-width:600px){.account-login{padding:16px}.account-form{padding:24px;width:100%}.account-overlay{padding:10px}.account-dialog{padding:18px}.account-create{grid-template-columns:1fr}.account-admin .button-row{flex-direction:column;align-items:stretch}}
+
+*{box-sizing:border-box}body{margin:0;color:#244435;font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}.account-form{width:min(440px,100%)}.account-login>section{width:min(440px,100%)}.account-form button{font:inherit;cursor:pointer;border:0;border-radius:9px;background:#087f5b;color:#fff}.account-form button:disabled{opacity:.6;cursor:wait}.account-form .form-label{display:block}.muted{color:#77897f}.small{font-size:12px}.error-banner{padding:10px;background:#fff1ef;border-radius:8px;color:#a83627}#web-login-status{min-height:1.6em} .account-form input{font:inherit}</style></head><body><main class="account-login"><section><form id="web-login-form" class="account-form">
+<span class="account-brand">工程师工作台</span><h1>登录你的工作台</h1><p class="muted">请使用管理员发放的工号和密码。</p>
+<label class="form-label">登录工号<input aria-label="登录工号" name="employee" autocomplete="username" maxlength="40" required></label>
+<label class="form-label">登录密码<input aria-label="登录密码" name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
+<p id="web-login-error" class="error-banner" role="alert" hidden></p><button id="web-login-submit" type="submit" disabled>登录</button>
+<p id="web-login-status" class="small muted" role="status" aria-live="polite"></p><p class="small muted">没有账号或忘记密码，请联系管理员。</p>
+<noscript>请启用浏览器的 JavaScript 后使用工作台。</noscript></form></section></main><script>window.WorkbenchWebConfig={"enabled": true, "url": "https://edfvegskicolbnnrbuld.supabase.co", "publicKey": "sb_publishable_follC-N3FfiZLBo5U7EWVg_MANuirih", "prefetch": ["./workbench.html", "./assets/workbench.a249c39a249767ae.js", "./assets/workbench.e49057e29c8c06fe.css"]};
+// Small public website entry. The full workbench still validates the protected
+// identity row before opening any account workspace or administration controls.
+(() => {
+  const config=window.WorkbenchWebConfig;
+  const target=new URL('./workbench.html',location.href).href;
+  const form=document.getElementById('web-login-form');
+  const error=document.getElementById('web-login-error');
+  const button=document.getElementById('web-login-submit');
+  const status=document.getElementById('web-login-status');
+  const sessionKey='workbench-auth:'+config.url;
+  if(!config.enabled){location.replace(target);return;}
+  try{
+    const saved=JSON.parse(sessionStorage.getItem(sessionKey)??'null');
+    if(saved?.access_token&&saved?.refresh_token){status.textContent='正在打开你的工作台…';location.replace(target);return;}
+  }catch{}
+  button.disabled=false;
+  // Warm the heavy resources after the small form is visible. Prefetch has low
+  // priority and is skipped when the browser requests reduced data usage.
+  if(!navigator.connection?.saveData){
+    const warm=()=>{for(const href of config.prefetch??[]){const link=document.createElement('link');link.rel='prefetch';link.href=href;document.head.appendChild(link);}};
+    if('requestIdleCallback' in window)requestIdleCallback(warm,{timeout:1000});else setTimeout(warm,0);
+  }
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();button.disabled=true;error.hidden=true;status.textContent='正在验证账号…';
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+    try{
+      const employee=form.elements.employee.value.normalize('NFKC').trim().toLowerCase();
+      if(!/^[a-z0-9][a-z0-9_.-]{0,39}$/.test(employee))throw new Error('请输入管理员发放的工号。');
+      const response=await fetch(config.url+'/auth/v1/token?grant_type=password',{method:'POST',cache:'no-store',signal:controller.signal,
+        headers:{apikey:config.publicKey,'Content-Type':'application/json'},body:JSON.stringify({email:employee+'@workbench.invalid',password:form.elements.password.value})});
+      const value=await response.json();
+      if(!response.ok)throw new Error(response.status===429?'操作过于频繁，请稍后重试。':'工号或密码不正确，或账号尚未启用。');
+      if(!value.access_token||!value.refresh_token)throw new Error('登录响应无效，请稍后重试。');
+      sessionStorage.setItem(sessionKey,JSON.stringify({access_token:value.access_token,refresh_token:value.refresh_token,
+        expires_at:value.expires_at??Math.floor(Date.now()/1000)+value.expires_in}));
+      form.elements.password.value='';status.textContent='登录验证完成，正在打开工作台…';location.replace(target);
+    }catch(reason){
+      error.textContent=controller.signal.aborted?'账号服务连接超时，请检查网络后重试。':reason.message;
+      error.hidden=false;status.textContent='';button.disabled=false;
+    }finally{clearTimeout(timer);}
+  });
+})();
+</script></body></html>

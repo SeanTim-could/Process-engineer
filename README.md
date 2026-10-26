@@ -4,14 +4,14 @@
 
 ## 发布网址
 
-将本目录中的 `index.html`、`.nojekyll` 和 `启动工程师工作台.html` 一起提交到 GitHub 的 `main` 分支。在支持 GitHub Pages 的仓库中：
+将本目录中的 `index.html`、`workbench.html`、`assets/`、`.nojekyll` 和 `启动工程师工作台.html` 一起提交到 GitHub 的 `main` 分支。在支持 GitHub Pages 的仓库中：
 
 1. 打开仓库 **Settings → Pages**。
 2. 在 **Build and deployment → Source** 选择 **Deploy from a branch**。
 3. 选择 **main** 分支和 **/ (root)** 目录，点击 **Save**。
 4. 等待部署完成，使用 Pages 页面显示的实际网址。
 
-本仓库的默认网址通常为 `https://seantim-could.github.io/Process-engineer/`；只有 GitHub Pages 部署成功后才能访问。将网址发给对方即可，无需把 HTML 文件逐人发送。`index.html` 会跳转到现有工作台。
+本仓库的默认网址通常为 `https://seantim-could.github.io/Process-engineer/`；只有 GitHub Pages 部署成功后才能访问。将网址发给对方即可，无需把 HTML 文件逐人发送。`index.html` 是轻量登录页，在整套图表代码加载前就能显示。登录后进入 `workbench.html`，它使用带内容指纹的独立脚本与样式文件，便于缓存；登录页会在空闲时预取这些资源。旧版中文网页地址也会在网站上转到新入口。
 
 ## 分享数据
 
@@ -90,6 +90,7 @@ python3 -m unittest -v test_documents test_web_entry
 
 ```sh
 python3 scripts/sync-cross-unit-calculations.py
+python3 scripts/build-web.py
 ```
 
 浏览器回归测试需要 Node.js、Playwright 和 Chromium，使用隔离的浏览器上下文及虚拟装置数据，不会读取已有工作空间：
@@ -99,3 +100,5 @@ node scripts/test-cross-unit-calculations.cjs
 ```
 
 可用 `CHROMIUM_PATH` 指定浏览器路径。测试覆盖跨装置生产/LIMS引用、时间匹配、单位变化、后续导入重算、计算依赖、循环引用、备份迁移与实际编辑器操作。GitHub Actions 会自动运行该检查。
+
+修改账号模块后运行 `python3 scripts/sync-account-auth.py`，再运行 `python3 scripts/build-web.py`，同步生成网站入口和缓存资源。网站生成不会拆分便携包使用的单文件 HTML。`node scripts/test-web-entry.cjs` 会阻止重型脚本响应，验证登录页仍能先显示，并检查旧网址、登录后加载和网络超时反馈。
