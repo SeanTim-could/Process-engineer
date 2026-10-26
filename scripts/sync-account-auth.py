@@ -42,7 +42,7 @@ def render(html,config):
     origin=config['url'] if config['enabled'] else ''
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     js=base64.b64decode(match[2]).decode()
-    module=(ROOT/'frontend/account-auth.js').read_text()
+    module=(ROOT/'frontend/backup-merge.js').read_text()+'\n'+(ROOT/'frontend/account-auth.js').read_text()
     block=START+'\nvar AccountAuthConfig='+json.dumps(config,ensure_ascii=True)+';\n'+module+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]

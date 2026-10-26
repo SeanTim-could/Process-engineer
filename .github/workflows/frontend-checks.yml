@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -10,6 +10,7 @@ on:
       - 'scripts/test-cross-unit-calculations.cjs'
       - 'scripts/sync-account-auth.py'
       - 'scripts/test-managed-accounts.cjs'
+      - 'scripts/test-backup-merge.cjs'
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
@@ -26,6 +27,7 @@ on:
       - 'scripts/test-cross-unit-calculations.cjs'
       - 'scripts/sync-account-auth.py'
       - 'scripts/test-managed-accounts.cjs'
+      - 'scripts/test-backup-merge.cjs'
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
@@ -57,6 +59,7 @@ jobs:
           git diff --exit-code -- '*.html' assets
           node --check frontend/cross-unit-calculations.js
           node --check frontend/account-auth.js
+          node --check frontend/backup-merge.js
           python3 scripts/test-auth-config.py
       - name: Check account service types
         run: npx --yes deno@2.9.6 check supabase/functions/workbench-accounts/index.ts

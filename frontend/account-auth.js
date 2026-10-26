@@ -52,6 +52,7 @@ var AccountAuth = (() => {
     if(!enabled)return;
     if(!session || session.expires_at*1000<=Date.now() || !identity || identity.must_change_password || expected&&expected!==storageKey())throw new Error("登录状态已变化，请重新登录后继续。");
   }
+  function isAdmin(){return enabled&&identity?.role==="admin"&&identity.active&&!identity.must_change_password;}
   async function account(action,body={}){return raw("/functions/v1/workbench-accounts","POST",{action,...body},await token());}
   async function flush(){await Ei();await T$;}
   async function exportLegacy(){
@@ -151,7 +152,7 @@ var AccountAuth = (() => {
   function Controls(){
     const own=R.useContext(Context),[modal,setModal]=R.useState(""),[error,setError]=R.useState("");
     if(!enabled||!own)return null;
-    return h(R.Fragment,null,own.role==="admin"&&h("button",{onClick:()=>setModal("admin")},"账号管理"),
+    return h(R.Fragment,null,h(BackupMerge.Control),own.role==="admin"&&h("button",{onClick:()=>setModal("admin")},"账号管理"),
       h("button",{onClick:()=>setModal("password")},"修改密码"),h("button",{onClick:()=>leave().catch(e=>setError(e.message))},"退出登录"),
       error&&h("span",{role:"alert"},error),modal&&h("div",{className:"account-overlay",role:"dialog","aria-modal":true,"aria-label":modal==="admin"?"账号管理":"修改密码"},
         h("section",{className:"account-dialog"},h("button",{className:"account-close button","aria-label":"关闭账号窗口",onClick:()=>setModal("")},"关闭"),modal==="admin"?h(Admin):h(Password,{onDone:()=>setModal("")}))));
@@ -179,5 +180,5 @@ var AccountAuth = (() => {
     if(own.must_change_password)return h("main",{className:"account-login"},h("section",null,h(Password,{required:true}),h("button",{className:"button",onClick:()=>leave().catch(e=>setError(e.message))},"退出登录")));
     return h(Context.Provider,{value:own},h(R.Fragment,{key:own.id},children));
   }
-  return {Gate,Controls,enabled,storageKey,decorate,assertWorkspace};
+  return {Gate,Controls,enabled,storageKey,decorate,assertWorkspace,isAdmin};
 })();
