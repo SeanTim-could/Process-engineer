@@ -107,7 +107,8 @@ jobs:
       - name: Install isolated browser test dependencies
         run: |
           npm install --prefix "$RUNNER_TEMP/workbench-browser-tests" --no-save --package-lock=false playwright@1.62.1
-          "$RUNNER_TEMP/workbench-browser-tests/node_modules/.bin/playwright" install --with-deps chromium
+          # The tests use stable Chrome already installed on the runner.
+          /usr/bin/google-chrome --version
       - name: Test cross-device calculations in the actual workbench
         env:
           # Exercise the installed stable browser, including real IndexedDB/file handles.
