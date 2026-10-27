@@ -26,9 +26,9 @@ var DataAnalysis = (() => {
       aggregation:value.aggregation==="sum"?"sum":"mean",boxBy:value.boxBy==="group"?"group":"metric",bins:Number.isInteger(value.bins)&&value.bins>=5&&value.bins<=100?value.bins:0,lsl,usl};
   }
   function normalize(value){
-    if(value===undefined)return {version:1,revision:0,charts:[]};
+    if(value===undefined)return {version:1,revision:0,charts:[],drafts:{}};
     if(!value||value.version!==1||!Number.isSafeInteger(value.revision)||value.revision<0||!Array.isArray(value.charts)||value.charts.length>24)throw new Error("作图区备份格式无效，最多保存24张图表。");
-    const ids=new Set();return {version:1,revision:value.revision,charts:value.charts.map(chart=>{
+    const ids=new Set();return {version:1,revision:value.revision,drafts:AnalysisDrafts.normalize(value.drafts),charts:value.charts.map(chart=>{
       if(!chart||!/^chart_[\w-]{1,80}$/.test(chart.id)||ids.has(chart.id))throw new Error("图表编号无效或重复。");ids.add(chart.id);
       for(const key of ["createdAt","updatedAt"])if(typeof chart[key]!=="string"||!Number.isFinite(Date.parse(chart[key])))throw new Error("图表保存时间无效。");
       return {...chartConfig(chart),id:chart.id,createdAt:chart.createdAt,updatedAt:chart.updatedAt};
@@ -52,7 +52,7 @@ var DataAnalysis = (() => {
     const state=$r().state,u=new URL(req.url),saved=normalize(state.analytics);
     if(req.method==="GET")return Response.json(u.searchParams.has("id")?series(state,u.searchParams.get("id")):{sources:sources(state),...saved});
     if(req.method!=="PUT")throw new Error("分析操作无效。");
-    const body=await Ha(req);if(body.expectedRevision!==saved.revision)throw new Error("作图区已被其他操作更新，请刷新列表后重试。");
+    const body=await Ha(req);if(body.action==="draft"){if(!["timeseries","capability","plotting"].includes(body.mode))throw new Error("分析页面无效。");if(!AnalysisDrafts.accepts(body.clientEpoch))return Response.json({discarded:true});const draft=AnalysisDrafts.normalize({[body.mode]:body.draft})[body.mode];qt().analytics={...saved,drafts:{...saved.drafts,[body.mode]:draft}};return Response.json({draft});}if(body.expectedRevision!==saved.revision)throw new Error("作图区已被其他操作更新，请刷新列表后重试。");
     let charts=[...saved.charts],id=body.id;
     if(body.action==="delete"){if(!charts.some(c=>c.id===id))throw new Error("图表已不存在，请刷新列表。");charts=charts.filter(c=>c.id!==id);}
     else if(body.action==="save"){
@@ -62,7 +62,7 @@ var DataAnalysis = (() => {
       const now=new Date().toISOString(),chart={...config,id:id??"chart_"+crypto.randomUUID(),createdAt:index>=0?charts[index].createdAt:now,updatedAt:now};
       if(index>=0)charts[index]=chart;else charts.push(chart);
     }else throw new Error("作图区操作无效。");
-    const result=normalize({version:1,revision:saved.revision+1,charts});qt().analytics=result;return Response.json(result);
+    const result=normalize({...saved,revision:saved.revision+1,charts});qt().analytics=result;return Response.json(result);
   }
   async function api(url,method="GET",body){const r=await T0(url,{method,headers:body?{"Content-Type":"application/json"}:undefined,body:body?JSON.stringify(body):undefined}),data=await r.json();if(!r.ok)throw new Error(data.error);return data;}
   const defaults={sourceId:"",keys:[],title:"",type:"line",group:"",allGroups:false,from:"",to:"",xKey:"",normalized:false,palette:"coast",period:"day",aggregation:"mean",boxBy:"metric",bins:0,lsl:"",usl:""};
@@ -89,10 +89,10 @@ var DataAnalysis = (() => {
   }
   function Capability(props){return h(CapabilityReports.Workspace,{...props,Field,Select,SpecFields,api});}
   function Page({mode,refreshKey,onImport}){
-    const [catalog,setCatalog]=R.useState({sources:[],charts:[],revision:0}),[config,setConfig]=R.useState({...defaults}),[error,setError]=R.useState(""),[notice,setNotice]=R.useState(""),[loading,setLoading]=R.useState(true),[editing,setEditing]=R.useState(null),[busy,setBusy]=R.useState(false),root=R.useRef(null);
+    const [catalog,setCatalog]=R.useState({sources:[],charts:[],revision:0}),[config,setConfig]=AnalysisDrafts.usePart(mode,"config",{...defaults}),[error,setError]=R.useState(""),[notice,setNotice]=R.useState(""),[loading,setLoading]=R.useState(true),[editing,setEditing]=AnalysisDrafts.usePart(mode,"editing",null),[busy,setBusy]=R.useState(false),root=R.useRef(null);
     const update=patch=>{setConfig(old=>({...old,...patch}));setError("");setNotice("");};
-    async function reload(){const value=await api("/api/analytics");setCatalog(value);setConfig(old=>old.sourceId?old:{...old,sourceId:value.sources[0]?.id??""});return value;}
-    R.useEffect(()=>{let live=true;setLoading(true);api("/api/analytics").then(value=>{if(live){setCatalog(value);setConfig(old=>({...old,sourceId:value.sources.some(s=>s.id===old.sourceId)?old.sourceId:value.sources[0]?.id??""}));}}).catch(e=>{if(live)setError(e.message);}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[refreshKey]);
+    async function reload(){const value=await api("/api/analytics");AnalysisDrafts.seed(value.drafts);setCatalog(value);setConfig(old=>old.sourceId?old:{...old,sourceId:value.sources[0]?.id??""});return value;}
+    R.useEffect(()=>{let live=true;setLoading(true);api("/api/analytics").then(value=>{if(live){AnalysisDrafts.seed(value.drafts);setCatalog(value);setConfig(old=>({...old,sourceId:old.sourceId||value.sources[0]?.id||""}));}}).catch(e=>{if(live)setError(e.message);}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[refreshKey]);
     const {data,error:dataError}=useData(config.sourceId,refreshKey);
     R.useEffect(()=>{if(!data)return;setConfig(old=>{const keys=old.keys.filter(k=>data.columns.some(c=>c.key===k)),first=keys[0]??data.columns[0]?.key;
       const available=[...new Set(data.points.filter(r=>first&&Object.hasOwn(r.values,first)).map(r=>r.group))];
@@ -101,12 +101,12 @@ var DataAnalysis = (() => {
     const groupOptions=[...new Set(data?.points.filter(r=>!column||Object.hasOwn(r.values,column.key)).map(r=>r.group)??[])];
     const selection=R.useMemo(()=>{try{let rows=data?M.select(data.points,config):[];if(mode!=="plotting"&&column)rows=rows.filter(r=>Object.hasOwn(r.values,column.key));return {rows,error:""};}catch(e){return {rows:[],error:e.message};}},[data,config.group,config.allGroups,config.from,config.to,column?.key,mode]);
     const rows=selection.rows,rangeError=selection.error,summary=R.useMemo(()=>column?M.capability(rows,column.key):null,[rows,column?.key]);
-    async function save(asNew=false){setBusy(true);setError("");try{await Ei();const value=await api("/api/analytics","PUT",{action:"save",id:asNew?undefined:editing??undefined,config,expectedRevision:catalog.revision});setCatalog(old=>({...old,...value}));setEditing(asNew||!editing?value.charts.at(-1).id:editing);setNotice("图表配置已保存到作图区，也会包含在完整备份中。");}catch(e){setError(e.message);await reload().catch(()=>{});}finally{setBusy(false);}}
+    async function save(asNew=false){setBusy(true);setError("");try{await Ei();const value=await api("/api/analytics","PUT",{action:"save",id:asNew?undefined:editing??undefined,config,expectedRevision:catalog.revision});setCatalog(old=>({...old,...value}));setEditing(asNew||!editing?value.charts.at(-1).id:editing);setNotice("图表配置已保存到作图区，也会包含在保存的工作台文件中。");}catch(e){setError(e.message);await reload().catch(()=>{});}finally{setBusy(false);}}
     async function remove(id){setError("");try{const value=await api("/api/analytics","PUT",{action:"delete",id,expectedRevision:catalog.revision});setCatalog(old=>({...old,...value}));if(editing===id)setEditing(null);}catch(e){setError(e.message);await reload().catch(()=>{});}}
     function load(chart){setConfig({...chart,lsl:chart.lsl??"",usl:chart.usl??""});setEditing(chart.id);setNotice("已载入“"+chart.title+"”，修改后点击“保存修改”。");root.current?.scrollIntoView({behavior:"smooth",block:"start"});}
     const figureConfig={...config,title:config.title||(mode==="timeseries"?"时序分析 · "+(column?.label??""):P.types[config.type]),type:mode==="timeseries"?"line":config.type};
     const references=mode==="timeseries"&&summary?[{label:"均值",value:summary.mean,color:"#477be3"},{label:"I图上控制限",value:summary.upperControl,color:"#b08b48"},{label:"I图下控制限",value:summary.lowerControl,color:"#b08b48"},...refs(config)]:refs(config);
-    return h("div",{className:"analysis-workbench",ref:root},loading&&h("p",{role:"status"},"正在读取分析数据…"),
+    return h("div",{className:"analysis-workbench",ref:root},h(AnalysisDrafts.Notice,{mode}),loading&&h("p",{role:"status"},"正在读取分析数据…"),
       h("section",{className:"panel analysis-controls"},h("div",{className:"analysis-figure-head"},h("div",null,h("h2",null,mode==="capability"?"前后能力分析":mode==="timeseries"?"时序分析":"自由作图"),h("p",{className:"muted"},"直接使用当前账号已导入的生产、LIMS检验或日报指标，分析过程不修改原始数据。")),h("button",{className:"button",onClick:onImport},"导入分析数据")),
         !loading&&!catalog.sources.length?h("p",{className:"analysis-empty"},"还没有可分析的数据。请先导入表格，再选择装置和指标。"):h(R.Fragment,null,h("div",{className:"analysis-fields"},
           h(Select,{label:"分析数据来源",value:config.sourceId,onChange:sourceId=>{setEditing(null);update({sourceId,keys:[],group:"",allGroups:false,from:"",to:"",xKey:"",lsl:"",usl:"",normalized:false});},options:catalog.sources.map(s=>({value:s.id,label:s.name}))}),
@@ -120,11 +120,12 @@ var DataAnalysis = (() => {
         h("section",{className:"panel analysis-controls"},mode==="plotting"?h(R.Fragment,null,h("div",{className:"analysis-fields"},
           h(Field,{label:"图表标题",value:config.title,maxLength:120,placeholder:column.label,onChange:e=>update({title:e.target.value})}),
           h(Select,{label:"图表类型",value:config.type,onChange:type=>update({type,...["scatter","histogram"].includes(type)?{keys:config.keys.slice(0,1),normalized:false}:{}}),options:Object.entries(P.types).map(([value,label])=>({value,label}))}),
-          h(Select,{label:"图表配色",value:config.palette,onChange:palette=>update({palette}),options:[{value:"coast",label:"晴海 · 青蓝"},{value:"bright",label:"明亮 · 多彩"},{value:"forest",label:"自然 · 绿金"}]}),
+          h(Select,{label:"图表配色",value:config.palette,onChange:palette=>update({palette}),options:Object.entries(P.paletteNames).map(([value,label])=>({value,label}))}),
           config.type==="scatter"&&h(Select,{label:"散点横轴指标",value:config.xKey,onChange:xKey=>update({xKey}),options:data.columns.map(c=>({value:c.key,label:c.label+(c.unit?" / "+c.unit:"")}))}),
           config.type==="bar"&&h(R.Fragment,null,h(Select,{label:"柱状图汇总周期",value:config.period,onChange:period=>update({period}),options:[{value:"day",label:"按日"},{value:"week",label:"按周（周一开始）"},{value:"month",label:"按月"},{value:"all",label:"按采样分组"}]}),h(Select,{label:"柱状图汇总方法",value:config.aggregation,onChange:aggregation=>update({aggregation}),options:[{value:"mean",label:"有效值均值"},{value:"sum",label:"有效值求和"}]})),
           config.type==="histogram"&&h(Select,{label:"直方图分箱",value:String(config.bins),onChange:bins=>update({bins:Number(bins)}),options:[{value:"0",label:"自动（四分位距规则）"},...[5,10,15,20,30,50,100].map(n=>({value:String(n),label:n+"箱"}))]}),
           config.type==="box"&&h(Select,{label:"箱线图分组",value:config.boxBy,onChange:boxBy=>update({boxBy}),options:[{value:"metric",label:"按指标"},{value:"group",label:"按采样分组（单个指标）"}]}),h(SpecFields,{config,update})),
+          h("details",{className:"analysis-palette-picker"},h("summary",null,"预览全部12组配色"),h("div",{className:"analysis-palette-grid"},...Object.entries(P.palettes).map(([id,colors])=>h("button",{key:id,type:"button","aria-pressed":config.palette===id,onClick:()=>update({palette:id}),className:"palette-choice"},h("span",null,P.paletteNames[id]),h("span",{className:"palette-stripes","aria-hidden":true},...colors.map(color=>h("i",{key:color,style:{background:color}}))))))),
           ["line","area","bar","box"].includes(config.type)&&h("fieldset",{className:"analysis-metrics"},h("legend",null,"同图指标（最多6个）"),...data.columns.map(c=>h("label",{key:c.key},h("input",{type:"checkbox",checked:config.keys.includes(c.key),disabled:!config.keys.includes(c.key)&&config.keys.length>=6,"aria-label":"同图指标："+c.label,onChange:e=>{const keys=e.target.checked?[...config.keys,c.key]:config.keys.filter(k=>k!==c.key);if(keys.length)update({keys});}}),c.label+(c.unit?" / "+c.unit:""))),h("label",{className:"analysis-normalize"},h("input",{type:"checkbox",checked:config.normalized,onChange:e=>update({normalized:e.target.checked})}),"各指标归一化到0–1（比较变化形态）")),
           config.type==="scatter"&&h("p",{className:"small muted"},"散点图只配对同一条记录中的横、纵轴数值。跨装置或不同采样时间的配对请使用左侧“关系分析”。"),
           config.type==="bar"&&config.aggregation==="sum"&&h("p",{className:"analysis-notice small"},"求和不等于时间积分。流量、含量和统计量请按用途选择均值；仅对适合累加的数据求和。"),
@@ -132,7 +133,7 @@ var DataAnalysis = (() => {
         h("div",{className:"button-row analysis-export-row"},h("button",{className:"button",onClick:()=>P.download(csv(rows,data.columns.filter(c=>config.keys.includes(c.key)||config.type==="scatter"&&c.key===config.xKey)),(config.title||"分析数据")+".csv","text/csv;charset=utf-8")},"导出分析数据"),h("button",{className:"button",onClick:()=>exportReport(root.current,figureConfig.title,`${data.name}；分组 ${config.allGroups?"全部":config.group||"未分组"}；时间 ${config.from||"全部起始"} 至 ${config.to||"全部结束"}；有效样本 ${summary.n}。`)},"导出分析报告")),
         h(P.Figure,{config:figureConfig,rows,columns:data.columns,references,subtitle:data.name+" · "+(config.allGroups?"全部分组":config.group||"未分组")}),
         mode==="timeseries"&&h(P.Figure,{config:{...config,keys:["range"],type:"line",title:"移动极差 MR",normalized:false},rows:M.movingRanges(rows,column.key),columns:[{key:"range",label:"相邻个体移动极差",unit:column.unit}],references:[{label:"MR均值",value:summary.mrbar,color:"#477be3"},{label:"MR上控制限",value:summary.mrbar===null?null:summary.mrbar*3.267,color:"#b08b48"},{label:"MR下控制限",value:0,color:"#b08b48"}],subtitle:"移动极差使用相邻有效读数的绝对差；不同分组分别计算。"}))),
-      mode==="plotting"&&h("section",{className:"panel analysis-board"},h("div",{className:"analysis-figure-head"},h("div",null,h("h2",null,"我的作图区"),h("p",{className:"small muted"},"保存图表条件，后续打开自动读取当前数据；配置随账号隔离并包含在完整备份中。最多24张。")),h("button",{className:"button",onClick:()=>reload().catch(e=>setError(e.message))},"刷新图表列表")),!catalog.charts.length?h("p",{className:"analysis-empty"},"选好数据和图形后，点击“保存到作图区”，在这里积累常用图表。"):catalog.charts.map(chart=>h(SavedChart,{key:chart.id,chart,sources:catalog.sources,refreshKey,onLoad:load,onDelete:remove}))));
+      mode==="plotting"&&h("section",{className:"panel analysis-board"},h("div",{className:"analysis-figure-head"},h("div",null,h("h2",null,"我的作图区"),h("p",{className:"small muted"},"保存图表条件，后续打开自动读取当前数据；配置随账号隔离并包含在保存的工作台文件中。最多24张。")),h("button",{className:"button",onClick:()=>reload().catch(e=>setError(e.message))},"刷新图表列表")),!catalog.charts.length?h("p",{className:"analysis-empty"},"选好数据和图形后，点击“保存到作图区”，在这里积累常用图表。"):catalog.charts.map(chart=>h(SavedChart,{key:chart.id,chart,sources:catalog.sources,refreshKey,onLoad:load,onDelete:remove}))));
   }
   return {Nav,pages,Page,request,normalize,chartConfig};
 })();

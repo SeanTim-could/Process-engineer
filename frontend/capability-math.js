@@ -82,6 +82,15 @@ var CapabilityMath = (() => {
     }
     return {mean,variance};
   }
-  return {logUpper,upper,cdf,inverseNormal,logGamma,beta,c4,normality,prepare,evaluate,compare};
+  function splitSequence(rows,key,cut){
+    const ordered=rows.filter(r=>Object.hasOwn(r.values,key)).sort((a,b)=>a.time-b.time),state=[0,1].map(()=>({n:0,mean:0,mrMean:0,rangeCount:0,previous:new Map()})),points=[],ranges=[];
+    for(const row of ordered){const phase=row.time<cut?0:1,s=state[phase],value=row.values[key],previous=s.previous.get(row.group);let range=null;
+      if(finite(value)){s.n++;s.mean+=(value-s.mean)/s.n;if(previous&&finite(previous.values[key])){range=Math.abs(value-previous.values[key]);s.rangeCount++;s.mrMean+=(range-s.mrMean)/s.rangeCount;}}
+      s.previous.set(row.group,row);points.push({...row,phase,value:finite(value)?value:null});ranges.push({...row,phase,value:range});
+    }
+    const stats=state.map(s=>{const within=s.rangeCount?s.mrMean/1.128:null;return {n:s.n,mean:s.n?s.mean:null,mrMean:s.rangeCount?s.mrMean:null,rangeCount:s.rangeCount,within,lower:s.n&&within>0?s.mean-3*within:null,upper:s.n&&within>0?s.mean+3*within:null,mrUpper:s.rangeCount?s.mrMean*3.267:null};});
+    return {points,ranges,stats};
+  }
+  return {logUpper,upper,cdf,inverseNormal,logGamma,beta,c4,normality,prepare,evaluate,compare,splitSequence};
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=CapabilityMath;

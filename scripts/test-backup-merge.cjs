@@ -9,7 +9,6 @@ module.exports=async function testMerge(p,call,base,temp){
  const own=copy(base);own.state.datasets.ds_unit_mmp2=ledger('mmp2',[col('c_1','管理员指标')],{c_1:999});
  assert((await call('/api/offline/restore','POST',own)).ok);
  // Settle the real application's pending view save before comparing revisions.
- await p.getByRole('button',{name:'保存到本机',exact:true}).click();await p.getByText('数据、指标配置、本月关注和月报均已保存到本机。',{exact:true}).waitFor();
  const before=(await call('/api/offline/backup')).data;
  const source=copy(base),s=source.state,unit=copy(s.settings.units[0]);
  s.profile={...s.profile,name:'提交人甲',employeeId:'e001',theme:'ocean'};

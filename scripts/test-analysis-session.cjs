@@ -1,0 +1,37 @@
+const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),{fixture}=require('./workbench-browser-fixture.cjs'),M=require('../frontend/analysis-math.js');
+(async()=>{const f=await fixture(),{page:p,api,nav}=f,dir=await fs.mkdtemp(path.join(os.tmpdir(),'analysis-session-'));try{
+ p.on('dialog',dialog=>dialog.accept());await p.goto(f.site);const full=await api('/api/offline/backup'),start=Date.parse('2026-10-01T08:00:00.250+08:00');
+ const col=(key,label)=>({key,index:Number(key.slice(2)),header:label,label,unit:'kg/h',source:'production',module:'other',kind:'reading',aggregation:'auto',recognized:true,enabled:true,scale:1,limit:null,maxGapHours:null,showTotal:true});
+ const points=Array.from({length:120},(_,i)=>({unit:'mmp2',time:start+i*60000,group:'P',values:{c_1:10+Math.sin(i),c_2:20+Math.cos(i)}}));
+ full.state.datasets={ds_unit_mmp2:{dataset:{id:'ds_unit_mmp2',name:'指标',filename:'fixture.csv',sheet:'data',columns:[col('c_1','指标A'),col('c_2','指标B')],count:120,expectedCount:120,unitIds:['mmp2'],groups:['P'],start,end:points.at(-1).time,createdAt:'2026-10-01T00:00:00Z',status:'ready',role:'ledger'},points}};
+ await api('/api/offline/restore','POST',full);await p.reload();await nav('前后能力分析');await p.getByRole('img',{name:'汇总报告',exact:true}).waitFor();
+ await p.getByLabel('分析指标',{exact:true}).selectOption('c_2');await p.getByLabel('规格下限 LSL',{exact:true}).fill('5');await p.getByLabel('规格上限 USL',{exact:true}).fill('50');await p.getByLabel('子组大小',{exact:true}).fill('5');await p.getByLabel('目标值（可选）',{exact:true}).fill('20');await p.getByLabel('显著性水平 α',{exact:true}).selectOption('0.01');
+ await p.getByLabel('对比划分方式',{exact:true}).selectOption('datasets');await p.getByLabel('之后分析指标',{exact:true}).selectOption('c_1');await p.getByLabel('之后开始（北京时间）',{exact:true}).fill('2026-10-01T09:00');
+ const labels=['分析数据来源','分析指标','规格下限 LSL','规格上限 USL','子组大小','目标值（可选）','显著性水平 α','对比划分方式','之后分析指标','之后开始（北京时间）'];
+ const values=async()=>Promise.all(labels.map(name=>p.getByLabel(name,{exact:true}).inputValue()));let expected=await values();
+ await nav('运行总览');await nav('前后能力分析');await p.getByRole('img',{name:'汇总报告',exact:true}).waitFor();assert.deepEqual(await values(),expected,'navigation must restore every capability field');
+ await p.getByLabel('目标值（可选）',{exact:true}).fill('21');expected=await values();await p.reload();await nav('前后能力分析');await p.getByRole('img',{name:'汇总报告',exact:true}).waitFor();assert.deepEqual(await values(),expected,'an immediate refresh must recover even before the debounce timer fires');
+ const snapshot=await api('/api/offline/backup');assert.equal(snapshot.state.analytics.drafts.capability.workspace.afterChoice.from,'2026-10-01T09:00');
+ await p.reload();await nav('前后能力分析');await p.getByRole('img',{name:'汇总报告',exact:true}).waitFor();assert.deepEqual(await values(),expected,'refresh must restore the saved analysis form');
+ await p.getByLabel('对比划分方式',{exact:true}).selectOption('periods');for(const [name,v]of [['之前开始','2026-10-01T08:00'],['之前结束','2026-10-01T08:59'],['之后开始','2026-10-01T09:00'],['之后结束','2026-10-01T09:59']])await p.getByLabel(name+'（北京时间）',{exact:true}).fill(v);
+ await nav('运行总览');await nav('前后能力分析');assert.equal(await p.getByLabel('之前结束（北京时间）',{exact:true}).inputValue(),'2026-10-01T08:59');
+ await p.getByLabel('对比划分方式',{exact:true}).selectOption('split');await p.getByLabel('调整时间（北京时间）',{exact:true}).fill('2026-10-01T08:30:00.25');
+ const before=Number(await p.locator('[data-stat="n"] td[data-side="before"]').textContent());assert.equal(before,30);
+ const handle=p.locator('[data-split-handle]');await handle.scrollIntoViewIfNeeded();const box=await handle.boundingBox(),svg=await p.getByRole('img',{name:'I-MR 前后对比控制图',exact:true}).boundingBox();
+ await p.mouse.move(box.x+box.width/2,box.y+80);await p.mouse.down();await p.mouse.move(svg.x+(95+(1160-95)*.68)/1200*svg.width,box.y+80,{steps:8});
+ assert.equal(Number(await p.locator('[data-stat="n"] td[data-side="before"]').textContent()),30,'dragging previews before committing the statistics');await p.mouse.up();
+ await p.waitForFunction(()=>Number(document.querySelector('[data-stat="n"] td[data-side="before"]')?.textContent)>60);const cut=M.time(await p.getByLabel('调整时间（北京时间）',{exact:true}).inputValue()),nBefore=points.filter(r=>r.time<cut).length;
+ assert.equal(cut%1000,250,'dragging must preserve sub-second sampling boundaries');assert.equal(Number(await p.locator('[data-stat="n"] td[data-side="before"]').textContent()),nBefore);
+ await p.getByRole('slider',{name:'前后分界线',exact:true}).press('ArrowLeft');const moved=M.time(await p.getByLabel('调整时间（北京时间）',{exact:true}).inputValue());assert.equal(moved,cut-60000);
+ await nav('运行总览');await nav('前后能力分析');await p.getByRole('slider',{name:'前后分界线',exact:true}).waitFor();assert.equal(M.time(await p.getByLabel('调整时间（北京时间）',{exact:true}).inputValue()),moved);
+ // Explicitly empty/incomplete input is still the user's last state.
+ await p.getByLabel('调整时间（北京时间）',{exact:true}).fill('');await nav('运行总览');await nav('前后能力分析');assert.equal(await p.getByLabel('调整时间（北京时间）',{exact:true}).inputValue(),'');await p.getByLabel('调整时间（北京时间）',{exact:true}).fill(M.exactLocal(moved));
+ await p.screenshot({path:path.join(dir,'drag-divider.png'),fullPage:true});
+ await p.locator('.capability-comparison').screenshot({path:path.join(dir,'combined-imr.png')});
+ await nav('自由作图');await p.getByLabel('图表配色',{exact:true}).waitFor();assert.equal(await p.getByLabel('图表配色',{exact:true}).locator('option').count(),12);await p.getByLabel('图表配色',{exact:true}).selectOption('sunset');assert(await p.locator('.analysis-figure path[stroke="#e65a3f"]').count()>0);
+ await p.getByText('预览全部12组配色',{exact:true}).click();await p.getByRole('button',{name:'色盲友好 · 高辨识',exact:true}).click();assert.equal(await p.getByLabel('图表配色',{exact:true}).inputValue(),'accessible');await p.locator('.analysis-palette-picker').screenshot({path:path.join(dir,'palettes.png')});await nav('运行总览');await nav('自由作图');assert.equal(await p.getByLabel('图表配色',{exact:true}).inputValue(),'accessible');
+ await p.getByRole('button',{name:'保存到作图区',exact:true}).click();await p.locator('.analysis-saved-card').waitFor();const saved=await api('/api/offline/backup');assert.equal(saved.state.analytics.charts[0].palette,'accessible');
+ await p.reload();await nav('前后能力分析');await p.getByRole('slider',{name:'前后分界线',exact:true}).waitFor();assert.equal(M.time(await p.getByLabel('调整时间（北京时间）',{exact:true}).inputValue()),moved);
+ await p.getByLabel('规格下限 LSL',{exact:true}).fill('6');await api('/api/offline/restore','POST',saved);await p.reload();await nav('前后能力分析');assert.equal(await p.getByLabel('规格下限 LSL',{exact:true}).inputValue(),'5');assert.deepEqual((await api('/api/offline/backup')).state.datasets,full.state.datasets);
+ assert.deepEqual(f.errors,[]);console.log(JSON.stringify({passed:true,artifacts:dir,checks:['All form values survive immediate navigation, refresh and complete-file restore','Empty fields remain empty; pending edits are flushed into JSON','Pointer and keyboard dividers update all reports without changing measurements; millisecond sampling boundaries preserved','Twelve visibly different palettes persist into saved charts and drafts']},null,2));
+ }finally{await f.browser.close();}})().catch(e=>{console.error(e);console.error('::error::'+String(e.stack??e).replace(/%/g,'%25').replace(/\n/g,'%0A'));process.exitCode=1;});

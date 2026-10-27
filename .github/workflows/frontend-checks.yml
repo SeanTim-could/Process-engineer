@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -16,6 +16,10 @@ on:
       - 'scripts/test-data-analysis.cjs'
       - 'scripts/test-capability-math.cjs'
       - 'scripts/test-capability-reports.cjs'
+      - 'scripts/sync-workspace-files.py'
+      - 'scripts/test-analysis-session.cjs'
+      - 'scripts/test-workspace-files.cjs'
+      - 'scripts/workbench-browser-fixture.cjs'
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
@@ -38,6 +42,10 @@ on:
       - 'scripts/test-data-analysis.cjs'
       - 'scripts/test-capability-math.cjs'
       - 'scripts/test-capability-reports.cjs'
+      - 'scripts/sync-workspace-files.py'
+      - 'scripts/test-analysis-session.cjs'
+      - 'scripts/test-workspace-files.cjs'
+      - 'scripts/workbench-browser-fixture.cjs'
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
@@ -66,6 +74,7 @@ jobs:
           python3 scripts/sync-cross-unit-calculations.py
           python3 scripts/sync-account-auth.py
           python3 scripts/sync-data-analysis.py
+          python3 scripts/sync-workspace-files.py
           python3 scripts/build-web.py
           git diff --exit-code -- '*.html' assets
           node --check frontend/cross-unit-calculations.js
@@ -76,6 +85,9 @@ jobs:
           node --check frontend/data-analysis.js
           node --check frontend/capability-math.js
           node --check frontend/capability-reports.js
+          node --check frontend/capability-split-chart.js
+          node --check frontend/analysis-drafts.js
+          node --check frontend/workspace-files.js
           node scripts/test-analysis-math.cjs
           node scripts/test-capability-math.cjs
           python3 scripts/test-auth-config.py
@@ -98,3 +110,5 @@ jobs:
           node scripts/test-general-labels.cjs
           node scripts/test-data-analysis.cjs
           node scripts/test-capability-reports.cjs
+          node scripts/test-analysis-session.cjs
+          node scripts/test-workspace-files.cjs

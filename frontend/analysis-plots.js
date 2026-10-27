@@ -1,7 +1,8 @@
 // Self-contained SVG plots. Statistics always use every selected observation.
 var AnalysisPlots = (() => {
   const R=Se(),h=R.createElement,M=AnalysisMath;
-  const palettes={coast:["#078a9b","#477be3","#ed9853","#9c6edb","#34a478","#df667b"],bright:["#3567d8","#e58835","#16a5a1","#b665c7","#a0ad35","#de5f7e"],forest:["#16866a","#6d97d9","#c99429","#b76e9e","#559aaf","#bc6c51"]};
+  const palettes={coast:["#078a9b","#477be3","#ed9853","#9c6edb","#34a478","#df667b"],bright:["#3567d8","#e58835","#16a5a1","#b665c7","#a0ad35","#de5f7e"],forest:["#16866a","#6d97d9","#c99429","#b76e9e","#559aaf","#bc6c51"],sunset:["#e65a3f","#f2a137","#c73972","#8b4bb6","#4382bb","#dfa824"],aurora:["#7b4dd4","#13a6a1","#ed6c9d","#2d88c6","#e8ad27","#6e9d3d"],island:["#087cc1","#f47f38","#22a884","#b447ac","#d4ad24","#e2536b"],berry:["#d4368a","#804bbd","#4093ce","#e78b39","#24a48e","#bf4b52"],citrus:["#db8e08","#78a430","#09a5ab","#eb6647","#7770cf","#d4488d"],royal:["#3748be","#bd4545","#dcaa1e","#17a298","#8954bc","#e67826"],pastel:["#6c91d6","#d780a6","#61aaa0","#d5a057","#a18acb","#8eae66"],earth:["#a56234","#397b6e","#b24c65","#536ba7","#b19c37","#8b609d"],accessible:["#0072b2","#d55e00","#009e73","#cc79a7","#e69f00","#56b4e9"]};
+  const paletteNames={coast:"晴海 · 青蓝",bright:"明亮 · 多彩",forest:"自然 · 绿金",sunset:"落日 · 橙红",aurora:"极光 · 紫绿",island:"海岛 · 蓝橙",berry:"莓果 · 玫紫",citrus:"柑橘 · 黄绿",royal:"经典 · 宝蓝",pastel:"柔彩 · 浅色",earth:"大地 · 暖棕",accessible:"色盲友好 · 高辨识"};
   const types={line:"折线图",area:"面积图",bar:"柱状图",scatter:"散点图",histogram:"直方图",box:"箱线图"};
   const format=v=>!M.finite(v)?"—":Math.abs(v)>=1e7||Math.abs(v)>0&&Math.abs(v)<.0001?v.toExponential(3):v.toLocaleString("zh-CN",{maximumFractionDigits:4});
   const date=t=>M.local(t).replace("T"," ");
@@ -96,7 +97,7 @@ var AnalysisPlots = (() => {
   async function saveSvg(svg,title,png=false){
     if(!svg)throw new Error("请先生成有效图表。");
     const clone=svg.cloneNode(true),label=document.createElementNS("http://www.w3.org/2000/svg","text");
-    label.setAttribute("x","500");label.setAttribute("y","21");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","16");label.setAttribute("fill","#244252");label.textContent=title;if(!svg.hasAttribute("data-complete-report"))clone.appendChild(label);
+    label.setAttribute("x","500");label.setAttribute("y","21");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","16");label.setAttribute("fill","#244252");label.textContent=title;if(!svg.hasAttribute("data-complete-report")&&!svg.hasAttribute("data-complete-chart"))clone.appendChild(label);
     const source=new XMLSerializer().serializeToString(clone);
     if(!png){download(source,title+".svg","image/svg+xml;charset=utf-8");return;}
     const url=URL.createObjectURL(new Blob([source],{type:"image/svg+xml;charset=utf-8"}));
@@ -109,5 +110,5 @@ var AnalysisPlots = (() => {
       error&&h("p",{role:"alert",className:"error-banner"},error),h("div",{className:"analysis-svg-scroll"},h(Boundary,{signature:JSON.stringify(props.config)+JSON.stringify(props.columns)+props.rows.length},h(Svg,props))),h("p",{className:"analysis-mobile-hint small muted"},"可横向滑动查看完整图表。"),
       groupCount>20&&["line","area","box"].includes(props.config.type)&&h("p",{className:"small analysis-notice"},"当前有"+groupCount+"个采样分组，图形最多展示前20组。请选择具体分组查看其余数据；统计包含全部选中记录。"));
   }
-  return {Svg,Figure,Boundary,palettes,types,format,date,escape,download,saveSvg};
+  return {Svg,Figure,Boundary,palettes,paletteNames,types,format,date,escape,download,saveSvg};
 })();

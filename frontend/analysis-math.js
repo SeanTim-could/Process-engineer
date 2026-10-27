@@ -57,12 +57,13 @@ var AnalysisMath = (() => {
   }
   function time(value){
     if(!value)return null;
-    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value))throw new Error("请填写有效的日期和时间。");
-    const result=Date.parse(value+":00+08:00");
-    if(!Number.isFinite(result)||new Date(result+28800000).toISOString().slice(0,16)!==value)throw new Error("日期或时间无效。");
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(value))throw new Error("请填写有效的日期和时间。");
+    const withSeconds=value.length===16?value+":00":value,result=Date.parse(withSeconds+"+08:00"),canonical=new Date(result+28800000);
+    if(!Number.isFinite(result)||canonical.toISOString().slice(0,19)!==withSeconds.slice(0,19))throw new Error("日期或时间无效。");
     return result;
   }
   const local=time=>new Date(time+28800000).toISOString().slice(0,16);
+  const exactLocal=time=>new Date(time+28800000).toISOString().slice(0,23).replace(/(\.\d*?)0+$/,"$1").replace(/\.$/,"").replace(/:00$/,"");
   function select(rows,config){
     const from=time(config.from),to=time(config.to);if(from!==null&&to!==null&&from>to)throw new Error("开始时间不能晚于结束时间。");
     return rows.filter(r=>(config.allGroups===true||config.allGroups===undefined&&config.group==="*"||r.group===config.group)&&(from===null||r.time>=from)&&(to===null||r.time<to+60000)).sort((a,b)=>a.time-b.time);
@@ -95,6 +96,6 @@ var AnalysisMath = (() => {
     }
     return [...groups.values()].map(g=>({...g,values:Object.fromEntries(keys.map(key=>{const values=g.values[key],s=summarize(values);return [key,method==="sum"&&values.length?safe(values.reduce((a,b)=>a+b,0)):s.mean];}))}));
   }
-  return {finite,safe,summarize,quantile,movingRanges,normalCDF,limits,capability,histogram,time,local,select,periods,boxes,aggregate};
+  return {finite,safe,summarize,quantile,movingRanges,normalCDF,limits,capability,histogram,time,local,select,periods,boxes,aggregate,exactLocal};
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=AnalysisMath;

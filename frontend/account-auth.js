@@ -139,7 +139,7 @@ var AccountAuth = (() => {
         h("td",null,!row.active?"已停用":row.must_change_password?"待修改密码":"正常"),h("td",null,actions));
     });
     return h("div",{className:"account-admin"},h("h2",null,"账号管理"),h("p",{className:"muted"},"由你创建账号、绑定姓名和工号，并发放初始密码。"),
-      h("section",{className:"account-issued"},h("b",null,"迁移启用登录前的数据"),h("p",{className:"small"},"旧版数据仍保留在原浏览器。导出备份后，可用工作台顶部“恢复备份”迁入当前账号。"),h("button",{className:"button small-button",disabled:busy,onClick:()=>exportLegacy().catch(e=>setError(e.message))},"导出旧版本机备份")),
+      h("section",{className:"account-issued"},h("b",null,"迁移启用登录前的数据"),h("p",{className:"small"},"旧版数据仍保留在原浏览器。导出备份后，可用工作台顶部“打开”迁入当前账号。"),h("button",{className:"button small-button",disabled:busy,onClick:()=>exportLegacy().catch(e=>setError(e.message))},"导出旧版本机备份")),
       h("form",{className:"account-create",onSubmit:e=>{e.preventDefault();run("create",{name,employeeId:id});}},
         h(Field,{label:"新账号姓名",value:name,onChange:setName,autoComplete:"off"}),h(Field,{label:"新账号工号",value:id,onChange:setId,autoComplete:"off"}),
         h("button",{className:"button primary",disabled:busy},"创建并生成初始密码")),

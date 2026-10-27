@@ -166,7 +166,7 @@ var BackupMerge = (() => {
     const summary=review?.stats;
     return h(R.Fragment,null,h("button",{onClick:()=>{setOpen(true);setError("");}},"加入数据"),open&&h("div",{className:"account-overlay",role:"dialog","aria-modal":true,"aria-label":"加入用户数据"},
       h("section",{className:"account-dialog backup-merge"},h("button",{className:"button account-close",disabled:busy,onClick:()=>{call({action:"cancel"}).catch(()=>{});setOpen(false);setReview(null);setFile(null);}},"关闭加入窗口"),
-        h("h2",null,"加入用户数据"),h("p",{className:"muted"},"收集用户通过“完整备份”导出的 JSON 文件，逐个加入自己的汇总。已有数据保留，姓名、工号和个人设置保持当前账号。"),
+        h("h2",null,"加入用户数据"),h("p",{className:"muted"},"收集用户通过“另存为”导出的 JSON 文件，逐个加入自己的汇总。已有数据保留，姓名、工号和个人设置保持当前账号。"),
         h("label",{className:"form-label"},"选择用户 JSON 备份",h("input",{type:"file",accept:".json",disabled:busy,"aria-label":"选择用户 JSON 备份",onChange:e=>choose(e.target.files?.[0])})),
         file&&h("p",{className:"small"},file.name),h("label",{className:"form-label"},"提交人工号",h("input",{"aria-label":"提交人工号",value:source,maxLength:40,disabled:busy,onChange:e=>{setSource(e.target.value);setReview(null);}})),
         h("p",{className:"small muted"},"同一人每次使用相同工号，按来源区分装置。同一时间、分组的重复数据去重，冲突保留现有值；未完成导入的数据集跳过。"),

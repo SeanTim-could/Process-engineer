@@ -21,4 +21,7 @@ const interleaved=rows([1,10,2,20,3,30,4,40]).map((r,i)=>({...r,group:i%2?'B':'A
 const individual=C.prepare(rows([1,null,3,5]),'x',1);near(individual.within,2/1.128);assert.equal(individual.sChart.length,1);
 assert.equal(C.normality([1,2,3]).p,null);assert.equal(C.normality(Array(20).fill(1)).p,null);assert.equal(C.evaluate(C.prepare(rows([2,2,2]),'x',1),0,4).Cpk,null);assert.equal(C.compare(C.prepare(rows([1]),'x',1),C.prepare(rows([2]),'x',1)).mean.p,null);
 assert.throws(()=>C.prepare(rows([1,2]),'x',0));assert.throws(()=>C.prepare(rows([1,2]),'x',1.5));assert.throws(()=>C.evaluate(p,10,0));
+const split=C.splitSequence(rows([1,2,3,100,101,102]),'x',180000);assert.deepEqual(split.stats.map(s=>s.n),[3,3]);assert.deepEqual(split.ranges.filter(r=>r.value!==null).map(r=>r.value),[1,1,1,1]);near(split.stats[0].within,1/1.128);near(split.stats[1].within,1/1.128);
+const splitGap=C.splitSequence(rows([1,2,null,4,5,6]),'x',240000);assert.deepEqual(splitGap.ranges.filter(r=>r.value!==null).map(r=>r.value),[1,1]);
+assert.equal(M.time(M.exactLocal(Date.UTC(2026,9,1,0,0,0,250))),Date.UTC(2026,9,1,0,0,0,250));assert.throws(()=>M.time('2026-02-30T08:00:00.25'));
 console.log('Capability numerics passed: SciPy-referenced Welch/Levene/AD, stable normal tails and inverse Z, pooled c4 correction, 636/10 variable-size subgroups, exact 3-sigma limits, missing/group boundaries, one-sided specs and degenerate data.');

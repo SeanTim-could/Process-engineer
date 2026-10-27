@@ -46,7 +46,7 @@ const site='https://seantim-could.github.io/Process-engineer/';
   await p.getByRole('heading',{name:'登录你的工作台',exact:true}).waitFor();
   assert(await p.getByRole('button',{name:'登录',exact:true}).isEnabled());
   assert.equal(calls.length,0,'Showing the login form must not wait for the account server');
-  assert.equal(await p.getByRole('button',{name:'完整备份',exact:true}).count(),0);
+  assert.equal(await p.getByRole('button',{name:'另存为',exact:true}).count(),0);
   await p.getByRole('textbox',{name:'登录工号',exact:true}).fill('perf');await p.getByLabel('登录密码',{exact:true}).fill('FixturePass1234!');
   await p.getByRole('button',{name:'登录',exact:true}).click();await p.waitForURL('**/workbench.html',{waitUntil:'commit'});
   await p.getByRole('heading',{name:'正在加载工作台…',exact:true}).waitFor();

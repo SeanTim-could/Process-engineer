@@ -26,15 +26,15 @@ async function call(p,url,method='GET',body,ok=true){const value=await p.evaluat
   await p.getByLabel('调整时间（北京时间）',{exact:true}).fill('2026-10-01T09:00');await p.getByLabel('规格下限 LSL',{exact:true}).fill('7');await p.getByLabel('规格上限 USL',{exact:true}).fill('13');
   const samples=await p.locator('[data-stat="n"] td:not([data-side="delta"])').allTextContents();assert.deepEqual(samples,['59','59']);
   const ppk=(await p.locator('[data-stat="Ppk"] td:not([data-side="delta"])').allTextContents()).map(Number);assert(ppk[1]>ppk[0]*4);
-  assert.deepEqual((await p.locator('[data-stat="passRate"] td:not([data-side="delta"])').allTextContents()).map(Number),[100,100]);assert.equal(await p.locator('.capability-workspace .analysis-figure svg').count(),3);
+  assert.deepEqual((await p.locator('[data-stat="passRate"] td:not([data-side="delta"])').allTextContents()).map(Number),[100,100]);assert.equal(await p.locator('.capability-workspace .analysis-figure svg').count(),4);
   await p.screenshot({path:path.join(dir,'capability-desktop.png'),fullPage:true});
   const reportEvent=p.waitForEvent('download');await p.getByRole('button',{name:'导出分析报告',exact:true}).click();const report=await reportEvent;await report.saveAs(path.join(dir,'capability.html'));const reportText=await fs.readFile(path.join(dir,'capability.html'),'utf8');assert(reportText.includes('Ppk'));assert(reportText.includes('09:00'));assert(reportText.includes('标准差（整体）'));assert(reportText.includes('<svg'));
   await p.getByLabel('对比划分方式',{exact:true}).selectOption('periods');for(const [label,value]of [['之前开始','2026-10-01T08:00'],['之前结束','2026-10-01T08:59'],['之后开始','2026-10-01T09:00'],['之后结束','2026-10-01T09:59']])await p.getByLabel(label+'（北京时间）',{exact:true}).fill(value);
   assert.deepEqual(await p.locator('[data-stat="n"] td:not([data-side="delta"])').allTextContents(),['59','59']);
   await p.getByLabel('之后开始（北京时间）',{exact:true}).fill('2026-10-01T08:59');assert((await p.getByRole('alert').allTextContents()).some(s=>s.includes('不能重叠')));
   await p.getByLabel('之后开始（北京时间）',{exact:true}).fill('2026-10-01T09:00');
-  const {lastSavedAt:ignoreSaved,...analyzed}=(await call(p,'/api/offline/backup')).state,{lastSavedAt:ignoreOriginal,...baseline}=original;
-  assert.deepEqual(analyzed,baseline,'analysis and reports must not mutate workspace data');
+  const {lastSavedAt:ignoreSaved,analytics:analysisState,...analyzed}=(await call(p,'/api/offline/backup')).state,{lastSavedAt:ignoreOriginal,analytics:originalAnalysis,...baseline}=original;
+  assert.deepEqual(analyzed,baseline,'analysis and reports must not mutate original data');assert.deepEqual(analysisState.charts,originalAnalysis.charts);assert.equal(analysisState.drafts.capability.workspace.period.mode,'periods');
   await p.getByRole('button',{name:'自由作图',exact:true}).click();await p.getByLabel('图表类型',{exact:true}).waitFor();
   await p.getByLabel('图表标题',{exact:true}).fill('我的质量图');
   for(const type of ['area','bar','scatter','histogram','box','line']){await p.getByLabel('图表类型',{exact:true}).selectOption(type);await p.getByRole('img',{name:'我的质量图',exact:true}).waitFor();assert.equal(await p.getByRole('alert').count(),0,type);}
