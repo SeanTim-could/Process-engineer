@@ -27,6 +27,10 @@ def asset(name,content):
 def build(config_override=None):
     source=ROOT/'启动工程师工作台.html'
     html=source.read_text()
+    analysis_spec=importlib.util.spec_from_file_location('data_analysis_sync',ROOT/'scripts/sync-data-analysis.py')
+    analysis=importlib.util.module_from_spec(analysis_spec)
+    analysis_spec.loader.exec_module(analysis)
+    html=analysis.render(html)
     spec=importlib.util.spec_from_file_location('account_auth_sync',ROOT/'scripts/sync-account-auth.py')
     auth=importlib.util.module_from_spec(spec)
     spec.loader.exec_module(auth)

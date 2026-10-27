@@ -35,7 +35,7 @@ async function daily(p,headers,values){
   const context=await browser.newContext({viewport:{width:1400,height:950},acceptDownloads:true});
   await context.route('https://seantim-could.github.io/Process-engineer/**',r=>r.fulfill({contentType:'text/html; charset=utf-8',body:html}));
   const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(base);
-  await p.getByRole('button',{name:'自动图表',exact:true}).click();
+  await p.getByRole('button',{name:'数据分析',exact:true}).click();await p.getByRole('button',{name:'自动图表',exact:true}).click();
   await p.getByRole('heading',{name:'有时间，就能看见趋势。',exact:true}).waitFor();
   const empty=await p.locator('.auto-empty').innerText();assert(!forbidden.test(empty),empty);
   for(const name of ['生产指标','质量指标','资源消耗','损失分析','统计监测'])assert(empty.includes(name),name);

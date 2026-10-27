@@ -8,6 +8,8 @@ module.exports=async function testMerge(p,call,base,temp){
  const ledger=(unit,columns,values)=>({dataset:{id:'ds_unit_'+unit,name:'历史指标',filename:'fixture.csv',sheet:'全部月份',columns,count:1,expectedCount:1,unitIds:[unit],groups:['P'],start:time,end:time,createdAt:'2026-10-01T00:00:00.000Z',updatedAt:'2026-10-01T00:00:00.000Z',status:'ready',role:'ledger'},points:[{unit,time,group:'P',values}]});
  const own=copy(base);own.state.datasets.ds_unit_mmp2=ledger('mmp2',[col('c_1','管理员指标')],{c_1:999});
  assert((await call('/api/offline/restore','POST',own)).ok);
+ // Settle the real application's pending view save before comparing revisions.
+ await p.getByRole('button',{name:'保存到本机',exact:true}).click();await p.getByText('数据、指标配置、本月关注和月报均已保存到本机。',{exact:true}).waitFor();
  const before=(await call('/api/offline/backup')).data;
  const source=copy(base),s=source.state,unit=copy(s.settings.units[0]);
  s.profile={...s.profile,name:'提交人甲',employeeId:'e001',theme:'ocean'};
@@ -45,6 +47,7 @@ module.exports=async function testMerge(p,call,base,temp){
  const aId='ds_unit_'+a.id,bId='ds_unit_'+b.id,metric=merged.state.settings.customMetrics.find(m=>m.label==='自定义量');
  assert.deepEqual(merged.state.datasets.ds_unit_mmp2,before.state.datasets.ds_unit_mmp2);
  assert.deepEqual(merged.state.profile,before.state.profile);assert.deepEqual(merged.state.fileLinks,before.state.fileLinks);assert.deepEqual(merged.state.comparison,before.state.comparison);assert.deepEqual(merged.state.view,before.state.view);
+ assert.deepEqual(merged.state.analytics,before.state.analytics,'additive data imports preserve the administrator’s chart workspace');
  assert.equal(merged.state.focusNotes['mmp2:2026-10'].text,'管理员自己的记录');assert.equal(merged.state.focusNotes[a.id+':2026-10'].text,'用户关注');
  assert.equal(merged.state.datasets[aId].points[0].values.c_2,30);
  assert.equal(merged.state.datasets[aId].dataset.columns[1].formula.bindings['远端'].datasetId,bId);
@@ -52,7 +55,7 @@ module.exports=async function testMerge(p,call,base,temp){
  assert.equal(merged.state.datasets[aId].dataset.columns[2].formula.matching.anchor.unitId,b.id);
  assert.equal(merged.state.datasets[aId].points.find(p=>p.time===time+300000).values.c_3,5);
  const archive=Object.values(merged.state.datasets).find(e=>e.dataset.role==='archive');assert(archive);assert.deepEqual(archive.dataset.mergedInto,[aId]);
- assert.equal(merged.state.records[0].extras[metric.id],3);assert.equal(a.targets[metric.id],100);assert.equal(metric.unit,'t','a device ID matching a physical unit must not rewrite that physical unit');
+ assert.equal(merged.state.records.find(r=>r.unit===a.id).extras[metric.id],3);assert.equal(a.targets[metric.id],100);assert.equal(metric.unit,'t','a device ID matching a physical unit must not rewrite that physical unit');
  assert(merged.state.settings.units.find(u=>u.id==='mmp2').hiddenMetrics.includes(metric.id),'source-specific daily metrics stay hidden in the administrator’s original unit');
  assert.equal(merged.state.reports[0].id,a.id+':2026-10');assert.equal(merged.state.reports[0].current.metrics[metric.id],3);
  assert.equal(merged.state.metricReports[0].sourceId,aId);assert.equal(merged.state.metricReports[0].points[0].unit,a.id);
@@ -65,7 +68,7 @@ module.exports=async function testMerge(p,call,base,temp){
  incremental.state.records[0].feed=500;incremental.state.focusNotes['mmp2:2026-10'].text='修改后的关注';
  const delta=await review(incremental);assert(delta.stats.conflicts>=3);assert.equal(delta.stats.points,1);await commit(delta);
  merged=(await call('/api/offline/backup')).data;
- assert.equal(merged.state.datasets[aId].points[0].values.c_1,10);assert.equal(merged.state.datasets[aId].points[1].values.c_1,11);assert.equal(merged.state.datasets[aId].points[1].values.c_2,31);assert.equal(merged.state.records[0].feed,100);assert.equal(merged.state.focusNotes[a.id+':2026-10'].text,'用户关注');
+ assert.equal(merged.state.datasets[aId].points[0].values.c_1,10);assert.equal(merged.state.datasets[aId].points[1].values.c_1,11);assert.equal(merged.state.datasets[aId].points[1].values.c_2,31);assert.equal(merged.state.records.find(r=>r.unit===a.id).feed,100);assert.equal(merged.state.focusNotes[a.id+':2026-10'].text,'用户关注');
  // Another person with the same default device IDs must be isolated.
  await commit(await review(source,'e002'));let now=(await call('/api/offline/backup')).data;
  assert.equal(now.state.settings.units.length,5);assert.equal(Object.keys(now.state.datasets).length,7);assert.equal(now.state.datasets.ds_unit_mmp2.points[0].values.c_1,999);

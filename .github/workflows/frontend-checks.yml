@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -11,6 +11,9 @@ on:
       - 'scripts/sync-account-auth.py'
       - 'scripts/test-managed-accounts.cjs'
       - 'scripts/test-backup-merge.cjs'
+      - 'scripts/sync-data-analysis.py'
+      - 'scripts/test-analysis-math.cjs'
+      - 'scripts/test-data-analysis.cjs'
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
@@ -28,6 +31,9 @@ on:
       - 'scripts/sync-account-auth.py'
       - 'scripts/test-managed-accounts.cjs'
       - 'scripts/test-backup-merge.cjs'
+      - 'scripts/sync-data-analysis.py'
+      - 'scripts/test-analysis-math.cjs'
+      - 'scripts/test-data-analysis.cjs'
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
@@ -55,11 +61,16 @@ jobs:
         run: |
           python3 scripts/sync-cross-unit-calculations.py
           python3 scripts/sync-account-auth.py
+          python3 scripts/sync-data-analysis.py
           python3 scripts/build-web.py
           git diff --exit-code -- '*.html' assets
           node --check frontend/cross-unit-calculations.js
           node --check frontend/account-auth.js
           node --check frontend/backup-merge.js
+          node --check frontend/analysis-math.js
+          node --check frontend/analysis-plots.js
+          node --check frontend/data-analysis.js
+          node scripts/test-analysis-math.cjs
           python3 scripts/test-auth-config.py
       - name: Check account service types
         run: npx --yes deno@2.9.6 check supabase/functions/workbench-accounts/index.ts
@@ -78,3 +89,4 @@ jobs:
           node scripts/test-managed-accounts.cjs
           node scripts/test-web-entry.cjs
           node scripts/test-general-labels.cjs
+          node scripts/test-data-analysis.cjs

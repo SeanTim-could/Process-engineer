@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict');
+const M=require('../frontend/analysis-math.js');
+const near=(actual,expected,tol=1e-10)=>assert(Math.abs(actual-expected)<tol,`${actual} != ${expected}`);
+const rows=values=>values.map((v,i)=>({time:Date.UTC(2026,0,1,0,i),group:'A',values:{x:v}}));
+// Hand-calculated sample variance: sum((x-3)^2)/(5-1) = 2.5.
+const c=M.capability(rows([1,2,3,4,5]),'x',0,6);
+near(c.mean,3);near(c.sd,Math.sqrt(2.5));near(c.within,1/1.128);near(c.Cp,1.128);near(c.Cpk,1.128);near(c.Pp,1/Math.sqrt(2.5));near(c.Ppk,1/Math.sqrt(2.5));near(c.passRate,100);
+const shifted=M.capability(rows([7,8,9,10,11]),'x',0,6);assert(shifted.Cpk<0);assert.equal(shifted.outside,5);assert.equal(shifted.passRate,0);
+assert.equal(M.capability(rows([1,2,3]),'x',null,6).Cp,null);assert.notEqual(M.capability(rows([1,2,3]),'x',null,6).Cpk,null);
+assert.equal(M.capability(rows([1]),'x',0,6).Cpk,null);assert.equal(M.capability(rows([2,2,2]),'x',0,6).Cpk,null);assert.equal(M.capability(rows([null,undefined]),'x',0,6).mean,null);
+const gap=M.capability(rows([1,null,3,5]),'x',0,6);assert.equal(gap.missing,1);assert.equal(gap.movingRangeCount,1);near(gap.mrbar,2);
+const groups=rows([1,100,3,104]).map((r,i)=>({...r,group:i%2?'B':'A'}));assert.deepEqual(M.movingRanges(groups,'x').map(r=>r.values.range),[2,4]);
+const sparse=rows([1,2,3]);sparse[1].values={other:20};assert.equal(M.capability(sparse,'x').missing,0);assert.equal(M.movingRanges(sparse,'x')[0].values.range,2);
+near(M.normalCDF(0),.5,1e-8);near(M.normalCDF(1.959963984540054),.975,1e-7);near(M.normalCDF(-1.959963984540054),.025,1e-7);
+for(const values of [[1,2,3,4,5,5],[0,0,0],[-10,0,10,null]])assert.equal(M.histogram(values).reduce((n,b)=>n+b.count,0),values.filter(M.finite).length);
+const box=M.boxes([1,2,3,4,100]);assert.equal(box.median,3);assert.equal(box.low,1);assert.equal(box.high,4);assert.deepEqual(box.outliers,[100]);
+assert.equal(M.time('2026-10-01T08:00'),Date.UTC(2026,9,1,0));assert.throws(()=>M.time('2026-02-30T08:00'));
+const timed=rows([1,2,3]);assert.equal(M.select(timed,{group:'A',from:'2026-01-01T08:00',to:'2026-01-01T08:01'}).length,2);
+assert.equal(M.select(timed,{group:'*',allGroups:false,from:'',to:''}).length,0);assert.equal(M.select(timed,{group:'*',allGroups:true,from:'',to:''}).length,3);
+const parts=M.periods(timed,{mode:'split',split:'2026-01-01T08:01'});assert.equal(parts.before.length,1);assert.equal(parts.after.length,2);
+assert.throws(()=>M.periods(timed,{mode:'periods',beforeFrom:'2026-01-01T08:00',beforeTo:'2026-01-01T08:01',afterFrom:'2026-01-01T08:01',afterTo:'2026-01-01T08:02'}));
+assert.throws(()=>M.limits(5,5));assert.throws(()=>M.limits('invalid',10));
+assert.equal(M.aggregate(timed,['x'],'day','mean')[0].values.x,2);assert.equal(M.aggregate(timed,['x'],'day','sum')[0].values.x,6);
+console.log('Analysis numerics passed: independent variance/capability references, one-sided and negative capability, missing/constant samples, within-group MR, normal tails, bins/box outliers and Beijing-time boundaries.');
