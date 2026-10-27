@@ -73,6 +73,10 @@ def render(html):
         if js.count(marker)!=1:raise ValueError('Formula textarea marker missing')
         js=js.replace(marker,marker+',(0,xe.jsx)(FormulaSyntax.Assistance,{value:j,inputRef:ie,onChange:value=>{H(value),Ke()}})')
 
+    # Connect manual exclusions in display series without changing statistics.
+    hook('function UE(e,t,r,a,n){let i=WK(GK(e,t,r,a,n)),', 'function UE(e,t,r,a,n){let i=AnalysisPointMath.plotSeries(WK(GK(e,t,r,a,n)),e,t,a,n),')
+    hook('value:jm([b],d,t)})),h=t.targets[d.id]', 'value:jm([b],d,t)}));m=PointExclusions.rawChartData(m,e,d,t);let h=t.targets[d.id]')
+
     html=html[:match.start(2)]+base64.b64encode(js.encode()).decode()+html[match.end(2):]
     css='<style id="data-analysis-style">\n'+(ROOT/'frontend/data-analysis.css').read_text().rstrip()+'\n</style>'
     if 'id="data-analysis-style"' in html:html=re.sub(r'<style id="data-analysis-style">.*?</style>',lambda _:css,html,flags=re.S)

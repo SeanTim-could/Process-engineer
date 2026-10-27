@@ -58,7 +58,7 @@ var CapabilityMath = (() => {
     const ranges=M.movingRanges(samples,key),mr=M.summarize(ranges.map(r=>r.values.range));
     const within=size===1?(mr.n?mr.mean/1.128:null):df>0?Math.sqrt(ss/df)/c4(df+1):null;
     const controlMean=size===1?stats.mean:groups.length?groups.reduce((sum,g)=>sum+g.mean*g.n,0)/groups.reduce((n,g)=>n+g.n,0):null;
-    const xChart=size===1?samples.map((r,i)=>({index:i+1,group:r.group,time:r.time,value:r.values[key],center:stats.mean,lower:within>0?stats.mean-3*within:null,upper:within>0?stats.mean+3*within:null})):groups.map(g=>({...g,value:g.mean,center:controlMean,lower:within!==null?controlMean-3*within/Math.sqrt(g.n):null,upper:within!==null?controlMean+3*within/Math.sqrt(g.n):null}));
+    const xChart=size===1?samples.map((r,i)=>({index:i+1,group:r.group,time:r.time,value:r.values[key],excluded:M.excluded(r,key),center:stats.mean,lower:within>0?stats.mean-3*within:null,upper:within>0?stats.mean+3*within:null})):groups.map(g=>({...g,value:g.mean,center:controlMean,lower:within!==null?controlMean-3*within/Math.sqrt(g.n):null,upper:within!==null?controlMean+3*within/Math.sqrt(g.n):null}));
     const sChart=size===1?ranges.map((r,i)=>({index:i+1,group:r.group,time:r.time,value:r.values.range,center:mr.mean,lower:0,upper:mr.mean===null?null:3.267*mr.mean})):groups.map(g=>{const center=within===null?null:within*c4(g.n),spread=within===null?null:within*Math.sqrt(Math.max(0,1-c4(g.n)**2));return {...g,value:g.sd,center,lower:spread===null?null:Math.max(0,center-3*spread),upper:spread===null?null:center+3*spread};});
     const flag=arr=>arr.map(p=>({...p,signal:finite(p.value)&&finite(p.lower)&&finite(p.upper)&&(p.value<p.lower||p.value>p.upper)}));
     return {values:values.filter(finite),stats,within:safe(within),size,groups,invalidGroups,unassigned,df,mrbar:mr.mean,movingRangeCount:mr.n,xChart:flag(xChart),sChart:flag(sChart),normality:normality(values)};
@@ -86,7 +86,7 @@ var CapabilityMath = (() => {
     const ordered=rows.filter(r=>Object.hasOwn(r.values,key)).sort((a,b)=>a.time-b.time),state=[0,1].map(()=>({n:0,mean:0,mrMean:0,rangeCount:0,previous:new Map()})),points=[],ranges=[];
     for(const row of ordered){const phase=row.time<cut?0:1,s=state[phase],value=row.values[key],previous=s.previous.get(row.group);let range=null;
       if(finite(value)){s.n++;s.mean+=(value-s.mean)/s.n;if(previous&&finite(previous.values[key])){range=Math.abs(value-previous.values[key]);s.rangeCount++;s.mrMean+=(range-s.mrMean)/s.rangeCount;}}
-      s.previous.set(row.group,row);points.push({...row,phase,value:finite(value)?value:null});ranges.push({...row,phase,value:range});
+      s.previous.set(row.group,row);points.push({...row,phase,value:finite(value)?value:null,excluded:M.excluded(row,key)});ranges.push({...row,phase,value:range,excluded:M.excluded(row,key)||finite(value)&&previous&&M.excluded(previous,key)});
     }
     const stats=state.map(s=>{const within=s.rangeCount?s.mrMean/1.128:null;return {n:s.n,mean:s.n?s.mean:null,mrMean:s.rangeCount?s.mrMean:null,rangeCount:s.rangeCount,within,lower:s.n&&within>0?s.mean-3*within:null,upper:s.n&&within>0?s.mean+3*within:null,mrUpper:s.rangeCount?s.mrMean*3.267:null};});
     return {points,ranges,stats};

@@ -6,7 +6,7 @@ var CapabilitySplitChart = (() => {
   const text=(x,y,value,props={})=>h("text",{x,y,fill:"#526a7b",fontSize:13,...props},String(value));
   function drawSeries(data,xs,ys){const elements=[];let bucketId=0;const groups=new Map();for(const row of data){const id=JSON.stringify([row.phase,row.group]);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(row);}
     for(const points of groups.values()){
-      let segment=0;const tagged=points.map(p=>{if(!M.finite(p.value))segment++;return {...p,segment};}),step=Math.max(1,Math.ceil(tagged.length/600)),selected=[];
+      let segment=0;const tagged=points.filter(p=>!p.excluded).map(p=>{if(!M.finite(p.value))segment++;return {...p,segment};}),step=Math.max(1,Math.ceil(tagged.length/600)),selected=[];
       for(let i=0;i<tagged.length;i+=step){const b=tagged.slice(i,i+step).filter(p=>M.finite(p.value));if(!b.length)continue;selected.push(...[...new Set([b[0],b.at(-1),b.reduce((a,b)=>a.value<b.value?a:b),b.reduce((a,b)=>a.value>b.value?a:b)])].sort((a,b)=>a.time-b.time));}
       let d="",last=null;for(const p of selected){d+=last===p.segment?` L${xs(p.time)} ${ys(p.value)}`:` M${xs(p.time)} ${ys(p.value)}`;last=p.segment;}
       const color=points[0].phase?"#078a9b":"#477be3";elements.push(h("path",{key:"line"+bucketId++,d,stroke:color,strokeWidth:1.6,fill:"none"}));
@@ -38,7 +38,7 @@ var CapabilitySplitChart = (() => {
         h("rect",{width:W,height:H,fill:"white"}),text(W/2,25,"I-MR 前后对比 · "+column.label,{textAnchor:"middle",fontSize:18,fontWeight:600}),text(L,49,"之前 · n="+all.stats[0].n,{fill:"#477be3"}),text(E,49,"之后 · n="+all.stats[1].n,{fill:"#078a9b",textAnchor:"end"}),panel(false),panel(true),
         h("g",{role:canDrag?"slider":undefined,tabIndex:canDrag?0:undefined,"aria-label":canDrag?"前后分界线":undefined,"aria-orientation":"horizontal","aria-valuemin":candidates[0],"aria-valuemax":candidates.at(-1),"aria-valuenow":handleValue??undefined,"aria-valuetext":interactive?M.exactLocal(cut).replace("T"," ")+"（北京时间）":"两组分界",onKeyDown:keyDown},
           h("line",{x1:divider,x2:divider,y1:T-12,y2:BOTTOM+2,stroke:"#9565c9",strokeDasharray:"7 5",strokeWidth:2}),h("circle",{cx:divider,cy:T-13,r:8,fill:"#9565c9"}),canDrag&&h("rect",{"data-split-handle":"true",x:divider-15,y:T-27,width:30,height:BOTTOM-T+32,fill:"transparent",style:{cursor:"ew-resize",touchAction:"none"},onPointerDown:event=>{event.preventDefault();svgRef.current.setPointerCapture(event.pointerId);drag.current={time:nearest(cut)};event.currentTarget.parentNode.focus({preventScroll:true});move(event);}})),
-        text(W/2,615,interactive?"分界："+M.exactLocal(cut).replace("T"," ")+"（北京时间）；分界时刻归入之后":"采样顺序（两组分别按各自时间排序）",{textAnchor:"middle",fontSize:13}),text(W/2,640,"I-MR固定使用个体值；各组分别估计控制限，MR不跨越前后分界或缺失读数。统计使用全部样本。",{textAnchor:"middle",fontSize:12,fill:"#7c8e9a"}))),h("p",{className:"small muted"},"此图固定使用个体值 I-MR，不改变三份报告中的子组大小。虚线只改变前后划分，原始数据保持不变。"));
+        text(W/2,615,interactive?"分界："+M.exactLocal(cut).replace("T"," ")+"（北京时间）；分界时刻归入之后":"采样顺序（两组分别按各自时间排序）",{textAnchor:"middle",fontSize:13}),text(W/2,640,"I-MR固定使用个体值；各组分别估计控制限，MR不跨越前后分界或缺失读数。统计使用全部样本。",{textAnchor:"middle",fontSize:12,fill:"#7c8e9a"}))),h("p",{className:"small muted"},"此图固定使用个体值 I-MR，不改变三份报告中的子组大小。虚线只改变前后划分；曲线跨过手动排除点连线，不补值，原始数据保持不变。"));
   }
   return {Chart};
 })();

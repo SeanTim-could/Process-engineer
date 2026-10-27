@@ -23,6 +23,21 @@ var AnalysisPointMath = (() => {
       return values?{...row,values,excludedValues:excluded}:row;
     });
   }
-  return {identity,observation,normalize,apply};
+  // Rendering only: omit empty display buckets caused solely by manual exclusions.
+  // Missing source readings remain in the series to break the line as before.
+  function plotSeries(data,rows,column,period="raw",range) {
+    const bucket=time=>period==="raw"||column.aggregation==="none"?time:new Date(time+28800000).toISOString().slice(0,period==="month"?7:10),groups=new Map();
+    for(const row of rows){
+      if(!Object.hasOwn(row.values,column.key)||range&&(row.time<range.from||row.time>=range.to))continue;
+      const id=bucket(row.time),state=groups.get(id)??{excluded:false,missing:false};
+      if(!Number.isFinite(row.values[column.key])){
+        if(Number.isFinite(row.excludedValues?.[column.key]))state.excluded=true;
+        else state.missing=true;
+      }
+      groups.set(id,state);
+    }
+    return data.filter(point=>{const state=groups.get(bucket(point.time));return point.value!==null||!state?.excluded||state.missing;});
+  }
+  return {identity,observation,normalize,apply,plotSeries};
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=AnalysisPointMath;

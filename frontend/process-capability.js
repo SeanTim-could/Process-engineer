@@ -16,7 +16,7 @@ var ProcessCapability = (() => {
         h("p",{className:"small muted","data-process-normality":"true"},normality.p===null?"正态性检验："+normality.reason:`Anderson–Darling 正态性检验：A²=${P.format(normality.A2)}，P=${normality.p<.0001?"< 0.0001":P.format(normality.p)}。`),
         (normality.p!==null&&normality.p<.05)&&h("p",{className:"analysis-notice"},"正态性检验未通过（P < 0.05），正态预测超规格比例和能力指数仅供参考，请同时查看实际观测超规格比例。"),
         h("p",{className:"small muted"},`组内估计采用 ${prepared.value.size===1?prepared.value.movingRangeCount+" 对相邻读数":prepared.value.groups.length+" 个有效子组"}；无效子组 ${prepared.value.invalidGroups} 个。少于2个有效值或零波动时，相应指数显示“—”。`),
-        h("p",{className:"analysis-method small"},"能力指数应结合过程稳定性、独立性和分布形态解释。控制限反映过程波动，规格限反映要求；两者用途不同。排除读数在时序中保留缺口，移动极差不跨越缺口。"))),
+        h("p",{className:"analysis-method small"},"能力指数应结合过程稳定性、独立性和分布形态解释。控制限反映过程波动，规格限反映要求；两者用途不同。图形跨过手动排除点连线，但不补值；移动极差估计仍不跨越被排除的读数。"))),
       result&&h(P.Figure,{config:{...config,keys:[column.key],type:"histogram",normalized:false,title:"过程能力分布 · "+column.label},rows,columns:[column],references:[{label:"LSL",value:result.lsl},{label:"USL",value:result.usl}],normalCurves:[{mean:result.mean,sd:result.sd,label:"整体正态拟合",color:"#c94343"},{mean:result.mean,sd:result.within,label:"组内正态拟合",color:"#727b8c",dashed:true}],subtitle:"直方图使用全部有效读数；实线为整体拟合，虚线为组内拟合。"}));
   }
   return {Panel};

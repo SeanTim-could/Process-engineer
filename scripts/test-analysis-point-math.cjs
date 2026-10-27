@@ -7,3 +7,13 @@ for(const bad of [[point,point],[{...point,value:Infinity}],[{...point,sourceId:
 assert.equal(F.normalize('（[流量（校正）] ＋ 2） × （3－1） ÷ 2'),'([流量（校正）] + 2) * (3-1) / 2');
 assert.equal(F.normalize('IF（[项]]目（A）]>0，ABS（-2），0）'),'IF([项]]目（A）]>0,ABS(-2),0)');
 console.log('Point exclusions passed: metric/source/group/value identities, immutable originals, MR breaks, stale values and punctuation-safe bracket normalization.');
+// Display skips only manual exclusions, preserving real missing data and statistics.
+const plotted=masked.map(row=>({time:row.time,value:row.values.c_1}));
+assert.deepEqual(A.plotSeries(plotted,masked,{key:'c_1'},'raw').map(p=>p.value),[1,2,3,4]);
+const mixed=masked.map((row,i)=>i===3?{...row,values:{...row.values,c_1:null}}:row);
+assert.deepEqual(A.plotSeries(mixed.map(row=>({time:row.time,value:row.values.c_1})),mixed,{key:'c_1'},'raw').map(p=>p.value),[1,2,null,4]);
+assert.equal(M.movingRanges(masked,'c_1').length,2,'display continuity must not change MR pairs');
+const day=Date.parse('2026-10-01T00:00:00+08:00'),daily=[{...masked[2],time:day+60000},{...mixed[3],time:day+120000}];
+assert.equal(A.plotSeries([{time:day,value:null}],daily.slice(0,1),{key:'c_1'},'day').length,0);
+assert.equal(A.plotSeries([{time:day,value:null}],daily,{key:'c_1'},'day').length,1,'a bucket with genuine missing values must remain a gap');
+console.log('Display continuity passed: excluded samples skipped; genuine gaps, bucket boundaries and MR statistics preserved.');

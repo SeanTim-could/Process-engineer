@@ -1,6 +1,7 @@
 // Pure statistics shared by the browser and independent numerical checks.
 var AnalysisMath = (() => {
   const finite=v=>typeof v==="number"&&Number.isFinite(v);
+  const excluded=(row,key)=>!finite(row.values[key])&&finite(row.excludedValues?.[key]);
   const safe=v=>Number.isFinite(v)?v:null;
   const quantile=(sorted,p)=>{if(!sorted.length)return null;const x=(sorted.length-1)*p,i=Math.floor(x);return sorted[i]+(sorted[Math.min(i+1,sorted.length-1)]-sorted[i])*(x-i);};
   function summarize(values){
@@ -96,6 +97,6 @@ var AnalysisMath = (() => {
     }
     return [...groups.values()].map(g=>({...g,values:Object.fromEntries(keys.map(key=>{const values=g.values[key],s=summarize(values);return [key,method==="sum"&&values.length?safe(values.reduce((a,b)=>a+b,0)):s.mean];}))}));
   }
-  return {finite,safe,summarize,quantile,movingRanges,normalCDF,limits,capability,histogram,time,local,select,periods,boxes,aggregate,exactLocal};
+  return {finite,excluded,safe,summarize,quantile,movingRanges,normalCDF,limits,capability,histogram,time,local,select,periods,boxes,aggregate,exactLocal};
 })();
 if(typeof module!=="undefined"&&module.exports)module.exports=AnalysisMath;

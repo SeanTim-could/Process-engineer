@@ -12,6 +12,12 @@ var PointExclusions = (() => {
     const ids=new Set(points.map(A.identity));return records.filter(row=>!ids.has(A.identity({sourceId:"raw:"+unit.id,unit:row.unit,time:St(row.date),group:"",key:metric.id,value:jmCore([row],metric,unit)})));
   }
   const original=row=>row.excludedValues?{...row,values:{...row.values,...row.excludedValues}}:row;
+  function rawChartData(data,records,metric,unit){
+    const points=entry().points.filter(p=>p.sourceId==="raw:"+unit.id&&p.key===metric.id);if(!points.length)return data;
+    const ids=new Set(points.map(A.identity)),omitted=new Set();
+    for(const row of records)if(ids.has(A.identity({sourceId:"raw:"+unit.id,unit:row.unit,time:St(row.date),group:"",key:metric.id,value:jmCore([row],metric,unit)})))omitted.add(row.date);
+    return omitted.size?data.filter(point=>point.value!==null||!omitted.has(point.full)):data;
+  }
   const recordView=records=>entry().points.some(p=>p.sourceId.startsWith("raw:"))?[...records]:records;
   async function api(url,method="GET",body){const response=await T0(url,{method,headers:body?{"Content-Type":"application/json"}:undefined,body:body?JSON.stringify(body):undefined}),data=await response.json();if(!response.ok)throw new Error(data.error);return data;}
   function Tools({sourceId,keys,group,allGroups=true,from="",to="",queries,title="",disabled=false}){
@@ -46,5 +52,5 @@ var PointExclusions = (() => {
       h("div",{className:"button-row point-editor-footer"},h("button",{className:"button",disabled:busy||current<=1,onClick:()=>setPage(current-1)},"上一页"),h("span",null,`${current} / ${pages} 页 · ${candidates.length} 个读数`),h("button",{className:"button",disabled:busy||current>=pages,onClick:()=>setPage(current+1)},"下一页"),h("button",{className:"button",disabled:busy||!selected.size,onClick:()=>setSelected(new Map())},"清空选择"),h("button",{className:"button primary",disabled:busy||!selected.size,onClick:commit},restoring?"确认恢复所选点":"确认删除所选点"))));
   }
   function LegacyTools({url,title}){let query;try{const u=new URL(url,"http://offline.local"),p=u.searchParams;query={sourceId:p.get("id"),keys:[p.get("column")],group:p.get("group")??"",allGroups:!p.has("group"),from:(p.get("from")??"").replace(" ","T"),to:(p.get("to")??"").replace(" ","T")};}catch{return null;}return query.sourceId?h(Tools,{...query,title}):null;}
-  return {seed,useVersion,apply,filterRecords,recordView,original,Tools,LegacyTools};
+  return {seed,useVersion,apply,filterRecords,recordView,rawChartData,original,Tools,LegacyTools};
 })();

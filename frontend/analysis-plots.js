@@ -11,7 +11,7 @@ var AnalysisPlots = (() => {
   function thin(rows,key){
     // Keep extrema and original gap identities, so sampling cannot bridge a
     // missing reading. No sampling is used by summaries, histograms or exports.
-    let segment=0;const tagged=rows.map(row=>{if(!M.finite(row.values[key]))segment++;return {row,segment};}),result=[];
+    let segment=0;const tagged=rows.filter(row=>!M.excluded(row,key)).map(row=>{if(!M.finite(row.values[key]))segment++;return {row,segment};}),result=[];
     const size=Math.max(1,Math.ceil(rows.length/600));
     for(let i=0;i<tagged.length;i+=size){const bucket=tagged.slice(i,i+size).filter(p=>M.finite(p.row.values[key]));if(!bucket.length)continue;
       const lo=bucket.reduce((a,b)=>a.row.values[key]<b.row.values[key]?a:b),hi=bucket.reduce((a,b)=>a.row.values[key]>b.row.values[key]?a:b);
