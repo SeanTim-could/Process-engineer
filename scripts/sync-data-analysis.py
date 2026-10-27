@@ -11,7 +11,7 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['analysis-math.js','analysis-plots.js','data-analysis.js'])
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['analysis-math.js','analysis-plots.js','capability-math.js','capability-reports.js','data-analysis.js'])
     block=START+'\n'+code+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]

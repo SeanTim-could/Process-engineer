@@ -96,11 +96,11 @@ var AnalysisPlots = (() => {
   async function saveSvg(svg,title,png=false){
     if(!svg)throw new Error("请先生成有效图表。");
     const clone=svg.cloneNode(true),label=document.createElementNS("http://www.w3.org/2000/svg","text");
-    label.setAttribute("x","500");label.setAttribute("y","21");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","16");label.setAttribute("fill","#244252");label.textContent=title;clone.appendChild(label);
+    label.setAttribute("x","500");label.setAttribute("y","21");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","16");label.setAttribute("fill","#244252");label.textContent=title;if(!svg.hasAttribute("data-complete-report"))clone.appendChild(label);
     const source=new XMLSerializer().serializeToString(clone);
     if(!png){download(source,title+".svg","image/svg+xml;charset=utf-8");return;}
     const url=URL.createObjectURL(new Blob([source],{type:"image/svg+xml;charset=utf-8"}));
-    try{await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{try{const canvas=document.createElement("canvas");canvas.width=2000;canvas.height=920;canvas.getContext("2d").drawImage(img,0,0,2000,920);canvas.toBlob(blob=>{if(!blob){reject(new Error("图片导出失败。"));return;}download(blob,title+".png","image/png");resolve();},"image/png");}catch(e){reject(e);}};img.onerror=()=>reject(new Error("图表图片生成失败，请尝试导出 SVG。"));img.src=url;});}finally{URL.revokeObjectURL(url);}
+    try{await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{try{const canvas=document.createElement("canvas");const box=svg.viewBox.baseVal;canvas.width=(box.width||1000)*2;canvas.height=(box.height||460)*2;canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>{if(!blob){reject(new Error("图片导出失败。"));return;}download(blob,title+".png","image/png");resolve();},"image/png");}catch(e){reject(e);}};img.onerror=()=>reject(new Error("图表图片生成失败，请尝试导出 SVG。"));img.src=url;});}finally{URL.revokeObjectURL(url);}
   }
   class Boundary extends R.Component{constructor(props){super(props);this.state={error:null};}static getDerivedStateFromError(error){return {error};}componentDidUpdate(old){if(old.signature!==this.props.signature&&this.state.error)this.setState({error:null});}render(){return this.state.error?h("p",{role:"alert",className:"error-banner"},this.state.error.message):this.props.children;}}
   function Figure(props){const ref=R.useRef(null),[error,setError]=R.useState("");const title=props.config.title||types[props.config.type];
