@@ -11,7 +11,7 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['analysis-math.js','analysis-plots.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','data-analysis.js'])
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['analysis-math.js','analysis-point-math.js','formula-syntax.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','data-analysis.js'])
     block=START+'\n'+code+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]
@@ -32,6 +32,47 @@ def render(html):
         end=js.index('(0,B.jsxs)("div",{className:"sidebar-bottom"',start)
         js=js[:start]+'(0,B.jsx)(DataAnalysis.Nav,{items:w$,current:c,onSelect:Fi,reportCount:vt?g.length+t.metricReports.length:0}),'+js[end:]
         replace('$e&&c==="lims"&&(0,B.jsx)(NN,', '["timeseries","capability","plotting"].includes(c)&&(0,B.jsx)(DataAnalysis.Page,{mode:c,refreshKey:Sr,onImport:()=>{He(null),z(!0)}},c),$e&&c==="lims"&&(0,B.jsx)(NN,')
+
+    # Guarded upgrades of the original bundle: keep source records and formula
+    # inputs intact, mask only chart/summary views, and refresh existing hooks.
+    def hook(old,new):
+        nonlocal js
+        if new in js:return
+        if old not in js:
+            if new not in js:raise ValueError('Enhancement integration marker missing: '+old[:90])
+            return
+        if js.count(old)!=1:raise ValueError('Ambiguous enhancement marker: '+old[:90])
+        js=js.replace(old,new)
+    hook('function l3(e){let t=e.trim()', 'function l3(e){let t=FormulaSyntax.normalize(e).trim()')
+    hook('function jm(e,t,r){if(!e.length)', 'function jm(e,t,r){return jmCore(typeof PointExclusions!=="undefined"?PointExclusions.filterRecords(e,t,r):e,t,r)}function jmCore(e,t,r){if(!e.length)')
+    hook('VG(t.state);Eu.profile=', 'VG(t.state);PointExclusions.seed(t.state.analytics);Eu.profile=')
+    hook('await ZG(n.state,t.revision);if(r.pathname', 'await ZG(n.state,t.revision);PointExclusions.seed(n.state.analytics);if(r.pathname')
+    hook('function B1(e="production"){let[t,r]', 'function B1(e="production"){let pointVersion=PointExclusions.useVersion();let[t,r]')
+    hook('()=>I.abort()},[S?.id,p]);', '()=>I.abort()},[S?.id,p,pointVersion]);')
+    hook('onDatasetChange:u,onChanged:c}){let[f,d]', 'onDatasetChange:u,onChanged:c}){let pointVersion=PointExclusions.useVersion();let[f,d]')
+    hook('[p,r,v,ne?.id,e]),He=', '[p,r,v,ne?.id,e,pointVersion]),He=')
+    hook('s),u=l.dataset,c=l.points,f=t.get("from")', 's),u=l.dataset,c=t.get("format")==="csv"?l.points.map(PointExclusions.original):PointExclusions.apply(o.id,l.points),f=t.get("from")')
+    hook('function zN(){let e=Lu()', 'function zN(){PointExclusions.useVersion();let e=Lu()')
+    hook('Vt=vt?h:Q,lt=', 'Vt=vt?PointExclusions.recordView(h):Q,lt=')
+    start=js.index('function to(e,t)');end=js.index('function C1(',start)
+    segment=js[start:end]
+    if 'PointExclusions.apply' not in segment:
+        if segment.count('points:n}')!=1:raise ValueError('Scoped series points marker missing')
+        js=js[:start]+segment.replace('points:n}','points:PointExclusions.apply(e.dataset.id,n)}')+js[end:]
+    hook('connectMissing:connectMissing=!1}){let l=a??r,', 'connectMissing:connectMissing=!1}){PointExclusions.useVersion();let pointSource=new URL(o,"http://offline.local").searchParams.get("id");r=PointExclusions.apply(pointSource,r);a=a?PointExclusions.apply(pointSource,a):a;let l=a??r,')
+    hook('className:"panel auto-chart-card","data-column-key":e.key,children:[', 'className:"panel auto-chart-card","data-column-key":e.key,children:[(0,ue.jsx)(PointExclusions.LegacyTools,{url:o,title:e.label}),')
+    start=js.index('function S$({');end=js.index('function ',start+15)
+    segment=js[start:end]
+    if 'PointExclusions.Tools' not in segment:
+        marker='className:"panel chart-panel",children:['
+        if segment.count(marker)!=1:raise ValueError('Daily chart toolbar marker missing')
+        replacement=marker+'(0,B.jsx)(PointExclusions.Tools,{sourceId:"raw:"+t.id,keys:[d.id],allGroups:true,from:c??"",to:f??"",title:d.label}),'
+        js=js[:start]+segment.replace(marker,replacement)+js[end:]
+    marker=r'(0,xe.jsx)("textarea",{ref:ie,"aria-label":"\u8BA1\u7B97\u516C\u5F0F",value:j,rows:3,maxLength:2048,placeholder:"[\u4EA7\u54C1\u91CF] / [\u8FDB\u6599\u91CF]",onChange:Q=>{H(Q.target.value),Ke()}})]})'
+    if 'FormulaSyntax.Assistance,{value:j' not in js:
+        if js.count(marker)!=1:raise ValueError('Formula textarea marker missing')
+        js=js.replace(marker,marker+',(0,xe.jsx)(FormulaSyntax.Assistance,{value:j,inputRef:ie,onChange:value=>{H(value),Ke()}})')
+
     html=html[:match.start(2)]+base64.b64encode(js.encode()).decode()+html[match.end(2):]
     css='<style id="data-analysis-style">\n'+(ROOT/'frontend/data-analysis.css').read_text().rstrip()+'\n</style>'
     if 'id="data-analysis-style"' in html:html=re.sub(r'<style id="data-analysis-style">.*?</style>',lambda _:css,html,flags=re.S)

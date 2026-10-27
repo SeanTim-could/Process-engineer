@@ -20,7 +20,7 @@ async function call(p,url,method='GET',body,ok=true){const value=await p.evaluat
   await call(p,'/api/offline/restore','POST',backup);await p.reload();
   const original=(await call(p,'/api/offline/backup')).state;
   await p.getByRole('button',{name:'数据分析',exact:true}).click();await p.getByRole('button',{name:'时序分析',exact:true}).click();
-  await p.getByRole('img',{name:'时序分析 · 质量指标',exact:true}).waitFor();assert.equal(await p.locator('.analysis-figure svg').count(),2);
+  await p.getByRole('img',{name:'时序分析 · 质量指标',exact:true}).waitFor();assert.equal(await p.locator('.analysis-figure svg').count(),3);
   const line=await p.locator('.analysis-figure svg').first().locator('path[stroke-width="2"]').first().getAttribute('d');assert((line.match(/ M/g)||[]).length>=3,'missing readings must break the line');
   await p.getByRole('button',{name:'前后能力分析',exact:true}).click();await p.getByRole('img',{name:'汇总报告',exact:true}).waitFor();
   await p.getByLabel('调整时间（北京时间）',{exact:true}).fill('2026-10-01T09:00');await p.getByLabel('规格下限 LSL',{exact:true}).fill('7');await p.getByLabel('规格上限 USL',{exact:true}).fill('13');
