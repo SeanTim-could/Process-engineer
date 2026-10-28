@@ -10,6 +10,7 @@ import sys
 import webbrowser
 from urllib.parse import urlsplit
 from document_index import DocumentIndex, protect
+from excel_reader import ExcelReader
 
 PORT = 8765
 APP_HTML = '启动工程师工作台.html'
@@ -28,6 +29,8 @@ def check_runtime():
     import pythoncom
     import tkinter
     import win32com.client
+    import openpyxl
+    from io import BytesIO
 
     pythoncom.CoInitialize()
     try:
@@ -44,12 +47,27 @@ def check_runtime():
         if frozen:
             bundle = Path(sys._MEIPASS).resolve()
             bundled_modules = all(Path(module.__file__).resolve().is_relative_to(bundle)
-                                  for module in (pythoncom, tkinter, win32com.client))
+                                  for module in (pythoncom, tkinter, win32com.client, openpyxl))
             if not bundled_modules:
                 raise RuntimeError('运行组件未完整包含在便携包中。')
+        bridge = Path(__file__).with_name('excel_bridge.html')
+        if not bridge.is_file():
+            raise RuntimeError('Excel同步窗口资源缺失。')
+        memory = BytesIO()
+        book = openpyxl.Workbook()
+        book.active['A1'] = 123.5
+        book.save(memory)
+        book.close()
+        memory.seek(0)
+        book = openpyxl.load_workbook(memory, read_only=True, data_only=True)
+        if book.active['A1'].value != 123.5:
+            raise RuntimeError('Excel数值读取自检失败。')
+        book.close()
         return {'ok': True, 'frozen': frozen, 'bundled_modules': bundled_modules,
                 'python': sys.version.split()[0], 'tcl': tcl_version,
                 'com_runtime': True, 'dpapi': True, 'html': True,
+                'excel_reader': True, 'excel_bridge': True, 'openpyxl': openpyxl.__version__,
+                'excel_live_tested': False,
                 'office_documents_tested': False}
     finally:
         pythoncom.CoUninitialize()
@@ -67,8 +85,23 @@ def choose_folder():
         root.destroy()
 
 
-def make_handler(index, html_path, token, origin, picker=choose_folder, opener=None):
+def choose_excel():
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    try:
+        root.withdraw()
+        root.attributes('-topmost', True)
+        return filedialog.askopenfilename(parent=root, title='选择Python读取的Excel文件',
+                                          filetypes=[('Excel', '*.xlsx *.xlsm')])
+    finally:
+        root.destroy()
+
+
+def make_handler(index, html_path, token, origin, picker=choose_folder, opener=None,
+                 excel=None, excel_picker=choose_excel):
     opener = opener or (lambda path: os.startfile(str(path)))
+    excel = excel or ExcelReader()
 
     class Handler(BaseHTTPRequestHandler):
         server_version = 'WorkbenchLocal'
@@ -76,7 +109,7 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
         def log_message(self, *_):
             pass  # Do not log document names, queries, contents or tokens.
 
-        def reply(self, status, payload, content_type='application/json; charset=utf-8'):
+        def reply(self, status, payload, content_type='application/json; charset=utf-8', coop='same-origin'):
             data = payload if isinstance(payload, bytes) else json.dumps(payload, ensure_ascii=False).encode('utf-8')
             self.send_response(status)
             self.send_header('Content-Type', content_type)
@@ -84,7 +117,7 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
             self.send_header('X-Frame-Options', 'DENY')
-            self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
+            self.send_header('Cross-Origin-Opener-Policy', coop)
             self.send_header('Referrer-Policy', 'no-referrer')
             self.end_headers()
             self.wfile.write(data)
@@ -101,7 +134,8 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
                     length = int(self.headers.get('Content-Length', '0'))
                 except ValueError:
                     return self.reply(400, {'error': '请求长度无效。'})
-                if length < 0 or length > 8192:
+                limit = 32768 if urlsplit(self.path).path.startswith('/local-api/excel/') else 8192
+                if length < 0 or length > limit:
                     return self.reply(413, {'error': '请求内容过大。'})
                 previous_timeout = self.connection.gettimeout()
                 try:
@@ -114,12 +148,12 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
                 if len(raw_body) != length:
                     return self.reply(400, {'error': '请求内容未完整接收。'})
             path = urlsplit(self.path).path
-            if self.command == 'GET' and path in {'/', '/index.html', '/' + APP_HTML, '/documents'}:
+            if self.command == 'GET' and path in {'/', '/index.html', '/' + APP_HTML, '/documents', '/excel-bridge'}:
                 # Only the dedicated document page accepts a user-clicked link
                 # from a website. API requests still require the local origin
                 # and session token; no CORS access is granted to that website.
                 user_navigation = (
-                    path == '/documents'
+                    path in {'/documents', '/excel-bridge'}
                     and self.headers.get('Sec-Fetch-Mode') == 'navigate'
                     and self.headers.get('Sec-Fetch-Dest') == 'document'
                     and self.headers.get('Sec-Fetch-User') == '?1'
@@ -128,6 +162,12 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
                     return self.reply(403, {'error': '请在独立窗口打开本机文档检索。'})
                 if self.headers.get('Sec-Fetch-Site') == 'cross-site' and not user_navigation:
                     return self.reply(403, {'error': '请从本机启动器打开工作台。'})
+                if path == '/excel-bridge':
+                    bridge = Path(__file__).with_name('excel_bridge.html').read_text('utf-8')
+                    bridge = bridge.replace('/*LOCAL_CONFIG*/', 'window.ExcelLocal=' + json.dumps({'token': token, 'origin': origin}) + ';')
+                    # This dedicated, user-opened popup needs its website opener.
+                    # Local APIs retain origin + token checks and grant no CORS access.
+                    return self.reply(200, bridge.encode('utf-8'), 'text/html; charset=utf-8', coop='same-origin' if urlsplit(self.path).query == 'local=1' else 'unsafe-none')
                 html = html_path.read_text('utf-8').replace("connect-src 'none'", "connect-src 'self'")
                 boot = json.dumps({'token': token, 'version': 1,
                                    'view': 'documents' if path == '/documents' else 'overview'}, ensure_ascii=True)
@@ -154,6 +194,18 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
                         raise ValueError('请求格式不正确。')
                 if path == '/local-api/status':
                     return self.reply(200, index.status())
+                if path == '/local-api/excel/files':
+                    mode = body.get('mode', 'file')
+                    if mode == 'open':
+                        return self.reply(200, {'files': excel.opened()})
+                    if mode != 'file':
+                        raise ValueError('读取模式无效。')
+                    selected = excel_picker()
+                    return self.reply(200, {'files': [excel.select(selected)] if selected else []})
+                if path == '/local-api/excel/sheets':
+                    return self.reply(200, excel.describe(body.get('fileId')))
+                if path == '/local-api/excel/read':
+                    return self.reply(200, excel.read(body))
                 if path == '/local-api/folder':
                     return self.reply(200, {'folder': picker()})
                 if path == '/local-api/index':
@@ -171,6 +223,8 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
                     index.clear()
                     return self.reply(200, index.status())
                 return self.reply(404, {'error': '接口不存在。'})
+            except ImportError:
+                return self.reply(500, {'error': '缺少Excel读取依赖，请先运行“安装Excel同步依赖.bat”。'})
             except (ValueError, FileNotFoundError, NotADirectoryError) as error:
                 return self.reply(400, {'error': str(error) if isinstance(error, ValueError) else '找不到文件夹或文件，请检查路径。'})
             except Exception:
@@ -188,6 +242,7 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
 def main(argv=None):
     parser = argparse.ArgumentParser(description='工艺工程师工作台本机服务')
     parser.add_argument('--documents', action='store_true', help='启动后直接打开文档检索')
+    parser.add_argument('--excel-sync', action='store_true', help='启动后打开网站的Excel自动同步入口')
     parser.add_argument('--no-browser', action='store_true', help='只启动服务，不自动打开浏览器')
     parser.add_argument('--self-test', action='store_true', help='检查运行组件，不打开文档或启动服务')
     args = parser.parse_args(argv)
@@ -221,12 +276,19 @@ def main(argv=None):
         print(f'本机端口 {PORT} 已被占用。若工作台已启动，请使用已打开的窗口；否则先关闭占用程序，再启动。')
         return 1
     print('工艺工程师工作台已启动：' + origin)
-    print('请保留此窗口。关闭窗口会停止文档检索，浏览器内已保存的生产数据不会删除。')
+    print('当前读取程序：' + sys.executable)
+    if args.excel_sync:
+        print('Excel由Python读取；请保持Excel数据已更新。文件模式读取前需保存。')
+    print('请保留此窗口。关闭窗口会停止文档检索和Excel读取，浏览器内已保存的数据不会删除。')
     print('仅检索文档无需迁移生产数据。如需在本机使用生产数据，请先在网站“另存为”工作台JSON文件，再在本机“打开”。')
     print('读取停住时，请查看 Office 的授权、密码或文件打开提示。取消将在当前文件结束后生效。')
     if not args.no_browser:
-        documents = args.documents or bool(getattr(sys, 'frozen', False))
-        webbrowser.open(origin + ('/documents' if documents else ''))
+        if args.excel_sync:
+            webbrowser.open('https://seantim-could.github.io/Process-engineer/')
+            print('登录后打开“数据管理 → Excel自动同步”，点击“连接本机Excel”。')
+        else:
+            documents = args.documents or bool(getattr(sys, 'frozen', False))
+            webbrowser.open(origin + ('/documents' if documents else ''))
     try:
         server.serve_forever(poll_interval=0.5)
     except KeyboardInterrupt:

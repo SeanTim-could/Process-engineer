@@ -11,7 +11,7 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['analysis-math.js','analysis-point-math.js','formula-syntax.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','data-analysis.js'])
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['analysis-math.js','analysis-point-math.js','formula-syntax.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','excel-sync.js','data-analysis.js'])
     block=START+'\n'+code+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]
@@ -76,6 +76,19 @@ def render(html):
     # Connect manual exclusions in display series without changing statistics.
     hook('function UE(e,t,r,a,n){let i=WK(GK(e,t,r,a,n)),', 'function UE(e,t,r,a,n){let i=AnalysisPointMath.plotSeries(WK(GK(e,t,r,a,n)),e,t,a,n),')
     hook('value:jm([b],d,t)})),h=t.targets[d.id]', 'value:jm([b],d,t)}));m=PointExclusions.rawChartData(m,e,d,t);let h=t.targets[d.id]')
+
+    # Excel values arrive through a user-authorized local popup, then use the
+    # existing account-local import/validation and cross-unit calculation graph.
+    hook('var B=oe(yt(),1),w$=[...DataAnalysis.pages,', 'var B=oe(yt(),1),w$=[...ExcelSync.pages,...DataAnalysis.pages,')
+    hook('analytics:DataAnalysis.normalize(t.analytics),settings:r', 'excelSync:ExcelSync.normalize(t.excelSync),analytics:DataAnalysis.normalize(t.analytics),settings:r')
+    hook('else if(r.pathname==="/api/analytics")', 'else if(r.pathname==="/api/excel-sync"){a=await ExcelSync.request(e)}else if(r.pathname==="/api/analytics")')
+    hook('AnalysisDrafts.reset(n.state.analytics?.drafts);', 'AnalysisDrafts.reset(n.state.analytics?.drafts);ExcelSync.reset();')
+    hook('"timeseries","capability","plotting"].includes(c),zs=', '"timeseries","capability","plotting","excel-sync"].includes(c),zs=')
+    hook('className:"page-description",children:["timeseries","capability","plotting"].includes(c)?', 'className:"page-description",children:c==="excel-sync"?"由Python读取Excel结果，自动加入当前账号的工作台。清晰预览，按时间追加。": ["timeseries","capability","plotting"].includes(c)?')
+    hook('jsx)("h1",{children:c==="timeseries"?', 'jsx)("h1",{children:c==="excel-sync"?"让Excel里的数据，自动加入工作台。":c==="timeseries"?')
+    marker='["timeseries","capability","plotting"].includes(c)&&(0,B.jsx)(DataAnalysis.Page,'
+    hook(marker,'c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,{settings:d}),'+marker)
+    hook('Q=(0,It.useMemo)(()=>p3(),[]);async function ze', 'Q=(0,It.useMemo)(()=>p3(),[]);ExcelSync.useImports(detail=>{Qt(v=>v+1);t.refresh(!t.dataset&&t.view.unitId===detail.unitId?detail.datasetId:undefined).catch(()=>{});});async function ze')
 
     html=html[:match.start(2)]+base64.b64encode(js.encode()).decode()+html[match.end(2):]
     css='<style id="data-analysis-style">\n'+(ROOT/'frontend/data-analysis.css').read_text().rstrip()+'\n</style>'

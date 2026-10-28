@@ -10,6 +10,9 @@ on:
       - 'local_service/**'
       - 'scripts/verify-portable.ps1'
       - 'scripts/run-service-tests.py'
+      - 'scripts/build-excel-python.py'
+      - 'requirements-excel-sync.txt'
+      - 'Excel自动同步使用说明.md'
       - 'licenses/**'
       - 'THIRD-PARTY-NOTICES.txt'
       - '*.html'
@@ -21,6 +24,9 @@ on:
       - 'local_service/**'
       - 'scripts/verify-portable.ps1'
       - 'scripts/run-service-tests.py'
+      - 'scripts/build-excel-python.py'
+      - 'requirements-excel-sync.txt'
+      - 'Excel自动同步使用说明.md'
       - 'licenses/**'
       - 'THIRD-PARTY-NOTICES.txt'
       - '*.html'
@@ -69,6 +75,8 @@ jobs:
           path: |
             Windows-Build/Workbench-Windows-Portable.zip
             Windows-Build/Workbench-Windows-Portable.zip.sha256
+            Windows-Build/Workbench-Excel-Python.zip
+            Windows-Build/Workbench-Excel-Python.zip.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -94,6 +102,7 @@ jobs:
           set -euo pipefail
           cd release
           sha256sum --check Workbench-Windows-Portable.zip.sha256
+          sha256sum --check Workbench-Excel-Python.zip.sha256
           if [[ "$GITHUB_REF" == refs/tags/portable-* ]]; then
             release_tag="$GITHUB_REF_NAME"
           else
@@ -112,6 +121,8 @@ jobs:
           下载 Workbench-Windows-Portable.zip，完整解压后双击 ProcessEngineerWorkbench.exe。
           请保留 _internal 文件夹及其他配套文件。仍需桌面版 Microsoft Office 和自己的文档读取权限。
 
+          Excel自动同步：公司已授权python.exe时，可下载Workbench-Excel-Python.zip，安装依赖后运行启动脚本。网页“数据管理 → Excel自动同步”连接本机读取窗口。
+
           本版本已通过 Windows 服务测试和移除 Python 命令后的运行验证。实际 Office 文档读取需在目标电脑验证。
           NOTES
             gh release create "$release_tag" --repo "$GITHUB_REPOSITORY" \
@@ -119,7 +130,8 @@ jobs:
               --notes-file "$RUNNER_TEMP/workbench-release-notes.md" --draft
           fi
           gh release upload "$release_tag" --repo "$GITHUB_REPOSITORY" \
-            Workbench-Windows-Portable.zip Workbench-Windows-Portable.zip.sha256 --clobber
+            Workbench-Windows-Portable.zip Workbench-Windows-Portable.zip.sha256 \
+            Workbench-Excel-Python.zip Workbench-Excel-Python.zip.sha256 --clobber
           gh release edit "$release_tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
           echo '## Public launcher download' >> "$GITHUB_STEP_SUMMARY"
           echo "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/Workbench-Windows-Portable.zip" >> "$GITHUB_STEP_SUMMARY"

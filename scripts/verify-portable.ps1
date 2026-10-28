@@ -21,7 +21,7 @@ try {
     $output = & $exe --self-test
     if ($LASTEXITCODE -ne 0) { throw "Portable self-test failed: $output" }
     $runtime = $output | ConvertFrom-Json
-    if (!$runtime.ok -or !$runtime.frozen -or !$runtime.bundled_modules -or !$runtime.dpapi -or !$runtime.com_runtime -or !$runtime.html) {
+    if (!$runtime.ok -or !$runtime.frozen -or !$runtime.bundled_modules -or !$runtime.dpapi -or !$runtime.com_runtime -or !$runtime.html -or !$runtime.excel_reader -or !$runtime.excel_bridge) {
         throw 'The EXE did not verify its bundled runtime.'
     }
     $process = Start-Process -FilePath $exe -ArgumentList '--no-browser', '--documents' -PassThru
@@ -43,6 +43,10 @@ try {
     $headers = @{ Origin = 'http://127.0.0.1:8765'; 'X-Workbench-Token' = $session.token }
     $status = Invoke-RestMethod 'http://127.0.0.1:8765/local-api/status' -Headers $headers
     if ($status.running -or $status.fileCount -ne 0) { throw 'Unexpected document state in the clean verification user.' }
+    $excelPage = Invoke-WebRequest 'http://127.0.0.1:8765/excel-bridge' -TimeoutSec 5
+    if ($excelPage.StatusCode -ne 200 -or $excelPage.Content -notmatch 'window.ExcelLocal=') {
+        throw 'The portable Excel bridge resource or its session bootstrap is missing.'
+    }
     $blocked = Invoke-WebRequest 'http://127.0.0.1:8765/local-api/status' -Headers @{
         Origin = 'https://example.invalid'; 'X-Workbench-Token' = $session.token
     } -SkipHttpErrorCheck
@@ -53,7 +57,7 @@ try {
 - EXE launched with Python and py removed from PATH.
 - Bundled Python, COM support, Tcl/Tk, HTML resources and Windows DPAPI passed.
 - Extracted under a directory containing Chinese characters and spaces.
-- Local document page and authenticated status request passed.
+- Local document page, Excel bridge, openpyxl value round-trip and authenticated status request passed.
 - Remote website API access remained blocked.
 - Office document reading still requires Microsoft Office and authorization testing on the target PC.
 

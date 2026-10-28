@@ -6,7 +6,7 @@ async function fixture(options={}){
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH??(fs.existsSync('/usr/bin/chromium')?'/usr/bin/chromium':chromium.executablePath()),headless:true,args:['--no-sandbox']});
  const context=await browser.newContext({viewport:{width:1500,height:1100},acceptDownloads:true,...options});await context.route(origin+'/Process-engineer/**',r=>r.fulfill({body:html,contentType:'text/html; charset=utf-8'}));const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  const api=async(url,method='GET',body)=>page.evaluate(async({url,method,body})=>{const r=await fetch(url,{method,headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined}),data=await r.json();if(!r.ok)throw new Error(data.error);return data;},{url,method,body});
- const nav=async name=>{const section=['时序分析','前后能力分析','自由作图','自动图表'].includes(name)?'数据分析':['数据中心','指标设置'].includes(name)?'数据管理':['个人中心','文档检索','文件索引'].includes(name)?'文档与个人':'运行概览';const toggle=page.getByRole('button',{name:section,exact:true});if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();await page.getByRole('button',{name,exact:true}).click();};
+ const nav=async name=>{const section=['时序分析','前后能力分析','自由作图','自动图表'].includes(name)?'数据分析':['数据中心','Excel自动同步','指标设置'].includes(name)?'数据管理':['个人中心','文档检索','文件索引'].includes(name)?'文档与个人':'运行概览';const toggle=page.getByRole('button',{name:section,exact:true});if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();await page.getByRole('button',{name,exact:true}).click();};
  return {browser,context,page,errors,api,nav,site};
 }
 module.exports={fixture};

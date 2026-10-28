@@ -87,6 +87,18 @@
 
 完整备份包含这些跨装置绑定。要让另一台电脑继续计算，请分享完整备份；单独导出一个装置的 CSV 不会带走其他装置和公式配置。
 
+## Python读取加密Excel并自动加入工作台
+
+在 **数据管理 → Excel自动同步** 选择目标装置、分组和生产/LIMS来源，下载并运行 **Python脚本版**，连接本机窗口，配置工作簿/工作表、起止行、时间列及数值列映射，预览后允许发送即可定时追加。沿用Excel中已计算的PI DataLink结果，不重新计算均值、不自动触发DataLink更新、不保存原文件。
+
+- Python白名单场景优先使用 `Workbench-Excel-Python.zip`，首次安装依赖后运行 **启动Excel同步Python.bat**；可用 `WORKBENCH_PYTHON` 指定已授权解释器。便携EXE不自动继承python.exe的读取权限。
+- 默认读取已打开Excel的内存值，包括未保存的结果；也可使用openpyxl读取已保存xlsx/xlsm的缓存值。已打开模式需Windows、Excel和pywin32，且只连接当前Excel实例。
+- 同一装置/采样时间/分组/指标的有效新值会更新旧值，新时间追加；不删除未返回的历史，不用错误值或空白清空已有有效值。每批完整接收、验证后原子提交，并重新计算相关公式；重复快照不反复写入或累积档案。
+- 本机页面只通过绑定的浏览器弹窗传送数值，远程网站不能直接调用本机文件API。保持原网站账号和本机数据库；本机API不开放CORS，继续校验Host、Origin和令牌。
+- 同步可在切换页面后继续；停止、关闭同步窗口、退出/切换账号或打开其他JSON后停止。Excel读取时间和最新采样时间分别显示，不能把读取成功等同于PI已刷新。
+
+完整步骤、Excel布局、数据量限制和权限验证见 [Excel自动同步使用说明](Excel自动同步使用说明.md)。真实公司加密文件的读取权限及PI更新状态需在目标电脑验证。
+
 ## 数据分析与自由作图
 
 左侧菜单按 **运行概览、数据分析、数据管理、文档与个人** 四组组织。点击一级标题可展开或收起，原有自动图表、多指标对比、关系分析、LIMS、月报、数据中心和个人中心功能仍可进入。
@@ -194,3 +206,5 @@ node scripts/test-cross-unit-calculations.cjs
 分析工作状态与文件操作的源码分别位于 `frontend/analysis-drafts.js`、`frontend/capability-split-chart.js`、`frontend/workspace-files.js`。`python3 scripts/build-web.py` 自动同步分析与文件模块；也可单独执行 `scripts/sync-workspace-files.py`。`node scripts/test-analysis-session.cjs` 验证导航/立即刷新/文件恢复、拖动及键盘分界、毫秒节点和12组配色；`node scripts/test-workspace-files.cjs` 使用真实的隔离OPFS文件句柄/写入流和IndexedDB，只模拟选择对话框，验证保存、另存为、打开、重载、失败及下载模式。
 
 新增功能回归：`node scripts/test-analysis-point-math.cjs` 检查定位、原值保护、移动极差断点和括号规范化；`node scripts/test-process-capability-and-points.cjs` 验证实际公式计算/括号编辑、时序过程能力、图上与明细选点、LIMS/自动图表/前后报告/自由作图同步、刷新与JSON恢复、并发冲突、日报派生指标和手机窗口。账号套件同时检查排除记录的账号隔离。
+
+Excel同步回归：`python scripts/run-service-tests.py` 检查实际xlsx缓存读取、日期系统、错误值、重复时间、COM内存读取与只读行为，以及本机HTTP访问边界；`node scripts/test-excel-sync.cjs` 连接真实Python服务和浏览器弹窗，验证预览、周期读取、追加/更新、重复抑制、公式重算、空错值保护、停止、备份恢复、批次回滚和手机布局。Windows构建同时校验便携包与Python脚本包。

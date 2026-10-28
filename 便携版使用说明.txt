@@ -22,3 +22,6 @@
 
 若公司对文档读取程序有授权限制，请在一份自己有权限读取的文档上验证。
 这个便携版仍需使用自己的 Office 环境，不包含 Microsoft Office。
+
+Excel自动同步
+可运行“启动Excel同步.bat”，登录网站后进入“数据管理 → Excel自动同步”。若公司只授权python.exe，请安装依赖并运行“启动Excel同步Python.bat”，或下载单独的Python脚本包。详细步骤见“Excel自动同步使用说明.md”。本程序只读取Excel现有结果，不触发PI DataLink更新。

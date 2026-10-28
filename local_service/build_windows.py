@@ -43,7 +43,10 @@ def verify_archive(archive):
                 'ProcessEngineerWorkbench/启动本地检索.bat',
                 'ProcessEngineerWorkbench/启动工程师工作台.html',
                 'ProcessEngineerWorkbench/便携版使用说明.txt',
-                'ProcessEngineerWorkbench/build-info.json'}
+                'ProcessEngineerWorkbench/build-info.json',
+                'ProcessEngineerWorkbench/_internal/excel_bridge.html',
+                'ProcessEngineerWorkbench/启动Excel同步Python.bat',
+                'ProcessEngineerWorkbench/local_service/excel_reader.py'}
     with ZipFile(archive) as package:
         if package.testzip() is not None or not required.issubset(package.namelist()):
             raise RuntimeError('便携包校验失败，未得到完整的 EXE 及运行组件。')
@@ -70,7 +73,8 @@ def main():
                '--distpath', str(build / 'dist'), '--workpath', str(build / 'work'),
                '--specpath', str(build), '--paths', str(root / 'local_service'),
                '--add-data', str(root / '启动工程师工作台.html') + ';.',
-               '--collect-submodules', 'win32com', '--hidden-import', 'pythoncom',
+               '--add-data', str(root / 'local_service' / 'excel_bridge.html') + ';.',
+               '--collect-submodules', 'win32com', '--collect-submodules', 'openpyxl', '--hidden-import', 'pythoncom',
                '--hidden-import', 'pywintypes', '--hidden-import', 'win32timezone',
                '--hidden-import', 'tkinter', '--hidden-import', 'tkinter.filedialog',
                str(root / 'local_service' / 'launcher.py')]
@@ -80,8 +84,13 @@ def main():
     print(build_result.stderr)
     distribution = build / 'dist' / 'ProcessEngineerWorkbench'
     for name in ('便携版使用说明.txt', '启动本地检索.bat', '启动工程师工作台.html',
-                 '本地检索网站接入说明.md', 'THIRD-PARTY-NOTICES.txt'):
+                 '本地检索网站接入说明.md', 'THIRD-PARTY-NOTICES.txt', 'Excel自动同步使用说明.md',
+                 '启动Excel同步.bat', '启动Excel同步Python.bat', '安装Excel同步依赖.bat', 'requirements-excel-sync.txt'):
         shutil.copy2(root / name, distribution / name)
+    source_folder = distribution / 'local_service'
+    source_folder.mkdir(exist_ok=True)
+    for name in ('launcher.py', 'document_index.py', 'office_reader.py', 'excel_reader.py', 'excel_bridge.html'):
+        shutil.copy2(root / 'local_service' / name, source_folder / name)
     shutil.copytree(root / 'licenses', distribution / 'licenses', dirs_exist_ok=True)
     packages = copy_runtime_licenses(distribution / 'licenses' / 'windows-runtime')
     result = subprocess.run([str(distribution / 'ProcessEngineerWorkbench.exe'), '--self-test'],
@@ -98,6 +107,7 @@ def main():
     with Path(archive).open('rb') as source:
         checksum = hashlib.file_digest(source, 'sha256').hexdigest()
     Path(archive + '.sha256').write_text(checksum + '  ' + Path(archive).name + '\n', encoding='ascii')
+    subprocess.run([sys.executable, str(root / 'scripts' / 'build-excel-python.py'), '--output', str(build)], check=True)
     print('\n打包完成：' + archive)
     print('本包包含 Python 及 pywin32，使用者无需安装 Python。必须完整解压并保留 _internal 目录。')
     print('Microsoft Office 及文档访问权限仍需在目标电脑验证。')

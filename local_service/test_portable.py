@@ -29,7 +29,8 @@ class PortableTests(unittest.TestCase):
         prefix = 'ProcessEngineerWorkbench/'
         required = ['ProcessEngineerWorkbench.exe',
                     f'_internal/python{sys.version_info.major}{sys.version_info.minor}.dll',
-                    '启动本地检索.bat', '启动工程师工作台.html', '便携版使用说明.txt', 'build-info.json']
+                    '启动本地检索.bat', '启动工程师工作台.html', '便携版使用说明.txt', 'build-info.json',
+                    '_internal/excel_bridge.html', '启动Excel同步Python.bat', 'local_service/excel_reader.py']
         with tempfile.TemporaryDirectory() as folder:
             archive = Path(folder) / 'portable.zip'
             with ZipFile(archive, 'w') as package:

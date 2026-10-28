@@ -3,7 +3,7 @@ var DataAnalysis = (() => {
   const R=Se(),h=R.createElement,M=AnalysisMath,P=AnalysisPlots;
   const groups=[{id:"operations",label:"运行概览",items:["overview","trends","lims","reports"]},
     {id:"analytics",label:"数据分析",items:["timeseries","capability","plotting","charts","comparison","analysis"]},
-    {id:"data",label:"数据管理",items:["data","settings"]},{id:"personal",label:"文档与个人",items:["files","documents","profile"]}];
+    {id:"data",label:"数据管理",items:["data","excel-sync","settings"]},{id:"personal",label:"文档与个人",items:["files","documents","profile"]}];
   const pages=[{id:"timeseries",label:"时序分析",en:"TIME SERIES",icon:Pm},{id:"capability",label:"前后能力分析",en:"BEFORE / AFTER",icon:jo},{id:"plotting",label:"自由作图",en:"CHART WORKSPACE",icon:Mn}];
   function Nav({items,current,onSelect,reportCount}){
     const active=groups.find(g=>g.items.includes(current))?.id,[open,setOpen]=R.useState(()=>new Set([active]));

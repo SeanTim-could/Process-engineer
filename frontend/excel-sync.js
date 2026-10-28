@@ -1,0 +1,93 @@
+// Python reads Excel locally. A bound popup sends values to this account's browser workspace.
+var ExcelSync = (() => {
+  const R=Se(),h=R.createElement,jobs=new Map(),events='workbench-excel-status',localOrigin='http://127.0.0.1:8765';
+  let connection=null,watch=null;
+  const pages=[{id:'excel-sync',label:'Excel自动同步',en:'PYTHON / EXCEL',icon:Pm}];
+  const scope=()=>AccountAuth.storageKey(),rowKey=p=>JSON.stringify([p.unit,p.time,p.group]);
+  function text(value,max,label){if(typeof value!=='string'||value.length>max)throw new Error(label+'无效。');return value;}
+  function target(value={}){const unitId=text(value.unitId??'',40,'目标装置'),group=text(value.group??'PI',80,'采样分组');if(unitId&&!/^[\w-]+$/.test(unitId))throw new Error('目标装置无效。');return {unitId,group,source:value.source==='lims'?'lims':'production'};}
+  function normalize(value){if(value===undefined)return {version:1,target:target(),sources:[]};if(!value||value.version!==1||!Array.isArray(value.sources)||value.sources.length>64)throw new Error('Excel同步记录无效。');return {version:1,target:target(value.target),sources:value.sources.map(s=>{
+    if(!s||!/^xs_[a-f0-9]{1,32}$/.test(s.id)||!Number.isFinite(Date.parse(s.importedAt))||!Number.isSafeInteger(s.lastDataTime)||!Number.isInteger(s.count)||s.count<1||s.count>20000)throw new Error('Excel同步来源记录无效。');return {id:s.id,...target(s),filename:text(s.filename,200,'工作簿名'),sheet:text(s.sheet,100,'工作表名'),importedAt:s.importedAt,lastDataTime:s.lastDataTime,count:s.count};})};}
+  async function request(req){const state=$r().state,saved=normalize(state.excelSync);if(req.method==='GET')return Response.json(saved);if(req.method!=='POST')throw new Error('Excel同步操作无效。');const body=await Ha(req),key=scope();
+    for(const [id,job]of jobs)if(job.expires<Date.now())jobs.delete(id);
+    if(body.action==='begin'){
+      const selected=target(body.target);if(!state.settings.units.some(u=>u.id===selected.unitId&&!u.archived))throw new Error('目标装置已停用，请重新选择。');
+      if(!Number.isInteger(body.count)||body.count<1||body.count>20000||!Array.isArray(body.columns)||body.columns.length<1||body.columns.length>20||! /^[a-f0-9]{64}$/.test(body.sourceId??''))throw new Error('Excel快照格式或数据量无效。');
+      if(jobs.size>=4)throw new Error('已有同步批次在处理，请稍后重试。');
+      const names=new Set(),columns=uc(body.columns.map((c,i)=>{if(!c||c.key!=='c_'+(i+1))throw new Error('数值列编号无效。');const label=text(c.label,80,'指标名称').trim(),unit=text(c.unit??'',30,'单位');if(!label||names.has(ao(label)))throw new Error('指标名称为空或重复。');names.add(ao(label));return {key:c.key,index:i+1,header:label,label,unit,source:selected.source,module:'other',kind:'reading',aggregation:'mean',recognized:true,enabled:true,scale:1,limit:null,showTotal:false};}));
+      const id=crypto.randomUUID(),datasetId='ds_unit_'+selected.unitId,existing=state.datasets[datasetId];
+      jobs.set(id,{scope:key,expires:Date.now()+300000,target:selected,sourceId:body.sourceId,filename:text(body.filename,200,'工作簿名'),sheet:text(body.sheet,100,'工作表名'),columns,count:body.count,rows:[],seen:new Set(),targetVersion:existing?vC(JSON.stringify(existing)):null});return Response.json({id});
+    }
+    const job=jobs.get(body.id);if(!job||job.scope!==key)throw new Error('同步批次已失效，请重新读取Excel。');
+    if(body.action==='cancel'){jobs.delete(body.id);return Response.json({ok:true});}
+    if(body.action==='rows'){
+      if(body.offset!==job.rows.length)throw new Error('同步批次顺序错误。');if(!Array.isArray(body.rows)||body.rows.length<1||body.rows.length>1000)throw new Error('每批支持1至1000个时间点。');const rows=[];for(let i=0;i<body.rows.length;i+=250)rows.push(...Um(body.rows.slice(i,i+250),job.columns,[job.target.unitId]));if(job.rows.length+rows.length>job.count)throw new Error('同步批次超出预期行数。');
+      for(const row of rows){if(row.group!==job.target.group||job.seen.has(row.time)||!Object.values(row.values).some(AnalysisMath.finite))throw new Error('采样时间重复、分组不符或没有有效数值。');job.seen.add(row.time);row.values=Object.fromEntries(Object.entries(row.values).filter(([,v])=>AnalysisMath.finite(v)));}
+      job.rows.push(...rows);return Response.json({count:job.rows.length});
+    }
+    if(body.action!=='commit')throw new Error('Excel同步操作无效。');jobs.delete(body.id);
+    if(job.rows.length!==job.count)throw new Error('数据尚未完整读取，本轮未写入。');
+    const datasetId='ds_unit_'+job.target.unitId,old=state.datasets[datasetId];if((old?vC(JSON.stringify(old)):null)!==job.targetVersion)throw new Error('装置数据在读取期间被修改，本轮未写入，下一轮将重新同步。');
+    const now=new Date().toISOString(),tempId='ds_excel_'+body.id.replaceAll('-',''),entry={dataset:{id:tempId,name:'Excel同步',filename:job.filename,sheet:job.sheet,columns:job.columns,count:job.count,expectedCount:job.count,unitIds:[job.target.unitId],groups:[job.target.group],start:job.rows[0].time,end:job.rows.at(-1).time,createdAt:now,status:'importing'},points:job.rows};
+    const input={...state.datasets,[tempId]:entry},review=BG(input,[tempId],state.settings).review,plan=BG(input,[tempId],state.settings,{token:review.token,policy:'new'}),next=structuredClone(state);
+    for(const output of plan.outputs){const oldKeys=new Set((state.datasets[output.dataset.id]?.dataset.columns??[]).map(c=>c.key));for(const col of output.dataset.columns)if(!oldKeys.has(col.key)&&!col.formula){col.aggregation="mean";col.showTotal=false;}output.dataset.updatedAt=now;next.datasets[output.dataset.id]=output;}
+    for(const id of plan.archiveIds){const previous=next.datasets[id],mergedInto=[...new Set([...(previous.dataset.mergedInto??[]),datasetId])];previous.dataset={...previous.dataset,mergedInto,...previous.dataset.unitIds.every(unit=>mergedInto.includes('ds_unit_'+unit))?{role:'archive'}:{}};}
+    CrossUnit.recalculate(next);
+    const result=next.datasets[datasetId],before=new Map((old?.points??[]).map(p=>[rowKey(p),p])),rawKeys=new Set(result.dataset.columns.filter(c=>!c.formula).map(c=>c.key));let added=0,updated=0;
+    for(const row of result.points){const previous=before.get(rowKey(row));if(!previous){added++;continue;}for(const [k,v]of Object.entries(row.values))if(rawKeys.has(k)&&v!==previous.values[k])updated++;}
+    const changed=!old||JSON.stringify([old.dataset.columns,old.points])!==JSON.stringify([result.dataset.columns,result.points]);
+    if(changed){const id='xs_'+vC(JSON.stringify([job.sourceId,job.target])),summary={id,...job.target,filename:job.filename,sheet:job.sheet,importedAt:now,lastDataTime:Math.max(...job.rows.map(r=>r.time)),count:job.count};next.excelSync={version:1,target:job.target,sources:[summary,...saved.sources.filter(s=>s.id!==id)].slice(0,64)};
+      const validated=DC({format:'process-studio-offline',version:1,state:next});Object.assign(qt(),validated);
+    }
+    return Response.json({datasetId,unitId:job.target.unitId,added,updated,changed,count:job.count,importedAt:now});
+  }
+  async function api(body){const response=await T0('/api/excel-sync',{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined}),data=await response.json();if(!response.ok)throw new Error(data.error);return data;}
+  const notify=()=>window.dispatchEvent(new Event(events));
+  function send(c,kind,extra={}){if(c?.popup&&!c.popup.closed)c.popup.postMessage({channel:'workbench-excel',nonce:c.nonce,kind,...extra},localOrigin);}
+  function stop(reason='自动同步已停止。'){const c=connection;if(!c)return;c.active=false;c.status=reason;send(c,'stop');clearInterval(watch);watch=null;notify();}
+  function reset(){jobs.clear();stop('工作台文件已重新打开，请重新连接Excel同步。');}
+  async function apply(c,snapshot){
+    if(!snapshot||snapshot.version!==1||!Array.isArray(snapshot.rows)||snapshot.rows.length<1||snapshot.rows.length>20000)throw new Error('Excel快照无效。');
+    const assert=()=>{AccountAuth.assertWorkspace(c.scope);if(connection!==c||!c.active)throw new Error('同步已停止。');};let batch,done=false;
+    try{assert();batch=await api({action:'begin',target:c.target,count:snapshot.rows.length,columns:snapshot.columns,sourceId:snapshot.sourceId,filename:snapshot.filename,sheet:snapshot.sheet});
+      for(let offset=0;offset<snapshot.rows.length;offset+=1000){assert();await api({action:'rows',id:batch.id,offset,rows:snapshot.rows.slice(offset,offset+1000).map(row=>({...row,unit:c.target.unitId,group:c.target.group}))});}
+      assert();const result=await api({action:'commit',id:batch.id});done=true;assert();return result;
+    }finally{if(batch&&!done){try{AccountAuth.assertWorkspace(c.scope);await api({action:'cancel',id:batch.id});}catch{}}}
+  }
+  async function receive(event){const c=connection,d=event.data;if(!c||event.source!==c.popup||event.origin!==localOrigin||!d||d.channel!=='workbench-excel'||d.nonce!==c.nonce)return;
+    try{AccountAuth.assertWorkspace(c.scope);}catch{stop('账号已退出或切换，Excel同步已停止。');return;}
+    if(d.kind==='ready'){c.bound=true;send(c,'bind',{account:c.scope,unitName:c.unitName,group:c.target.group});c.status='已连接本机。请在同步窗口预览并允许发送。';notify();return;}
+    if(d.kind==='started'){c.active=true;c.status='已允许自动同步，正在等待Python读取。';notify();return;}
+    if(d.kind==='stopped'){stop();return;}
+    if(d.kind==='read-error'&&c.active){c.status='本轮未同步：'+String(d.message??'本机读取失败').slice(0,400);notify();return;}
+    if(d.kind==='heartbeat'&&c.active){c.readAt=d.readAt;c.lastDataTime=d.lastDataTime;c.status='Excel数值未变化，未重复写入。';notify();return;}
+    if(d.kind!=='snapshot'||!c.active||typeof d.frame!=='string')return;
+    if(c.busy){send(c,'ack',{frame:d.frame,error:'上一轮工作台同步尚未结束。'});return;}
+    c.busy=true;c.status='正在把Excel数据加入当前工作台…';notify();
+    try{const result=await apply(c,d.snapshot);c.readAt=d.snapshot.readAt;c.lastDataTime=d.snapshot.rows.at(-1).time;c.result=result;c.status=`同步完成：新增 ${result.added} 个时间点，更新 ${result.updated} 个读数。`;send(c,'ack',{frame:d.frame,result});if(result.changed)window.dispatchEvent(new CustomEvent('workbench-excel-imported',{detail:{scope:c.scope,...result}}));}
+    catch(e){c.status=e.message;send(c,'ack',{frame:d.frame,error:e.message});}
+    finally{c.busy=false;notify();}
+  }
+  window.addEventListener('message',receive);
+  function connect(selected,unitName){stop();const c={scope:scope(),target:target(selected),unitName,nonce:crypto.randomUUID(),active:false,busy:false,bound:false,openedAt:Date.now(),status:'正在打开本机同步窗口…',popup:null};connection=c;
+    c.popup=window.open(localOrigin+'/excel-bridge'+(location.origin===localOrigin?'?local=1':'')+'#'+new URLSearchParams({nonce:c.nonce,origin:location.origin}),'workbench-excel-'+crypto.randomUUID(),'width=1100,height=850');if(!c.popup){c.status='同步窗口被浏览器拦截，请允许弹出窗口后重试。';notify();return;}
+    watch=setInterval(()=>{try{AccountAuth.assertWorkspace(c.scope);if(c.popup.closed)stop('本机同步窗口已关闭。');else if(!c.bound&&Date.now()-c.openedAt>12000&&c.status==='正在打开本机同步窗口…'){c.status='尚未连接到本机Python服务。请先运行新版启动器，再重新连接；若已运行，请检查同步窗口提示。';notify();}}catch{stop('账号已退出或切换，Excel同步已停止。');}},1500);notify();
+  }
+  function Page({settings}){const [selected,setSelected]=R.useState(()=>({unitId:settings.units.find(u=>!u.archived)?.id??'',group:'PI',source:'production'})),[saved,setSaved]=R.useState(null),[,refresh]=R.useState(0),[error,setError]=R.useState('');const key=scope();
+    R.useEffect(()=>{let live=true;api().then(value=>{if(live){setSaved(value);if(value.target.unitId)setSelected(value.target);}}).catch(e=>live&&setError(e.message));const change=()=>{if(live)refresh(n=>n+1);},imported=()=>api().then(v=>live&&setSaved(v)).catch(()=>{});window.addEventListener(events,change);window.addEventListener('workbench-excel-imported',imported);return()=>{live=false;window.removeEventListener(events,change);window.removeEventListener('workbench-excel-imported',imported);};},[]);
+    const c=connection?.scope===key?connection:null,units=settings.units.filter(u=>!u.archived),unit=units.find(u=>u.id===selected.unitId),format=t=>Number.isFinite(t)?new Date(t+28800000).toISOString().slice(0,19).replace('T',' '):'尚未读取';
+    return h('div',{className:'analysis-workbench'},h('section',{className:'panel analysis-controls'},h('h2',null,'Excel自动同步'),h('p',{className:'muted'},'由本机Python读取你在Excel中准备好的PI结果，并自动追加到当前账号。保持Excel原有均值口径，不重新计算PI数据。'),h('div',{className:'analysis-fields'},
+      h('label',{className:'analysis-field'},h('span',null,'Excel同步目标装置'),h('select',{'aria-label':'Excel同步目标装置',value:selected.unitId,onChange:e=>setSelected({...selected,unitId:e.target.value}),disabled:!!c?.active},...units.map(u=>h('option',{key:u.id,value:u.id},u.name)))),
+      h('label',{className:'analysis-field'},h('span',null,'Excel同步采样分组'),h('input',{'aria-label':'Excel同步采样分组',maxLength:80,value:selected.group,onChange:e=>setSelected({...selected,group:e.target.value}),disabled:!!c?.active})),
+      h('label',{className:'analysis-field'},h('span',null,'Excel指标来源'),h('select',{'aria-label':'Excel指标来源',value:selected.source,onChange:e=>setSelected({...selected,source:e.target.value}),disabled:!!c?.active},h('option',{value:'production'},'生产指标'),h('option',{value:'lims'},'LIMS检验指标')))),
+      h('div',{className:'button-row'},h('button',{className:'button primary',disabled:!unit||!!c?.busy,onClick:()=>connect(selected,unit.name)},'连接本机Excel'),c&&h('button',{className:'button',onClick:()=>stop()},'停止Excel同步')),
+      h('p',{className:'analysis-notice',role:'status'},c?.status??'先运行Python启动器，再点击连接。读取范围和列映射在本机同步窗口设置，预览确认后开始。'),error&&h('p',{className:'error-banner',role:'alert'},error),
+      c&&h('p',{className:'small muted'},'最近Python读取：'+(c.readAt??'尚未读取')+'；最新采样时间（北京时间）：'+format(c.lastDataTime)),
+      h('p',{className:'small muted'},'相同采样时间、分组和指标的有效新值会更新旧值，其他历史保留。空值、Excel错误值不覆盖已有有效数据。同步运行期间可切换页面，关闭同步窗口、停止或退出账号后停止。'),
+      h('p',{className:'small muted'},'PI DataLink更新和Excel刷新由你在Excel中完成。读取已打开Excel可取得未保存的结果；文件模式需先保存。Python已加入白名单时优先运行Python脚本版，打包EXE的权限需单独确认。')),
+      h('section',{className:'panel analysis-controls'},h('h3',null,'启动与下载'),h('ol',null,h('li',null,'下载并解压Python脚本版，首次运行“安装Excel同步依赖.bat”，再运行“启动Excel同步Python.bat”。'),h('li',null,'保留Python窗口，在这里选择装置、分组后点击连接。'),h('li',null,'本机窗口选择工作簿、工作表、起止行、时间列和数值列；预览后允许发送。')),h('div',{className:'button-row'},h('a',{className:'button',href:'https://github.com/SeanTim-could/Process-engineer/releases/latest/download/Workbench-Excel-Python.zip',download:true},'下载Python脚本版'),h('a',{className:'button',href:'https://github.com/SeanTim-could/Process-engineer/releases/latest/download/Workbench-Windows-Portable.zip',download:true},'下载便携版'))),
+      h('section',{className:'panel analysis-controls'},h('h3',null,'最近写入的Excel来源'),!(saved?.sources.length)?h('p',{className:'muted'},'尚无同步记录。'):h('div',{className:'table-wrap'},h('table',{className:'data-table'},h('thead',null,h('tr',null,...['工作簿 / 工作表','装置 / 分组','最近写入时间','最新采样时间','本轮时间点'].map(t=>h('th',{key:t},t)))),h('tbody',null,...saved.sources.map(s=>h('tr',{key:s.id},h('td',null,s.filename+' / '+s.sheet),h('td',null,(settings.units.find(u=>u.id===s.unitId)?.name??s.unitId)+' / '+s.group),h('td',null,format(Date.parse(s.importedAt))),h('td',null,format(s.lastDataTime)),h('td',null,s.count))))))));
+  }
+  function useImports(callback){const ref=R.useRef(callback);ref.current=callback;R.useEffect(()=>{const key=scope(),listen=e=>{if(e.detail.scope===key)ref.current(e.detail);};window.addEventListener('workbench-excel-imported',listen);return()=>window.removeEventListener('workbench-excel-imported',listen);},[]);}
+  return {pages,Page,request,normalize,reset,useImports};
+})();
