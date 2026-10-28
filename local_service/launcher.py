@@ -278,7 +278,7 @@ def main(argv=None):
     print('工艺工程师工作台已启动：' + origin)
     print('当前读取程序：' + sys.executable)
     if args.excel_sync:
-        print('Excel由Python读取；请保持Excel数据已更新。文件模式读取前需保存。')
+        print('Excel由Python读取；已打开模式可在每次读取前刷新公式。文件模式仅读取上次保存结果。')
     print('请保留此窗口。关闭窗口会停止文档检索和Excel读取，浏览器内已保存的数据不会删除。')
     print('仅检索文档无需迁移生产数据。如需在本机使用生产数据，请先在网站“另存为”工作台JSON文件，再在本机“打开”。')
     print('读取停住时，请查看 Office 的授权、密码或文件打开提示。取消将在当前文件结束后生效。')

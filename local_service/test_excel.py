@@ -13,7 +13,7 @@ from http.server import ThreadingHTTPServer
 
 from openpyxl import Workbook
 from document_index import DocumentIndex
-from excel_reader import ExcelReader, timestamp, numeric, parse_rows, config
+from excel_reader import ExcelReader, timestamp, numeric, parse_rows, config, refresh_excel
 from launcher import make_handler
 
 
@@ -74,7 +74,7 @@ class ExcelTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_rows([rows[0], (rows[0][0], 2)], columns, 1, 2)
 
-    def test_open_excel_uses_unsaved_values_without_refresh_save_or_close(self):
+    def test_open_excel_uses_unsaved_values_without_save_or_close(self):
         selected = self.reader.select(self.path, 'open')
         events = []
         class Area:
@@ -87,14 +87,23 @@ class ExcelTests(unittest.TestCase):
                 return SimpleNamespace(End=lambda direction: SimpleNamespace(Row=2))
         sheet = SimpleNamespace(Cells=Cells(), Rows=SimpleNamespace(Count=1048576), Range=lambda *args: Area())
         book = SimpleNamespace(FullName=str(self.path), Date1904=False, Worksheets=SimpleNamespace(Item=lambda name: sheet))
-        app = SimpleNamespace(Ready=True, CalculationState=0, Workbooks=SimpleNamespace(Count=1, Item=lambda i: book))
+        app = SimpleNamespace(Ready=True, CalculationState=0, CalculateFull=lambda: events.append('CalculateFull'), Workbooks=SimpleNamespace(Count=1, Item=lambda i: book))
         @contextmanager
         def active():
             yield app
         with patch('excel_reader.active_excel', active):
             result = self.reader.read({**self.body, 'fileId': selected['fileId']})
             self.assertEqual(result['rows'][0]['values']['c_1'], 999)
+            self.assertEqual(events, ['CalculateFull', 'Value2', 'Value2'])
+            self.assertEqual(result['refresh']['mode'], 'calculate')
+            events.clear()
+            self.reader.read({**self.body, 'fileId': selected['fileId'], 'refreshMode': 'none'})
             self.assertEqual(events, ['Value2', 'Value2'])
+            events.clear()
+            app.CalculateFull = lambda: (_ for _ in ()).throw(RuntimeError('PI offline'))
+            with self.assertRaisesRegex(ValueError, '刷新失败'):
+                self.reader.read({**self.body, 'fileId': selected['fileId']})
+            self.assertEqual(events, [], 'A failed refresh must not read cached old results')
             app.CalculationState = 1
             with self.assertRaisesRegex(ValueError, '正在编辑或计算'):
                 self.reader.read({**self.body, 'fileId': selected['fileId']})
@@ -114,6 +123,38 @@ class ExcelTests(unittest.TestCase):
         self.path.unlink()
         with self.assertRaises(ValueError):
             self.reader.read(self.body)
+
+    def test_refresh_waits_scopes_macro_and_rejects_failures(self):
+        events = []
+        app = SimpleNamespace(Ready=True, CalculationState=0, CalculateFull=lambda: events.append('calculated'),
+                              Run=lambda name: events.append(name))
+        book = SimpleNamespace(Name="PI O'Brien.xlsm")
+        result = refresh_excel(app, book, {})
+        self.assertEqual(events, ['calculated'])
+        self.assertEqual(result['mode'], 'calculate')
+        result = refresh_excel(app, book, {'refreshMode': 'macro', 'refreshMacro': 'Module1.RefreshPI'})
+        self.assertEqual(events[-1], "'PI O''Brien.xlsm'!Module1.RefreshPI")
+        self.assertEqual(result['mode'], 'macro')
+        for name in ['external.xlsm!Run', "Bad'!x", 'foo(1)', '', '../Run']:
+            with self.assertRaises(ValueError):
+                refresh_excel(app, book, {'refreshMode': 'macro', 'refreshMacro': name})
+        app.CalculateFull = lambda: (_ for _ in ()).throw(RuntimeError('PI offline'))
+        with self.assertRaisesRegex(ValueError, '刷新失败'):
+            refresh_excel(app, book, {})
+        self.assertIsNone(refresh_excel(app, book, {'refreshMode': 'none'}))
+        with self.assertRaisesRegex(ValueError, '文件模式无法刷新'):
+            self.reader.read({**self.body, 'refreshMode': 'calculate'})
+
+    def test_refresh_busy_and_timeout_do_not_read_old_results(self):
+        app = SimpleNamespace(Ready=True, CalculationState=0)
+        def calculate():
+            app.CalculationState = 1
+        app.CalculateFull = calculate
+        with patch('excel_reader.time.monotonic', side_effect=[0, 61]):
+            with self.assertRaisesRegex(ValueError, '超过60秒'):
+                refresh_excel(app, SimpleNamespace(), {})
+        with self.assertRaisesRegex(ValueError, '正在编辑或计算'):
+            refresh_excel(app, SimpleNamespace(), {})
 
 
 class ExcelHttpTests(ExcelTests):

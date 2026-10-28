@@ -1,4 +1,4 @@
-"""Read Excel results through the authorized Python process; never refresh or save workbooks."""
+"""Read Excel through Python, optionally recalculating DataLink formulas before reading."""
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -10,6 +10,7 @@ import re
 import secrets
 import sys
 import threading
+import time
 
 BEIJING = timezone(timedelta(hours=8))
 MAX_ROWS = 20_000
@@ -172,6 +173,46 @@ def is_ready(app):
         raise ValueError('Excel正在编辑或计算，本轮未读取；请等待PI更新完成。')
 
 
+def refresh_excel(app, book, body):
+    """Full calculation re-evaluates Excel/XLL formulas; never pretend RefreshAll is DataLink.
+
+    A local administrator may supply a workbook macro for versions requiring their
+    own DataLink update operation. Macros are scoped to the selected workbook.
+    """
+    mode = body.get('refreshMode', 'calculate')
+    if mode not in {'calculate', 'macro', 'none'}:
+        raise ValueError('Excel刷新方式无效。')
+    if mode == 'none':
+        return None
+    is_ready(app)
+    started = time.monotonic()
+    try:
+        if mode == 'macro':
+            macro = body.get('refreshMacro', '')
+            if not isinstance(macro, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,79}(?:\.[A-Za-z_][A-Za-z0-9_]{0,79})?', macro):
+                raise ValueError('请填写当前工作簿内的无参数刷新宏名称，例如 RefreshPI 或 Module1.RefreshPI。')
+            name = str(book.Name).replace("'", "''")
+            app.Run(f"'{name}'!{macro}")
+        else:
+            app.CalculateFull()
+        # DataLink formulas can finish asynchronously after CalculateFull returns.
+        # Keep this bounded; a rejected/busy/timeout cycle never imports old values.
+        while not app.Ready or app.CalculationState != 0:
+            if time.monotonic() - started > 60:
+                raise ValueError('Excel/PI刷新超过60秒，本轮未同步。请检查PI连接和Excel提示窗口。')
+            if sys.platform == 'win32':
+                importlib.import_module('pythoncom').PumpWaitingMessages()
+            time.sleep(0.2)
+        if time.monotonic() - started > 60:
+            raise ValueError('Excel/PI刷新超过60秒，本轮未同步。')
+    except ValueError:
+        raise
+    except Exception:
+        raise ValueError('Excel刷新失败，本轮未同步。请确认PI DataLink已加载、PI连接正常；使用刷新宏时需启用该宏。') from None
+    return {'mode': mode, 'completedAt': datetime.now(BEIJING).isoformat(),
+            'note': 'Excel刷新命令已完成；PI服务器质量和均值口径仍以DataLink结果为准。'}
+
+
 class ExcelReader:
     """Only native-picked files or explicitly selected open workbooks receive read capabilities."""
     def __init__(self):
@@ -255,6 +296,7 @@ class ExcelReader:
             with active_excel() as app:
                 is_ready(app)
                 book = self.find_book(app, path)
+                refresh = refresh_excel(app, book, body)
                 try:
                     sheet = book.Worksheets.Item(settings['sheet'])
                 except Exception:
@@ -263,17 +305,22 @@ class ExcelReader:
                 end = min(settings['end'], last) if settings['end'] else last
                 if not settings['start'] <= end < settings['start'] + MAX_ROWS:
                     raise ValueError('时间列为空或区域超过20000行，请设置起止行。')
-                # One bulk read, no Calculate, RefreshAll, Save, Close or DataLink automation.
+                # Read results only after the requested refresh has completed.
                 area = sheet.Range(sheet.Cells(settings['start'], 1), sheet.Cells(end, width))
                 rows = area.Value2
                 if end == settings['start'] and width == 1:
                     rows = ((rows,),)
+                if refresh:
+                    time.sleep(1)  # Reject results still changing after asynchronous calculation.
                 again = area.Value2
                 is_ready(app)
                 if rows != again:
                     raise ValueError('Excel结果仍在变化，本轮未同步，下一轮将重新读取。')
                 parsed, issues, details = parse_rows(rows, settings['columns'], settings['time'], settings['start'], bool(book.Date1904))
         else:
+            if body.get('refreshMode', 'none') != 'none':
+                raise ValueError('文件模式无法刷新PI。请改为读取已打开Excel，或选择仅读取已保存结果。')
+            refresh = None
             from openpyxl import load_workbook
             before = path.stat()
             try:
@@ -301,4 +348,4 @@ class ExcelReader:
         digest = hashlib.sha256(json.dumps([columns, parsed], sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         return {'version': 1, 'sourceId': source_id, 'filename': path.name, 'sheet': settings['sheet'],
                 'columns': columns, 'rows': parsed, 'issues': issues, 'details': details,
-                'digest': digest, 'mode': mode, 'readAt': datetime.now(BEIJING).isoformat()}
+                'digest': digest, 'mode': mode, 'refresh': refresh, 'readAt': datetime.now(BEIJING).isoformat()}

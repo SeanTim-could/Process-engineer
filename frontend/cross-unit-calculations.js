@@ -140,6 +140,15 @@ var CrossUnit = (() => {
   }
 
   function computeCross(state, entry, column, nodes) {
+    const groups = new Set(entry.points.filter(p => Object.keys(p.values).some(k => entry.dataset.columns.some(c => c.key === k && !c.formula && c.source !== 'lims'))).map(p => p.group));
+    computeCrossGroup(state,entry,column,nodes);
+    for (const group of groups) {
+      const adapted=SharedFormulas.adapt(column,entry.dataset.columns,group);
+      if(adapted!==column)computeCrossGroup(state,entry,adapted,nodes);
+    }
+  }
+
+  function computeCrossGroup(state, entry, column, nodes) {
     const formula=column.formula, ctx=context(state,entry,column,nodes);
     const ast=TE(formula.expression,name=>formula.bindings[name]);
     const onLims=ctx.lims.length && ctx.matching.timeline==="lims";
