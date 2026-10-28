@@ -6,6 +6,7 @@ import importlib
 import json
 import math
 from pathlib import Path
+import os
 import re
 import secrets
 import sys
@@ -215,22 +216,64 @@ def refresh_excel(app, book, body):
 
 class ExcelReader:
     """Only native-picked files or explicitly selected open workbooks receive read capabilities."""
-    def __init__(self):
+    def __init__(self, cache=None, codec=None):
         self.files = {}
         self.lock = threading.Lock()
+        self.file_lock = threading.RLock()
+        self.cache, self.codec = Path(cache) if cache else None, codec
+        self.memory_warning = ''
+        if self.cache and self.cache.exists():
+            try:
+                payload = json.loads(self.codec(self.cache.read_bytes(), decrypt=True))
+                if payload.get('version') != 1 or not isinstance(payload.get('files'), list) or len(payload['files']) > 256:
+                    raise ValueError()
+                for item in payload['files']:
+                    token, path, mode = item['token'], item['path'], item['mode']
+                    if not isinstance(token, str) or not re.fullmatch(r'[A-Za-z0-9_-]{20,100}', token) or mode not in {'open', 'file'}:
+                        raise ValueError()
+                    self.files[token] = (Path(path).resolve(), mode)
+            except Exception:
+                self.files.clear()
+                self.memory_warning = '上次工作簿选择未能恢复，请重新选择；导入参数仍保留。'
+
+    def persist_files(self):
+        if not self.cache:
+            return
+        try:
+            data = json.dumps({'version': 1, 'files': [{'token': token, 'path': str(path), 'mode': mode}
+                               for token, (path, mode) in self.files.items()]}, ensure_ascii=False).encode()
+            self.cache.parent.mkdir(parents=True, exist_ok=True)
+            temp = self.cache.with_suffix('.tmp')
+            temp.write_bytes(self.codec(data))
+            os.replace(temp, self.cache)
+            self.memory_warning = ''
+        except Exception:
+            self.memory_warning = '工作簿选择未能保存到本机，重启启动器后需重新选择；导入参数仍保留。'
 
     def select(self, path, mode='file'):
+        with self.file_lock:
+            return self._select(path, mode)
+
+    def _select(self, path, mode='file'):
         path = Path(path).resolve()
         suffixes = {'.xlsx', '.xlsm'} if mode == 'file' else {'.xlsx', '.xlsm', '.xls', '.xlsb'}
         if mode not in {'file', 'open'} or path.suffix.lower() not in suffixes or not path.is_file():
             raise ValueError('文件模式支持xlsx/xlsm；已打开模式还支持xls/xlsb。请重新选择Excel文件。')
         if path.stat().st_size > MAX_BYTES:
             raise ValueError('Excel文件超过128 MB，请拆分读取。')
-        if len(self.files) >= 40:
+        for token, existing in self.files.items():
+            if existing == (path, mode):
+                return {'fileId': token, 'name': path.name, 'mode': mode, 'warning': self.memory_warning}
+        if len(self.files) >= 256:
             self.files.pop(next(iter(self.files)))
         token = secrets.token_urlsafe(24)
         self.files[token] = (path, mode)
-        return {'fileId': token, 'name': path.name, 'mode': mode}
+        self.persist_files()
+        return {'fileId': token, 'name': path.name, 'mode': mode, 'warning': self.memory_warning}
+
+    def restore(self, token):
+        path, mode = self.source(token)
+        return {'fileId': token, 'name': path.name, 'mode': mode, 'warning': self.memory_warning}
 
     def opened(self):
         with active_excel() as app:

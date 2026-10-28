@@ -11,7 +11,7 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['analysis-math.js','analysis-point-math.js','formula-syntax.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','excel-sync.js','data-analysis.js'])
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['view-defaults.js','analysis-math.js','analysis-point-math.js','formula-syntax.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js'])
     block=START+'\n'+code+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]
@@ -45,8 +45,8 @@ def render(html):
         js=js.replace(old,new)
     hook('function l3(e){let t=e.trim()', 'function l3(e){let t=FormulaSyntax.normalize(e).trim()')
     hook('function jm(e,t,r){if(!e.length)', 'function jm(e,t,r){return jmCore(typeof PointExclusions!=="undefined"?PointExclusions.filterRecords(e,t,r):e,t,r)}function jmCore(e,t,r){if(!e.length)')
-    hook('VG(t.state);Eu.profile=', 'VG(t.state);PointExclusions.seed(t.state.analytics);Eu.profile=')
-    hook('await ZG(n.state,t.revision);if(r.pathname', 'await ZG(n.state,t.revision);PointExclusions.seed(n.state.analytics);if(r.pathname')
+    hook('VG(t.state);Eu.profile=', 'VG(t.state);PointExclusions.seed(t.state.analytics);LiveData.seed(t.state);Eu.profile=')
+    hook('await ZG(n.state,t.revision);if(r.pathname', 'await ZG(n.state,t.revision);PointExclusions.seed(n.state.analytics);LiveData.seed(n.state);if(r.pathname')
     hook('function B1(e="production"){let[t,r]', 'function B1(e="production"){let pointVersion=PointExclusions.useVersion();let[t,r]')
     hook('()=>I.abort()},[S?.id,p]);', '()=>I.abort()},[S?.id,p,pointVersion]);')
     hook('onDatasetChange:u,onChanged:c}){let[f,d]', 'onDatasetChange:u,onChanged:c}){let pointVersion=PointExclusions.useVersion();let[f,d]')
@@ -79,16 +79,42 @@ def render(html):
 
     # Excel values arrive through a user-authorized local popup, then use the
     # existing account-local import/validation and cross-unit calculation graph.
-    hook('var B=oe(yt(),1),w$=[...DataAnalysis.pages,', 'var B=oe(yt(),1),w$=[...ExcelSync.pages,...DataAnalysis.pages,')
+    hook('var B=oe(yt(),1),w$=[...DataAnalysis.pages,', 'var B=oe(yt(),1),w$=[...LiveData.pages,...ExcelSync.pages,...DataAnalysis.pages,')
     hook('analytics:DataAnalysis.normalize(t.analytics),settings:r', 'excelSync:ExcelSync.normalize(t.excelSync),analytics:DataAnalysis.normalize(t.analytics),settings:r')
     hook('else if(r.pathname==="/api/analytics")', 'else if(r.pathname==="/api/excel-sync"){a=await ExcelSync.request(e)}else if(r.pathname==="/api/analytics")')
     hook('AnalysisDrafts.reset(n.state.analytics?.drafts);', 'AnalysisDrafts.reset(n.state.analytics?.drafts);ExcelSync.reset();')
-    hook('"timeseries","capability","plotting"].includes(c),zs=', '"timeseries","capability","plotting","excel-sync"].includes(c),zs=')
-    hook('className:"page-description",children:["timeseries","capability","plotting"].includes(c)?', 'className:"page-description",children:c==="excel-sync"?"由Python读取Excel结果，自动加入当前账号的工作台。清晰预览，按时间追加。": ["timeseries","capability","plotting"].includes(c)?')
-    hook('jsx)("h1",{children:c==="timeseries"?', 'jsx)("h1",{children:c==="excel-sync"?"让Excel里的数据，自动加入工作台。":c==="timeseries"?')
+    hook('"timeseries","capability","plotting"].includes(c),zs=', '"timeseries","capability","plotting","excel-sync","live-data"].includes(c),zs=')
+    hook('className:"page-description",children:["timeseries","capability","plotting"].includes(c)?', 'className:"page-description",children:c==="live-data"?"独立查看PI采样和计算指标，实时数据与日均汇总分别展示。":c==="excel-sync"?"由Python读取Excel结果，自动加入当前账号的工作台。清晰预览，按时间追加。": ["timeseries","capability","plotting"].includes(c)?')
+    hook('jsx)("h1",{children:c==="timeseries"?', 'jsx)("h1",{children:c==="live-data"?"实时数据，跟上装置每一次变化。":c==="excel-sync"?"让Excel里的数据，自动加入工作台。":c==="timeseries"?')
     marker='["timeseries","capability","plotting"].includes(c)&&(0,B.jsx)(DataAnalysis.Page,'
     hook(marker,'c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,{settings:d}),'+marker)
     hook('Q=(0,It.useMemo)(()=>p3(),[]);async function ze', 'Q=(0,It.useMemo)(()=>p3(),[]);ExcelSync.useImports(detail=>{Qt(v=>v+1);t.refresh(!t.dataset&&t.view.unitId===detail.unitId?detail.datasetId:undefined).catch(()=>{});});async function ze')
+
+    # Device-specific Excel profiles, PI provenance and calendar-month defaults.
+    hook('var B=oe(yt(),1),w$=[...ExcelSync.pages,', 'var B=oe(yt(),1),w$=[...LiveData.pages,...ExcelSync.pages,')
+    hook('else if(r.pathname==="/api/excel-sync")', 'else if(r.pathname==="/api/live-data"){a=LiveData.request(e)}else if(r.pathname==="/api/excel-sync")')
+    hook('PointExclusions.seed(t.state.analytics);Eu.profile=', 'PointExclusions.seed(t.state.analytics);LiveData.seed(t.state);Eu.profile=')
+    hook('PointExclusions.seed(n.state.analytics);if(r.pathname', 'PointExclusions.seed(n.state.analytics);LiveData.seed(n.state);if(r.pathname')
+    hook('"plotting","excel-sync"].includes(c),zs=', '"plotting","excel-sync","live-data"].includes(c),zs=')
+    hook('jsx)("h1",{children:c==="excel-sync"?', 'jsx)("h1",{children:c==="live-data"?"实时数据，跟上装置每一次变化。":c==="excel-sync"?')
+    hook('className:"page-description",children:c==="excel-sync"?', 'className:"page-description",children:c==="live-data"?"独立查看PI采样和计算指标，实时数据与日均汇总分别展示。":c==="excel-sync"?')
+    hook('c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,', 'c==="live-data"&&(0,B.jsx)(LiveData.Page,{refreshKey:Sr}),c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,')
+    hook('QG,{workspace:t,trends:c==="trends"}', 'QG,{workspace:LiveData.summary(t),trends:c==="trends"}')
+    hook('function Rn(e){return e.count?zm(e.start,e.end):ni(br().slice(0,7))}', 'function Rn(e){return ViewDefaults.range()}')
+    hook('v.current:G.view,H=G.datasets.find', 'v.current:{...G.view,...ViewDefaults.range()},H=G.datasets.find')
+    hook('function Fi(he){he==="charts"', 'ViewDefaults.useOpeningRange(c,t.ready,t.updateView);function Fi(he){he==="charts"')
+    hook('sourceId:"raw",...ni(v.current.month),group:""', 'sourceId:"raw",...ViewDefaults.range(),group:""')
+    hook('{unitId:I,sourceId:"raw",group:""})},A=', '{unitId:I,sourceId:"raw",...ViewDefaults.range(),group:""})},A=')
+    # The relationship view previously picked the full source overlap.
+    hook('I(At&&i?_s(i):mt(vn<=ys?vn:Cr(ve))),j(At&&o?_s(o,!0):mt(vn<=ys?ys:Ta(ve)))', 'I(ViewDefaults.range().from),j(ViewDefaults.range().to)')
+    hook('let L=_.comparison??Pd();o(L)', 'let L={...(_.comparison??Pd()),...ViewDefaults.range(),lines:(_.comparison??Pd()).lines.map(line=>({...line,from:"",to:""}))};o(L)')
+
+    hook('else if(r.pathname==="/api/live-data")', 'else if(r.pathname==="/api/formula-health"){a=await FormulaHealth.request(e)}else if(r.pathname==="/api/live-data")')
+    # A ready ledger can contain stale local formula values from an older engine.
+    # Check reads before returning them; raw fields and formula definitions remain unchanged.
+    hook('let r=new URL(e.url),a;if(r.pathname', 'let r=new URL(e.url),a;if(e.method==="GET"&&["/api/series","/api/live-data","/api/formula-health"].includes(r.pathname))FormulaHealth.ensure(t.revision);if(r.pathname')
+    hook('CrossUnit.recalculate(staged);Object.assign(n.state,staged);', 'FormulaHealth.recalculate(staged);Object.assign(n.state,staged);')
+    hook('$e&&c==="data"&&rt&&(0,B.jsx)(kC,', '$e&&c==="data"&&rt&&(0,B.jsx)(FormulaHealth.Panel,{unitId:lt.id,from:t.view.from,to:t.view.to,refreshKey:Sr,onChanged:()=>{t.refresh();Qt(v=>v+1)}}),$e&&c==="data"&&rt&&(0,B.jsx)(kC,')
 
     html=html[:match.start(2)]+base64.b64encode(js.encode()).decode()+html[match.end(2):]
     css='<style id="data-analysis-style">\n'+(ROOT/'frontend/data-analysis.css').read_text().rstrip()+'\n</style>'

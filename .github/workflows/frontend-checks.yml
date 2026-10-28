@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -10,6 +10,8 @@ on:
       - 'requirements-excel-sync.txt'
       - 'scripts/test-excel-sync.cjs'
       - 'scripts/test-pi-daily.cjs'
+      - 'scripts/test-device-excel-profiles.cjs'
+      - 'scripts/test-live-defaults-and-formulas.cjs'
       - 'scripts/excel-sync-fixture.py'
       - 'scripts/sync-cross-unit-calculations.py'
       - 'scripts/test-cross-unit-calculations.cjs'
@@ -43,6 +45,8 @@ on:
       - 'requirements-excel-sync.txt'
       - 'scripts/test-excel-sync.cjs'
       - 'scripts/test-pi-daily.cjs'
+      - 'scripts/test-device-excel-profiles.cjs'
+      - 'scripts/test-live-defaults-and-formulas.cjs'
       - 'scripts/excel-sync-fixture.py'
       - 'scripts/sync-cross-unit-calculations.py'
       - 'scripts/test-cross-unit-calculations.cjs'
@@ -96,6 +100,9 @@ jobs:
           node --check frontend/backup-merge.js
           node --check frontend/excel-sync.js
           node --check frontend/pi-daily.js
+          node --check frontend/live-data.js
+          node --check frontend/view-defaults.js
+          node --check frontend/formula-health.js
           node --check frontend/shared-formulas.js
           node --check frontend/analysis-math.js
           node --check frontend/analysis-point-math.js
@@ -149,3 +156,5 @@ jobs:
           node scripts/test-process-capability-and-points.cjs
           node scripts/test-excel-sync.cjs
           node scripts/test-pi-daily.cjs
+          node scripts/test-device-excel-profiles.cjs
+          node scripts/test-live-defaults-and-formulas.cjs

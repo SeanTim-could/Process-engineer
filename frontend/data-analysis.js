@@ -1,7 +1,7 @@
 // Read-only analysis over account-local data; saved chart recipes live in backups.
 var DataAnalysis = (() => {
   const R=Se(),h=R.createElement,M=AnalysisMath,P=AnalysisPlots;
-  const groups=[{id:"operations",label:"运行概览",items:["overview","trends","lims","reports"]},
+  const groups=[{id:"operations",label:"运行概览",items:["overview","live-data","trends","lims","reports"]},
     {id:"analytics",label:"数据分析",items:["timeseries","capability","plotting","charts","comparison","analysis"]},
     {id:"data",label:"数据管理",items:["data","excel-sync","settings"]},{id:"personal",label:"文档与个人",items:["files","documents","profile"]}];
   const pages=[{id:"timeseries",label:"时序分析",en:"TIME SERIES",icon:Pm},{id:"capability",label:"前后能力分析",en:"BEFORE / AFTER",icon:jo},{id:"plotting",label:"自由作图",en:"CHART WORKSPACE",icon:Mn}];
@@ -100,10 +100,10 @@ var DataAnalysis = (() => {
   }
   function Capability(props){return h(CapabilityReports.Workspace,{...props,Field,Select,SpecFields,api});}
   function Page({mode,refreshKey,onImport}){
-    const [catalog,setCatalog]=R.useState({sources:[],charts:[],revision:0}),[config,setConfig]=AnalysisDrafts.usePart(mode,"config",{...defaults}),[error,setError]=R.useState(""),[notice,setNotice]=R.useState(""),[loading,setLoading]=R.useState(true),[editing,setEditing]=AnalysisDrafts.usePart(mode,"editing",null),[busy,setBusy]=R.useState(false),root=R.useRef(null);
+    const [catalog,setCatalog]=R.useState({sources:[],charts:[],revision:0}),[config,setConfig]=AnalysisDrafts.usePart(mode,"config",{...defaults,...ViewDefaults.analysis()}),[error,setError]=R.useState(""),[notice,setNotice]=R.useState(""),[loading,setLoading]=R.useState(true),[editing,setEditing]=AnalysisDrafts.usePart(mode,"editing",null),[busy,setBusy]=R.useState(false),root=R.useRef(null),opening=R.useRef(true);
     const update=patch=>{setConfig(old=>({...old,...patch}));setError("");setNotice("");};
     async function reload(){const value=await api("/api/analytics");AnalysisDrafts.seed(value.drafts);setCatalog(value);setConfig(old=>old.sourceId?old:{...old,sourceId:value.sources[0]?.id??""});return value;}
-    R.useEffect(()=>{let live=true;setLoading(true);api("/api/analytics").then(value=>{if(live){AnalysisDrafts.seed(value.drafts);setCatalog(value);setConfig(old=>({...old,sourceId:old.sourceId||value.sources[0]?.id||""}));}}).catch(e=>{if(live)setError(e.message);}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[refreshKey]);
+    R.useEffect(()=>{let live=true;setLoading(true);api("/api/analytics").then(value=>{if(live){AnalysisDrafts.seed(value.drafts);setCatalog(value);setConfig(old=>({...old,sourceId:old.sourceId||value.sources[0]?.id||"",...opening.current?ViewDefaults.analysis():{}}));opening.current=false;}}).catch(e=>{if(live)setError(e.message);}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[refreshKey]);
     const {data,error:dataError}=useData(config.sourceId,refreshKey);
     R.useEffect(()=>{if(!data)return;setConfig(old=>{const keys=old.keys.filter(k=>data.columns.some(c=>c.key===k)),first=keys[0]??data.columns[0]?.key;
       const available=[...new Set(data.points.filter(r=>first&&Object.hasOwn(r.values,first)).map(r=>r.group))];
@@ -120,7 +120,7 @@ var DataAnalysis = (() => {
     return h("div",{className:"analysis-workbench",ref:root},h(AnalysisDrafts.Notice,{mode}),loading&&h("p",{role:"status"},"正在读取分析数据…"),
       h("section",{className:"panel analysis-controls"},h("div",{className:"analysis-figure-head"},h("div",null,h("h2",null,mode==="capability"?"前后能力分析":mode==="timeseries"?"时序分析":"自由作图"),h("p",{className:"muted"},"直接使用当前账号已导入的生产、LIMS检验或日报指标，分析过程不修改原始数据。")),h("button",{className:"button",onClick:onImport},"导入分析数据")),
         !loading&&!catalog.sources.length?h("p",{className:"analysis-empty"},"还没有可分析的数据。请先导入表格，再选择装置和指标。"):h(R.Fragment,null,h("div",{className:"analysis-fields"},
-          h(Select,{label:"分析数据来源",value:config.sourceId,onChange:sourceId=>{setEditing(null);update({sourceId,keys:[],group:"",allGroups:false,from:"",to:"",xKey:"",lsl:"",usl:"",normalized:false});},options:catalog.sources.map(s=>({value:s.id,label:s.name}))}),
+          h(Select,{label:"分析数据来源",value:config.sourceId,onChange:sourceId=>{setEditing(null);update({sourceId,keys:[],group:"",allGroups:false,...ViewDefaults.analysis(),xKey:"",lsl:"",usl:"",normalized:false});},options:catalog.sources.map(s=>({value:s.id,label:s.name}))}),
           h(Select,{label:mode==="plotting"?"主要指标 / 纵轴":"分析指标",value:config.keys[0]??"",onChange:key=>update({keys:[key],group:data?.points.find(r=>Object.hasOwn(r.values,key))?.group??"",allGroups:false,normalized:false,lsl:"",usl:""}),options:(data?.columns??[]).map(c=>({value:c.key,label:(c.source==="lims"?"LIMS · ":"")+c.label+(c.unit?" / "+c.unit:"")}))}),
           h(Select,{label:"采样分组",value:config.allGroups?"*":JSON.stringify(config.group),onChange:value=>update(value==="*"?{allGroups:true}:{group:JSON.parse(value),allGroups:false}),options:[...groupOptions.map(g=>({value:JSON.stringify(g),label:g||"未分组"})),{value:"*",label:"全部分组（合并分析）"}]}),
           h(Field,{label:"分析开始（北京时间）",type:"datetime-local",value:config.from,onChange:e=>update({from:e.target.value})}),h(Field,{label:"分析结束（北京时间）",type:"datetime-local",value:config.to,onChange:e=>update({to:e.target.value})})),

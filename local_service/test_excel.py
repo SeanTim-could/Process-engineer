@@ -156,6 +156,29 @@ class ExcelTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '正在编辑或计算'):
             refresh_excel(app, SimpleNamespace(), {})
 
+    def test_picked_file_capability_is_restored_after_service_restart(self):
+        # Exercise the codec boundary without relying on Windows in this fixture.
+        codec = lambda data, decrypt=False: data[::-1]
+        cache = self.root / 'capabilities.dat'
+        first = ExcelReader(cache, codec)
+        chosen = first.select(self.path)
+        self.assertNotIn(str(self.path).encode(), cache.read_bytes())
+        self.assertEqual(first.select(self.path)['fileId'], chosen['fileId'])
+        second = ExcelReader(cache, codec)
+        self.assertEqual(second.restore(chosen['fileId'])['name'], self.path.name)
+        self.assertEqual(second.read({**self.body, 'fileId': chosen['fileId']})['rows'][0]['values']['c_1'], 20)
+        self.assertEqual(second.select(self.path)['fileId'], chosen['fileId'])
+        with self.assertRaises(ValueError):
+            second.restore(str(self.path))
+        self.path.unlink()
+        with self.assertRaisesRegex(ValueError, '不可访问'):
+            second.restore(chosen['fileId'])
+        cache.write_bytes(b'corrupt')
+        corrupted = ExcelReader(cache, codec)
+        self.assertTrue(corrupted.memory_warning)
+        with self.assertRaises(ValueError):
+            corrupted.restore(chosen['fileId'])
+
 
 class ExcelHttpTests(ExcelTests):
     def setUp(self):

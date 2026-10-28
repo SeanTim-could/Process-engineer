@@ -101,7 +101,7 @@ def choose_excel():
 def make_handler(index, html_path, token, origin, picker=choose_folder, opener=None,
                  excel=None, excel_picker=choose_excel):
     opener = opener or (lambda path: os.startfile(str(path)))
-    excel = excel or ExcelReader()
+    excel = excel or ExcelReader(index.cache.with_name('excel-files.dat') if os.name == 'nt' else None, protect)
 
     class Handler(BaseHTTPRequestHandler):
         server_version = 'WorkbenchLocal'
@@ -204,6 +204,8 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
                     return self.reply(200, {'files': [excel.select(selected)] if selected else []})
                 if path == '/local-api/excel/sheets':
                     return self.reply(200, excel.describe(body.get('fileId')))
+                if path == '/local-api/excel/restore':
+                    return self.reply(200, excel.restore(body.get('fileId')))
                 if path == '/local-api/excel/read':
                     return self.reply(200, excel.read(body))
                 if path == '/local-api/folder':
