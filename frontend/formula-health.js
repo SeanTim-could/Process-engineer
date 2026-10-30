@@ -11,6 +11,7 @@ var FormulaHealth = (() => {
   }
   function ensure(revision) {
     const scope=AccountAuth.storageKey();if(checked.get(scope)===revision)return;
+    if(!Object.values($r().state.datasets).some(e=>e.dataset.status==='ready'&&e.dataset.role==='ledger'&&e.dataset.columns.some(c=>c.formula))){checked.set(scope,revision);return;}
     const state=structuredClone($r().state),changed=recalculate(state);if(changed.length)Object.assign(qt(),state);
     checked.set(scope,changed.length?revision+1:revision);
   }

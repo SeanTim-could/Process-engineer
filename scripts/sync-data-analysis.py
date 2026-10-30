@@ -11,7 +11,7 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['view-defaults.js','analysis-math.js','analysis-point-math.js','formula-syntax.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js'])
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['view-defaults.js','analysis-math.js','analysis-point-math.js','formula-syntax.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js'])
     block=START+'\n'+code+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]
@@ -32,6 +32,12 @@ def render(html):
         end=js.index('(0,B.jsxs)("div",{className:"sidebar-bottom"',start)
         js=js[:start]+'(0,B.jsx)(DataAnalysis.Nav,{items:w$,current:c,onSelect:Fi,reportCount:vt?g.length+t.metricReports.length:0}),'+js[end:]
         replace('$e&&c==="lims"&&(0,B.jsx)(NN,', '["timeseries","capability","plotting"].includes(c)&&(0,B.jsx)(DataAnalysis.Page,{mode:c,refreshKey:Sr,onImport:()=>{He(null),z(!0)}},c),$e&&c==="lims"&&(0,B.jsx)(NN,')
+
+    # Upgrade the former synchronous PI read route before applying guarded hooks.
+    # A handler must finish before Wwe checks dirty state and commits IndexedDB.
+    js=js.replace('a=LiveData.request(e)', 'a=await LiveData.request(e)')
+    live_route='else if(r.pathname==="/api/live-data"){a=await LiveData.request(e)}'
+    while live_route+live_route in js:js=js.replace(live_route+live_route,live_route)
 
     # Guarded upgrades of the original bundle: keep source records and formula
     # inputs intact, mask only chart/summary views, and refresh existing hooks.
@@ -92,7 +98,7 @@ def render(html):
 
     # Device-specific Excel profiles, PI provenance and calendar-month defaults.
     hook('var B=oe(yt(),1),w$=[...ExcelSync.pages,', 'var B=oe(yt(),1),w$=[...LiveData.pages,...ExcelSync.pages,')
-    hook('else if(r.pathname==="/api/excel-sync")', 'else if(r.pathname==="/api/live-data"){a=LiveData.request(e)}else if(r.pathname==="/api/excel-sync")')
+    hook('else if(r.pathname==="/api/excel-sync")', 'else if(r.pathname==="/api/live-data"){a=await LiveData.request(e)}else if(r.pathname==="/api/excel-sync")')
     hook('PointExclusions.seed(t.state.analytics);Eu.profile=', 'PointExclusions.seed(t.state.analytics);LiveData.seed(t.state);Eu.profile=')
     hook('PointExclusions.seed(n.state.analytics);if(r.pathname', 'PointExclusions.seed(n.state.analytics);LiveData.seed(n.state);if(r.pathname')
     hook('"plotting","excel-sync"].includes(c),zs=', '"plotting","excel-sync","live-data"].includes(c),zs=')
@@ -115,6 +121,8 @@ def render(html):
     hook('let r=new URL(e.url),a;if(r.pathname', 'let r=new URL(e.url),a;if(e.method==="GET"&&["/api/series","/api/live-data","/api/formula-health"].includes(r.pathname))FormulaHealth.ensure(t.revision);if(r.pathname')
     hook('CrossUnit.recalculate(staged);Object.assign(n.state,staged);', 'FormulaHealth.recalculate(staged);Object.assign(n.state,staged);')
     hook('$e&&c==="data"&&rt&&(0,B.jsx)(kC,', '$e&&c==="data"&&rt&&(0,B.jsx)(FormulaHealth.Panel,{unitId:lt.id,from:t.view.from,to:t.view.to,refreshKey:Sr,onChanged:()=>{t.refresh();Qt(v=>v+1)}}),$e&&c==="data"&&rt&&(0,B.jsx)(kC,')
+
+    if js.count(live_route)!=1:raise ValueError('Expected one awaited PI data route')
 
     html=html[:match.start(2)]+base64.b64encode(js.encode()).decode()+html[match.end(2):]
     css='<style id="data-analysis-style">\n'+(ROOT/'frontend/data-analysis.css').read_text().rstrip()+'\n</style>'

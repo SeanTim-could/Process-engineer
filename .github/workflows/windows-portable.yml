@@ -121,7 +121,7 @@ jobs:
           下载 Workbench-Windows-Portable.zip，完整解压后双击 ProcessEngineerWorkbench.exe。
           请保留 _internal 文件夹及其他配套文件。仍需桌面版 Microsoft Office 和自己的文档读取权限。
 
-          Excel自动同步：支持按装置记住Excel参数/工作簿、独立PI实时页面、最近一个月默认范围、公式运行检查和PI日均汇总（新分组或已有日报）。实际DataLink更新需在目标电脑核对。公司已授权python.exe时，可下载Workbench-Excel-Python.zip，安装依赖后运行启动脚本。网页“数据管理 → Excel自动同步”连接本机读取窗口。
+          Excel自动同步：支持按装置记住Excel参数/工作簿、轻量PI实时曲线、悬停参考线与框选放大、上次查看装置恢复、PI采样删除、公式运行检查和PI日均汇总。实际DataLink更新需在目标电脑核对。公司已授权python.exe时，可下载Workbench-Excel-Python.zip，安装依赖后运行启动脚本。网页“数据管理 → Excel自动同步”连接本机读取窗口。
 
           本版本已通过 Windows 服务测试和移除 Python 命令后的运行验证。实际 Office 文档读取需在目标电脑验证。
           NOTES

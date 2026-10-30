@@ -47,6 +47,7 @@ var ExcelSync = (() => {
   function send(c,kind,extra={}){if(c?.popup&&!c.popup.closed)c.popup.postMessage({channel:'workbench-excel',nonce:c.nonce,kind,...extra},localOrigin);}
   function stop(reason='自动同步已停止。'){const c=connection;if(!c)return;c.active=false;c.status=reason;send(c,'stop');clearInterval(watch);watch=null;notify();}
   function reset(){jobs.clear();stop('工作台文件已重新打开，请重新连接Excel同步。');}
+  function stopTarget(unitId,group){const key=scope();for(const [id,job]of jobs)if(job.scope===key&&job.target.unitId===unitId&&job.target.group===group)jobs.delete(id);if(connection?.scope===key&&connection.target.unitId===unitId&&connection.target.group===group)stop('此PI分组的数据已删除，同步已停止；重新启动可能再次导入Excel中的记录。');}
   async function apply(c,snapshot){
     if(!snapshot||snapshot.version!==1||!Array.isArray(snapshot.rows)||snapshot.rows.length<1||snapshot.rows.length>20000)throw new Error('Excel快照无效。');
     const assert=()=>{AccountAuth.assertWorkspace(c.scope);if(connection!==c||!c.active)throw new Error('同步已停止。');};let batch,done=false;
@@ -95,5 +96,5 @@ var ExcelSync = (() => {
       h('section',{className:'panel analysis-controls'},h('h3',null,'最近写入的Excel来源'),!(saved?.sources.length)?h('p',{className:'muted'},'尚无同步记录。'):h('div',{className:'table-wrap'},h('table',{className:'data-table'},h('thead',null,h('tr',null,...['工作簿 / 工作表','装置 / 分组','最近写入时间','最新采样时间','本轮时间点'].map(t=>h('th',{key:t},t)))),h('tbody',null,...saved.sources.map(s=>h('tr',{key:s.id},h('td',null,s.filename+' / '+s.sheet),h('td',null,(settings.units.find(u=>u.id===s.unitId)?.name??s.unitId)+' / '+s.group),h('td',null,format(Date.parse(s.importedAt))),h('td',null,format(s.lastDataTime)),h('td',null,s.count))))))));
   }
   function useImports(callback){const ref=R.useRef(callback);ref.current=callback;R.useEffect(()=>{const key=scope(),listen=e=>{if(e.detail.scope===key)ref.current(e.detail);};window.addEventListener('workbench-excel-imported',listen);return()=>window.removeEventListener('workbench-excel-imported',listen);},[]);}
-  return {pages,Page,request,normalize,reset,useImports};
+  return {pages,Page,request,normalize,reset,stopTarget,useImports};
 })();

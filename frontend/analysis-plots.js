@@ -99,7 +99,7 @@ var AnalysisPlots = (() => {
   function download(content,filename,type){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement("a");a.href=url;a.download=filename.replace(/[\\/:*?"<>|]/g,"_");a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
   async function saveSvg(svg,title,png=false){
     if(!svg)throw new Error("请先生成有效图表。");
-    const clone=svg.cloneNode(true),label=document.createElementNS("http://www.w3.org/2000/svg","text");
+    const clone=svg.cloneNode(true);clone.querySelectorAll('[data-live-overlay],[data-live-interaction]').forEach(node=>node.remove());const label=document.createElementNS("http://www.w3.org/2000/svg","text");
     label.setAttribute("x","500");label.setAttribute("y","21");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","16");label.setAttribute("fill","#244252");label.textContent=title;if(!svg.hasAttribute("data-complete-report")&&!svg.hasAttribute("data-complete-chart"))clone.appendChild(label);
     const source=new XMLSerializer().serializeToString(clone);
     if(!png){download(source,title+".svg","image/svg+xml;charset=utf-8");return;}

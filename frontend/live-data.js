@@ -13,30 +13,63 @@ var LiveData = (() => {
     const pairs=new Set(seeded.groups.map(identity)),points=workspace.points.filter(p=>!pairs.has(identity({unitId:p.unit,group:p.group}))),allPoints=workspace.allPoints.filter(p=>!pairs.has(identity({unitId:p.unit,group:p.group}))),available=new Set(points.flatMap(p=>Object.keys(p.values)));
     return {...workspace,points,allPoints,dataset:workspace.dataset?{...workspace.dataset,columns:workspace.dataset.columns.filter(c=>available.has(c.key)),groups:[...new Set(points.map(p=>p.group))]}:null};
   }
-  function request(req){
-    if(req.method!=='GET')throw new Error('实时数据仅支持读取。');const state=$r().state,query=new URL(req.url).searchParams,unitId=query.get('unitId'),pairs=new Set(provenance(state).map(identity)),units=state.settings.units.filter(u=>!u.archived),entries=Object.values(state.datasets).filter(e=>e.dataset.status==='ready'&&e.dataset.role==='ledger'),catalog=units.map(u=>({id:u.id,name:u.name,groups:[...new Set(entries.flatMap(e=>e.points.filter(p=>p.unit===u.id&&pairs.has(identity({unitId:u.id,group:p.group}))).map(p=>p.group)))].sort()})).filter(u=>u.groups.length);
-    if(!unitId)return Response.json({units:catalog});
-    if(!units.some(u=>u.id===unitId))throw new Error('实时装置已不可用。');
-    const entry=entries.find(e=>e.dataset.unitIds.includes(unitId));if(!entry)return Response.json({units:catalog,columns:[],points:[]});
-    const points=PointExclusions.apply(entry.dataset.id,entry.points.filter(p=>p.unit===unitId&&pairs.has(identity({unitId,group:p.group})))),keys=new Set(points.flatMap(p=>Object.keys(p.values)));
-    return Response.json({units:catalog,sourceId:entry.dataset.id,columns:entry.dataset.columns.filter(c=>c.enabled&&c.kind!=='limit'&&keys.has(c.key)),points});
+  function catalog(state,pairs){
+    const units=state.settings.units.filter(u=>!u.archived),byUnit=new Map(units.map(u=>[u.id,new Set()]));
+    for(const entry of Object.values(state.datasets))if(entry.dataset.status==='ready'&&entry.dataset.role==='ledger'){
+      const raw=new Set(entry.dataset.columns.filter(c=>!c.formula).map(c=>c.key));
+      for(const p of entry.points)if(byUnit.has(p.unit)&&pairs.has(identity({unitId:p.unit,group:p.group}))&&Object.keys(p.values).some(k=>raw.has(k)))byUnit.get(p.unit).add(p.group);
+    }
+    return units.map(u=>({id:u.id,name:u.name,groups:[...byUnit.get(u.id)].sort()}));
   }
-  async function api(unit){const r=await T0('/api/live-data'+(unit?'?unitId='+encodeURIComponent(unit):'')),v=await r.json();if(!r.ok)throw new Error(v.error);return v;}
-  function Page({refreshKey}) {
-    const [data,setData]=R.useState({units:[],columns:[],points:[]}),[unit,setUnit]=R.useState(''),[group,setGroup]=R.useState(''),[range,setRange]=R.useState(()=>ViewDefaults.analysis()),[error,setError]=R.useState(''),[loading,setLoading]=R.useState(false),version=PointExclusions.useVersion(),follow=R.useRef(true);
-    R.useEffect(()=>{let live=true;setLoading(true);api(unit).then(v=>{if(!live)return;setData(v);if(!unit&&v.units.length)setUnit(v.units[0].id);if(unit){const choices=v.units.find(u=>u.id===unit)?.groups??[];setGroup(old=>choices.includes(old)?old:choices[0]??'');}}).catch(e=>live&&setError(e.message)).finally(()=>live&&setLoading(false));return()=>{live=false;};},[unit,refreshKey,version]);
-    R.useEffect(()=>{if(follow.current)setRange(ViewDefaults.analysis());},[refreshKey]);
-    R.useEffect(()=>{const timer=setInterval(()=>{if(follow.current)setRange(ViewDefaults.analysis());},60000);return()=>clearInterval(timer);},[]);
-    let rows=[],failure='';try{rows=AnalysisMath.select(data.points??[],{...range,group,allGroups:false});}catch(e){failure=e.message;}
-    const columns=(data.columns??[]).filter(c=>(data.points??[]).some(p=>p.group===group&&Object.hasOwn(p.values,c.key))),groups=data.units.find(u=>u.id===unit)?.groups??[],format=t=>new Date(t+28800000).toISOString().slice(0,19).replace('T',' ');
-    function csv(){const quote=v=>'"'+String(typeof v==='string'&&/^[=+\-@\t\r]/.test(v)?"'"+v:v??'').replace(/"/g,'""')+'"';AnalysisPlots.download('\ufeff'+[['时间（北京时间）','分组',...columns.map(c=>c.label+(c.unit?' / '+c.unit:''))],...rows.map(p=>[format(p.time),p.group,...columns.map(c=>p.values[c.key]??'')])].map(r=>r.map(quote).join(',')).join('\r\n'),'PI实时数据.csv','text/csv;charset=utf-8');}
-    return h('div',{className:'analysis-workbench'},h('section',{className:'panel analysis-controls'},h('h2',null,'PI实时数据'),h('p',{className:'muted'},'显示Excel同步导入的PI采样值和计算指标。日均值与历史汇总在运行总览查看；需要保持Excel同步窗口运行。'),h('div',{className:'analysis-fields'},
-      h('label',{className:'analysis-field'},h('span',null,'实时数据装置'),h('select',{'aria-label':'实时数据装置',value:unit,onChange:e=>{setData(d=>({...d,points:[],columns:[]}));setUnit(e.target.value);follow.current=true;setRange(ViewDefaults.analysis());}},...data.units.map(u=>h('option',{key:u.id,value:u.id},u.name)))),
-      h('label',{className:'analysis-field'},h('span',null,'PI采样分组'),h('select',{'aria-label':'PI采样分组',value:group,onChange:e=>setGroup(e.target.value)},...groups.map(g=>h('option',{key:g,value:g},g||'未分组')))),
-      ...[['实时开始时间','from'],['实时结束时间','to']].map(([label,key])=>h('label',{className:'analysis-field',key},h('span',null,label),h('input',{'aria-label':label,type:'datetime-local',value:range[key],onChange:e=>{follow.current=false;setRange({...range,[key]:e.target.value});}})))),h('div',{className:'button-row'},h('button',{className:'button',onClick:()=>{follow.current=true;setRange(ViewDefaults.analysis());}},'最近一个月'),h('button',{className:'button',disabled:!rows.length,onClick:csv},'导出实时数据 CSV')),h('p',{className:'small muted'},`当前范围 ${rows.length} 个时间点。默认随同步推进最近一个月；手动改时间后暂停跟随，点击最近一个月恢复。`)),
-      loading&&h('p',{role:'status'},'正在读取实时数据…'),[error,failure].filter(Boolean).map(m=>h('p',{key:m,role:'alert',className:'error-banner'},m)),!loading&&!data.units.length&&h('section',{className:'panel analysis-controls'},h('p',null,'尚无PI同步数据，请到“数据管理 → Excel自动同步”连接本机Excel。')),
-      ...columns.map((col,index)=>{const config={...range,sourceId:data.sourceId,keys:[col.key],group,allGroups:false,type:'line',palette:['coast','sunset','aurora','island'][index%4],title:col.label+' · PI实时',normalized:false};const latest=[...rows].reverse().find(p=>AnalysisMath.finite(p.values[col.key]));return h('section',{className:'panel analysis-controls',key:col.key},h('p',{className:'small muted'},'最新有效值：'+(latest?AnalysisPlots.format(latest.values[col.key])+' '+col.unit+' · '+format(latest.time):'当前时段暂无有效值')),h(AnalysisPlots.Figure,{config,rows,columns:data.columns,subtitle:group||'未分组'}));}),
-      !!rows.length&&h('section',{className:'panel analysis-controls'},h('h3',null,'实时数据明细'),h('p',{className:'small muted'},'显示最近200个时间点，CSV导出包含所选时段全部数据。'),h('div',{className:'table-wrap'},h('table',{className:'data-table','aria-label':'PI实时数据明细'},h('thead',null,h('tr',null,...['时间',...columns.map(c=>c.label)].map(c=>h('th',{key:c},c)))),h('tbody',null,...rows.slice(-200).reverse().map(p=>h('tr',{key:p.time},h('td',null,format(p.time)),...columns.map(c=>h('td',{key:c.key},p.values[c.key]??'—')))))))));
+  function bounds(value){
+    const from=AnalysisMath.time((value.from??'').replace(' ','T')),to=AnalysisMath.time((value.to??'').replace(' ','T'));
+    if(from!==null&&to!==null&&from>to)throw new Error('开始时间不能晚于结束时间。');
+    return {from:from??-Infinity,to:to===null?Infinity:to+(value.exact===true?1:60000)};
   }
-  return {pages,groups,provenance,seed,summary,request,Page};
+  function selection(state,value){
+    const unitId=value.unitId,group=value.group;if(!state.settings.units.some(u=>u.id===unitId&&!u.archived)||!provenance(state).some(p=>p.unitId===unitId&&p.group===group))throw new Error('请选择已有PI采样分组。');
+    if(!['range','all'].includes(value.mode))throw new Error('请选择删除当前时段或当前PI分组全部采样。');
+    const range=value.mode==='all'?{from:-Infinity,to:Infinity}:bounds(value);
+    if(value.mode==='range'&&(!value.from||!value.to))throw new Error('请明确要删除的起止时间。');
+    const entry=state.datasets['ds_unit_'+unitId];if(!entry)throw new Error('PI数据已不存在。');
+    const match=p=>p.unit===unitId&&p.group===group&&p.time>=range.from&&p.time<range.to;
+    const raw=new Set(entry.dataset.columns.filter(c=>!c.formula).map(c=>c.key)),rows=entry.points.filter(p=>match(p)&&Object.keys(p.values).some(k=>raw.has(k)));
+    const token=vC(JSON.stringify([unitId,group,value.mode,value.from,value.to,value.exact,entry.dataset.updatedAt,rows]));
+    return {unitId,group,entry,rows,match,token};
+  }
+  async function remove(req){
+    const state=$r().state,body=await Ha(req),selected=selection(state,body);
+    if(!selected.rows.length)throw new Error('所选范围没有可删除的PI采样。');
+    if(body.action==='review-delete')return Response.json({token:selected.token,count:selected.rows.length,unitName:state.settings.units.find(u=>u.id===selected.unitId).name});
+    if(body.action!=='delete'||body.token!==selected.token)throw new Error('数据已变化，请重新预览删除范围后确认。');
+    const staged=structuredClone(state),now=new Date().toISOString();
+    for(const [id,entry]of Object.entries(staged.datasets)){
+      if(entry.dataset.status!=='ready')continue;
+      const points=entry.points.filter(p=>!selected.match(p));if(points.length===entry.points.length)continue;
+      if(!points.length&&entry.dataset.role!=='ledger'){delete staged.datasets[id];continue;}
+      entry.points=points;const times=points.map(p=>p.time);
+      entry.dataset={...entry.dataset,count:points.length,expectedCount:points.length,start:times.length?Math.min(...times):0,end:times.length?Math.max(...times):0,groups:points.length?[...new Set(points.map(p=>p.group))].sort():[''],updatedAt:now};
+    }
+    FormulaHealth.recalculate(staged);
+    const validated=DC({format:'process-studio-offline',version:1,state:staged});
+    ExcelSync.stopTarget(selected.unitId,selected.group);
+    Object.assign(qt(),validated);
+    return Response.json({deleted:selected.rows.length,unitId:selected.unitId,group:selected.group});
+  }
+  async function request(req){
+    if(req.method==='POST')return remove(req);if(req.method!=='GET')throw new Error('实时数据操作无效。');
+    const state=$r().state,query=new URL(req.url).searchParams,pairs=new Set(provenance(state).map(identity)),units=catalog(state,pairs),unitId=query.get('unitId');
+    if(!unitId)return Response.json({units});
+    if(!units.some(u=>u.id===unitId))return Response.json({units,unavailable:true,columns:[],series:[],count:0});
+    const entry=state.datasets['ds_unit_'+unitId],group=query.get('group')??units.find(u=>u.id===unitId).groups[0]??'',range=bounds({from:query.get('from')??'',to:query.get('to')??'',exact:query.get('exact')==='1'});
+    if(!entry||!pairs.has(identity({unitId,group})))return Response.json({units,unitId,group,columns:[],series:[],count:0});
+    const rawKeys=new Set(entry.dataset.columns.filter(c=>!c.formula).map(c=>c.key));
+    const source=entry.points.filter(p=>p.unit===unitId&&p.group===group&&p.time>=range.from&&p.time<range.to&&Object.keys(p.values).some(k=>rawKeys.has(k))).sort((a,b)=>a.time-b.time);
+    const keys=new Set();for(const row of source)for(const key of Object.keys(row.values))keys.add(key);const columns=entry.dataset.columns.filter(c=>c.enabled&&c.kind!=='limit'&&keys.has(c.key));
+    if(query.get('mode')==='export')return Response.json({sourceId:entry.dataset.id,unitId,group,columns,points:source});
+    const count=Number(query.get('limit')??6);if(!Number.isInteger(count)||count<1||count>100)throw new Error('指标数量无效。');
+    const rows=PointExclusions.apply(entry.dataset.id,source),series=columns.slice(0,count).map(column=>({column,...LiveSeries.sample(rows,column.key)}));
+    return Response.json({units,unitId,group,sourceId:entry.dataset.id,columns,series,count:source.length});
+  }
+  return {pages,groups,provenance,seed,summary,request,Page:LivePage.Page};
 })();
