@@ -11,6 +11,21 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
+    navigation_hooks=[
+      ('function B1(e="production",suspendSeries=false)', 'function B1(e="production",suspendSeries=false,viewPage=e==="lims"?"lims":"overview")'),
+      ('t=B1("production",["live-data","excel-sync","dashboard"].includes(c))', 't=B1("production",["live-data","excel-sync","dashboard"].includes(c),c)'),
+      ('ViewDefaults.useOpeningRange(c,t.ready,t.updateView);', '/* page-range:owned-by-workspace */'),
+      ('},[b]);let S=t.datasets.find', '},[b]);ViewDefaults.useOpeningRange(viewPage,a,x,t.view,e);let S=t.datasets.find'),
+      ('T=ZK(I?{...j,sourceId:I,from:"",to:"",group:""', 'T=ZK(I&&I!==j.sourceId?{...j,sourceId:I,from:"",to:"",group:""'),
+      ('[f,d]=(0,pr.useState)(()=>Dx("")),[m,h]=(0,pr.useState)(()=>Dx(""))', '[f,d]=ViewDefaults.useState("relationship:x",()=>Dx("")),[m,h]=ViewDefaults.useState("relationship:y",()=>Dx(""))'),
+      ('[G,j]=(0,pr.useState)(""),[H,T]=(0,pr.useState)("minute"),[_,L]=(0,pr.useState)("0")', '[G,j]=(0,pr.useState)(""),[H,T]=ViewDefaults.useState("relationship:alignment","minute"),[_,L]=ViewDefaults.useState("relationship:lag","0")'),
+      ('I(ViewDefaults.range().from),j(ViewDefaults.range().to)', 'let rememberedRange=ViewDefaults.read("relationship-range:"+te)??ViewDefaults.range();I(rememberedRange.from),j(rememberedRange.to)'),
+      ('let Qt=(0,pr.useMemo)(()=>{if(!ie||!ne||!Ge', 'ViewDefaults.useRemember("relationship-range:"+te,{from:z,to:G},ie&&S===te);let Qt=(0,pr.useMemo)(()=>{if(!ie||!ne||!Ge'),
+      ('[i,o]=(0,Nn.useState)(Pd),[s,l]', '[i,o]=ViewDefaults.useState("comparison",Pd),[s,l]'),
+      ('let L={...(_.comparison??Pd()),...ViewDefaults.range(),lines:(_.comparison??Pd()).lines.map(line=>({...line,from:"",to:""}))}', 'let L=ViewDefaults.read("comparison")??{...(_.comparison??Pd()),...ViewDefaults.range(),lines:(_.comparison??Pd()).lines.map(line=>({...line,from:"",to:""}))}'),
+    ]
+    for old,new in navigation_hooks:
+        if new in js:js=js.replace(new,old)
     memory_hooks=[
       ('let pointVersion=PointExclusions.useVersion();let[t,r]', 'let pointVersion=PointExclusions.useVersion();let workspaceMemory=WorkspaceMemory.useStore(e);let[t,r]'),
       ('let G={...v.current,...I};v.current=G', 'let G={...v.current,...I};workspaceMemory.remember(G);v.current=G'),
@@ -184,6 +199,10 @@ def render(html):
 
     for old,new in memory_hooks:
         if js.count(old)!=1:raise ValueError('Workspace memory integration marker missing: '+old[:75])
+        js=js.replace(old,new)
+
+    for old,new in navigation_hooks:
+        if js.count(old)!=1:raise ValueError('Navigation range integration marker missing: '+old[:75])
         js=js.replace(old,new)
 
     if js.count(live_route)!=1:raise ValueError('Expected one awaited PI data route')

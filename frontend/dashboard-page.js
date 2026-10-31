@@ -36,7 +36,8 @@ var DashboardPage = (() => {
       error&&h('p',{className:'error-banner',role:'alert'},error),h('div',{className:'button-row'},h('button',{className:'button primary',type:'submit',disabled:busy||!config.sourceId||!config.keys.length},busy?'正在保存…':value?'保存卡片':'添加到Dashboard'),h('button',{className:'button',type:'button',disabled:busy,onClick:onClose},'取消'))));
   }
   function Settings({board,busy,onSave}){
-    const [draft,setDraft]=R.useState(board),signature=JSON.stringify([board.columns,board.rangeMode,board.from,board.to]);R.useEffect(()=>setDraft(board),[signature]);
+    const signature=JSON.stringify([board.columns,board.rangeMode,board.from,board.to]),initial=()=>({columns:board.columns,rangeMode:board.rangeMode,from:board.from,to:board.to}),[saved,setSaved]=ViewDefaults.useState('dashboard-settings',()=>({signature,draft:initial()})),draft=saved.signature===signature?saved.draft:initial(),setDraft=change=>setSaved({signature,draft:typeof change==='function'?change(draft):change});
+    R.useEffect(()=>{if(saved.signature!==signature)setSaved({signature,draft:initial()});},[signature]);
     const patch=values=>setDraft(old=>({...old,...values}));
     return h('form',{className:'dashboard-settings',onSubmit:e=>{e.preventDefault();onSave({action:'settings',columns:draft.columns,rangeMode:draft.rangeMode,from:draft.from,to:draft.to});}},h('fieldset',{disabled:busy},h('div',{className:'analysis-fields'},
       select('看板显示列数',String(draft.columns),columns=>patch({columns:Number(columns)}),[1,2,3].map(n=>({value:String(n),label:n+'列'}))),
@@ -44,8 +45,8 @@ var DashboardPage = (() => {
       draft.rangeMode==='fixed'&&h(R.Fragment,null,input('看板统一开始时间',draft.from,from=>patch({from}),{type:'datetime-local',step:'0.001'}),input('看板统一结束时间',draft.to,to=>patch({to}),{type:'datetime-local',step:'0.001'}))),h('button',{className:'button',type:'submit'},'应用布局与时段')));
   }
   function Card({item,frame,revision,rangeVersion,index,total,busy,onMove,onEdit,onRemove,onWidth,onDragStart,onDrop}){
-    const [zoom,setZoom]=R.useState(null),[detail,setDetail]=R.useState(null),[zoomError,setError]=R.useState('');
-    R.useEffect(()=>{setZoom(null);setDetail(null);},[JSON.stringify(item.config),item.rangeMode,rangeVersion]);
+    const signature=JSON.stringify([item.config,item.rangeMode,rangeVersion]),[selection,setSelection]=ViewDefaults.useState('dashboard-zoom:'+item.id,()=>({signature,zoom:null})),zoom=selection.signature===signature?selection.zoom:null,setZoom=zoom=>setSelection({signature,zoom}),[detail,setDetail]=R.useState(null),[zoomError,setError]=R.useState('');
+    R.useEffect(()=>{if(selection.signature!==signature)setSelection({signature,zoom:null});},[signature]);
     R.useEffect(()=>{if(!zoom){setDetail(null);return;}let live=true;setDetail(null);setError('');Dashboard.api({focus:item.id,...zoom}).then(v=>live&&setDetail(v.frame)).catch(e=>live&&setError(e.message));return()=>{live=false;};},[JSON.stringify(zoom),revision,frame]);
     const data=zoom?detail:frame,title=item.config.title;
     return h('article',{className:'dashboard-card'+(item.wide?' dashboard-card-wide':''),'data-dashboard-card':item.id,onDragOver:e=>e.preventDefault(),onDrop:e=>{e.preventDefault();onDrop(index);}},
@@ -56,7 +57,7 @@ var DashboardPage = (() => {
       h(P.Boundary,{signature:item.id+revision+JSON.stringify(data.config)},data.kind==='series'?h(LiveChart.Chart,{series:data.series,config:{...data.config,compact:true},color:(P.palettes[item.config.palette]??P.palettes.coast)[0],title,subtitle:data.unitName+' · '+(data.config.group||'未分组'),pin:false,references:data.references,onZoom:next=>setZoom({...next,exact:'1'}),disabled:busy}):h(P.Figure,{config:{...data.config,compact:true},rows:data.rows,columns:data.columns,pin:false,references:data.references,subtitle:data.unitName+' · '+(data.config.allGroups?'全部分组':data.config.group||'未分组')})));
   }
   function Page({refreshKey}){
-    const [view,setView]=R.useState(null),[limit,setLimit]=R.useState(6),[revision,refresh]=R.useState(0),[loading,setLoading]=R.useState(true),[busy,setBusy]=R.useState(false),[editor,setEditor]=R.useState(null),[error,setError]=R.useState(''),[notice,setNotice]=R.useState(''),drag=R.useRef(null),version=PointExclusions.useVersion();
+    const [view,setView]=R.useState(null),[limit,setLimit]=ViewDefaults.useState('dashboard-limit',6),[revision,refresh]=R.useState(0),[loading,setLoading]=R.useState(true),[busy,setBusy]=R.useState(false),[editor,setEditor]=R.useState(null),[error,setError]=R.useState(''),[notice,setNotice]=R.useState(''),drag=R.useRef(null),version=PointExclusions.useVersion();
     R.useEffect(()=>{let live=true;setLoading(true);Dashboard.api({render:'1',catalog:'1',limit:String(limit)}).then(v=>{if(live){setView(v);setError('');}}).catch(e=>live&&setError(e.message)).finally(()=>live&&setLoading(false));return()=>{live=false;};},[refreshKey,revision,limit,version]);
     R.useEffect(()=>{const scope=AccountAuth.storageKey(),changed=e=>{if(e.detail.scope===scope)refresh(v=>v+1);},visible=()=>{if(!document.hidden)refresh(v=>v+1);},timer=setInterval(visible,60000);window.addEventListener(Dashboard.eventName,changed);document.addEventListener('visibilitychange',visible);return()=>{clearInterval(timer);window.removeEventListener(Dashboard.eventName,changed);document.removeEventListener('visibilitychange',visible);};},[]);
     async function mutate(body){setBusy(true);setError('');setNotice('');try{const result=await Dashboard.api({}, {...body,expectedRevision:view.board.revision});setView(old=>({...old,board:result.board,frames:body.action==='edit'?{...old.frames,[body.id]:undefined}:old.frames}));if(body.action==='add')setLimit(n=>Math.max(n,result.board.cards.length));refresh(v=>v+1);setNotice(result.duplicate?'这张图表已在Dashboard中。':'Dashboard已保存。');return result;}catch(e){setError(e.message);refresh(v=>v+1);throw e;}finally{setBusy(false);}}

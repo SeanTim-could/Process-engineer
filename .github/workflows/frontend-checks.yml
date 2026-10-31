@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -17,6 +17,7 @@ on:
       - 'scripts/test-live-interactions.cjs'
       - 'scripts/test-dashboard.cjs'
       - 'scripts/test-workspace-memory.cjs'
+      - 'scripts/test-navigation-ranges.cjs'
       - 'scripts/excel-sync-fixture.py'
       - 'scripts/sync-cross-unit-calculations.py'
       - 'scripts/test-cross-unit-calculations.cjs'
@@ -60,6 +61,7 @@ on:
       - 'scripts/test-live-interactions.cjs'
       - 'scripts/test-dashboard.cjs'
       - 'scripts/test-workspace-memory.cjs'
+      - 'scripts/test-navigation-ranges.cjs'
       - 'scripts/excel-sync-fixture.py'
       - 'scripts/sync-cross-unit-calculations.py'
       - 'scripts/test-cross-unit-calculations.cjs'
@@ -192,3 +194,5 @@ jobs:
           node scripts/test-live-interactions.cjs
           node scripts/test-dashboard.cjs
           node scripts/test-workspace-memory.cjs
+          node scripts/test-navigation-ranges.cjs
+          WORKBENCH_RANGE_ENTRY=workbench.html node scripts/test-navigation-ranges.cjs
