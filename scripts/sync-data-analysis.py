@@ -11,6 +11,20 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
+    memory_hooks=[
+      ('let pointVersion=PointExclusions.useVersion();let[t,r]', 'let pointVersion=PointExclusions.useVersion();let workspaceMemory=WorkspaceMemory.useStore(e);let[t,r]'),
+      ('let G={...v.current,...I};v.current=G', 'let G={...v.current,...I};workspaceMemory.remember(G);v.current=G'),
+      ('async I=>{try{let G=await Vo("GET",void 0,"?scope="+e)', 'async I=>{workspaceMemory.clear();try{let G=await Vo("GET",void 0,"?scope="+e)'),
+      ('if(!S||suspendSeries){d(""),c(null),l([]),h(!1);return}let I=new AbortController', 'if(!S||suspendSeries){d(""),c(null),l([]),h(!1);return}let cached=workspaceMemory.get(S.id,p+":"+pointVersion+":"+workspaceMemory.version);if(cached){l(cached.points);c(cached.dataset);d(S.id);h(!1);return}let I=new AbortController'),
+      ('.then(G=>{I.signal.aborted||(l(G.points),c(G.dataset),d(S.id))})', '.then(G=>{I.signal.aborted||(workspaceMemory.put(S.id,p+":"+pointVersion+":"+workspaceMemory.version,G),l(G.points),c(G.dataset),d(S.id))})'),
+      ('[S?.id,p,pointVersion,suspendSeries]);', '[S?.id,p,pointVersion,suspendSeries,workspaceMemory.version]);'),
+      ('w=I=>{let G=t.datasets.find(j=>j.role==="ledger"&&j.unitIds.includes(I))??t.datasets.find(j=>j.role!=="archive"&&j.unitIds.includes(I));x(G?{unitId:I,sourceId:G.id,...Rn(G),group:G.groups[0]??""}:{unitId:I,sourceId:"raw",...ViewDefaults.range(),group:""})}', 'w=I=>{let G=t.datasets.find(j=>j.role==="ledger"&&j.unitIds.includes(I))??t.datasets.find(j=>j.role!=="archive"&&j.unitIds.includes(I));x(workspaceMemory.select(I,G,G?{unitId:I,sourceId:G.id,...Rn(G),group:G.groups[0]??""}:{unitId:I,sourceId:"raw",...ViewDefaults.range(),group:""}))}'),
+      ('let D=f===S?.id?s:[],z=S?to({dataset:u??S,points:D},e).points:[];', 'let cachedSeries=S&&!suspendSeries?workspaceMemory.get(S.id,p+":"+pointVersion+":"+workspaceMemory.version):null;let D=f===S?.id?s:cachedSeries?.points??[],z=S?to({dataset:f===S.id?u??S:cachedSeries?.dataset??S,points:D},e).points:[];'),
+      ('fullDataset:f===S?.id?u:null,ready:a,error:i,loading:m||!!S&&f!==S.id', 'fullDataset:f===S?.id?u:cachedSeries?.dataset??null,ready:a,error:i,loading:!cachedSeries&&(m||!!S&&f!==S.id)'),
+      ('WorkspaceFiles.changed(t.revision+1);', 'WorkspaceMemory.changed(r.pathname,t.state.analytics?.exclusionRevision!==n.state.analytics?.exclusionRevision);WorkspaceFiles.changed(t.revision+1);'),
+    ]
+    for old,new in memory_hooks:
+        if new in js:js=js.replace(new,old)
     dashboard_hooks=[
       ('var B=oe(yt(),1),w$=[...LiveData.pages,...ExcelSync.pages,...DataAnalysis.pages,', 'var B=oe(yt(),1),w$=[...Dashboard.pages,...LiveData.pages,...ExcelSync.pages,...DataAnalysis.pages,'),
       ('else if(r.pathname==="/api/live-data")', 'else if(r.pathname==="/api/dashboard"){a=await Dashboard.request(e)}else if(r.pathname==="/api/live-data")'),
@@ -25,7 +39,7 @@ def render(html):
     ]
     for old,new in dashboard_hooks:
         if new in js:js=js.replace(new,old)
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['view-defaults.js','analysis-math.js','analysis-point-math.js','formula-syntax.js','chart-axes.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js','dashboard.js','dashboard-page.js'])
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['workspace-memory.js','view-defaults.js','analysis-math.js','analysis-point-math.js','formula-syntax.js','chart-axes.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js','dashboard.js','dashboard-page.js'])
     block=START+'\n'+code+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]
@@ -166,6 +180,10 @@ def render(html):
 
     for old,new in dashboard_hooks:
         if js.count(old)!=1:raise ValueError('Dashboard integration marker missing: '+old[:70])
+        js=js.replace(old,new)
+
+    for old,new in memory_hooks:
+        if js.count(old)!=1:raise ValueError('Workspace memory integration marker missing: '+old[:75])
         js=js.replace(old,new)
 
     if js.count(live_route)!=1:raise ValueError('Expected one awaited PI data route')
