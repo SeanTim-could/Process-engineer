@@ -42,8 +42,9 @@ var ViewDefaults = (() => {
   function useOpeningRange(page,ready,update,view,scope='production') {
     const R=Se(),previous=R.useRef(null);
     R.useLayoutEffect(()=>{
-      if(scope==='production'&&page==='lims')return;
-      if(!ready||!view||!['overview','trends','data','charts','lims','reports'].includes(page))return;
+      // Imports can update the shared workspace while another tool is open.
+      // Always restore this page's selection when returning from that tool.
+      if(!ready||!view||scope==='production'&&page==='lims'||!['overview','trends','data','charts','lims','reports'].includes(page)){previous.current=null;return;}
       const key='workspace:'+scope+':'+page+':'+view.unitId;
       if(previous.current!==key){
         previous.current=key;
