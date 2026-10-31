@@ -3,7 +3,14 @@
 (() => {
   const assets = window.WorkbenchAssets;
   const nativeFetch = window.fetch.bind(window);
-  let resolveStyle, rejectStyle, finished = false, failed = false, authMessage = '';
+  let resolveStyle, rejectStyle, finished = false, failed = false, executed = false, navigating = false, authMessage = '';
+  const reloading = performance.getEntriesByType('navigation')[0]?.type === 'reload';
+  const issues = [];
+  function record(stage, error) {
+    issues.push({stage, reason: error?.message || String(error)});
+    if (issues.length > 8) issues.shift();
+    try { sessionStorage.setItem('workbench-startup-issues', JSON.stringify(issues)); } catch {}
+  }
   const styleReady = new Promise((resolve, reject) => { resolveStyle = resolve; rejectStyle = reject; });
   styleReady.catch(() => {});
   const domReady = document.readyState === 'loading'
@@ -20,12 +27,14 @@
     });
   }
   function retry() {
-    const el = document.getElementById('web-startup-retry');
-    if (el) el.hidden = false;
-    else domReady.then(() => {
-      const target = document.getElementById('web-startup-retry');
-      if (target) target.hidden = false;
-    });
+    const show = () => {
+      for (const id of ['web-startup-retry','web-startup-compatible']) {
+        const el = document.getElementById(id);
+        if (el) el.hidden = false;
+      }
+    };
+    if (document.readyState === 'loading') domReady.then(show);
+    else show();
   }
   function render() {
     if (finished || !assets) return;
@@ -42,6 +51,7 @@
     progress(message) { authMessage = message; render(); },
     styleLoaded() { resolveStyle(); },
     ready() { finished = true; clearTimeout(slow); },
+    executed() { executed = true; },
     fail(message) {
       if (failed) return;
       failed = true; finished = true; clearTimeout(slow);
@@ -50,7 +60,7 @@
   });
   window.WorkbenchStartup = api;
 
-  async function compressed(kind) {
+  async function compressed(kind, fresh = reloading) {
     const info = assets[kind], controller = new AbortController();
     let stall;
     const reset = () => {
@@ -60,9 +70,9 @@
     reset();
     try {
       const response = await nativeFetch(new URL(info.compressed, location.href), {
-        cache: 'force-cache', signal: controller.signal
+        cache: fresh ? 'reload' : 'force-cache', signal: controller.signal
       });
-      if (!response.ok) throw new Error('Download unavailable');
+      if (!response.ok) throw Object.assign(new Error('HTTP ' + response.status), {retryFresh: true});
       let chunks = [], count = 0;
       if (response.body?.getReader) {
         const reader = response.body.getReader();
@@ -87,9 +97,13 @@
         : packed;
       const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
       const digest = Array.from(hash, value => value.toString(16).padStart(2, '0')).join('');
-      if (digest !== info.sha256) throw new Error('Resource verification failed');
+      if (digest !== info.sha256) throw Object.assign(new Error('Resource verification failed'), {retryFresh: true});
       progress[kind] = 1; render();
       return bytes;
+    } catch (error) {
+      record(kind + (fresh ? '-fresh' : '-cached'), error);
+      if (!fresh && error.retryFresh) return compressed(kind, true);
+      throw error;
     } finally { clearTimeout(stall); }
   }
   function rawStyle() {
@@ -127,18 +141,43 @@
       if (typeof DecompressionStream !== 'function' || !globalThis.crypto?.subtle) throw new Error('Use compatible resource');
       const bytes = await compressed('script');
       await domReady;
-      const url = URL.createObjectURL(new Blob([bytes], {type: 'text/javascript'}));
-      try { await script(url); } finally { URL.revokeObjectURL(url); }
-    } catch {
+      // The verified code has the same trust as our original inline bootstrap.
+      // Avoid blob: execution, which some browsers and browser policies reject.
+      const inline = document.createElement('script');
+      inline.textContent = new TextDecoder().decode(bytes) + '\n;window.WorkbenchStartup.executed();';
+      document.head.appendChild(inline);
+      if (!executed) throw new Error('Inline program was blocked');
+    } catch (error) {
+      record('compressed-program', error);
       progress.script = 0; render();
       await domReady;
-      await script(assets.script.url, assets.script.integrity);
+      try { await script(assets.script.url, assets.script.integrity); }
+      catch (error) {
+        record('standard-program', error);
+        // A cached failed request must not make every reload fail identically.
+        if (!error.message.includes('timed out')) {
+          const fresh = new URL(assets.script.url, location.href);
+          fresh.searchParams.set('wb_retry', Date.now());
+          await script(fresh.href, assets.script.integrity);
+        } else throw error;
+      }
       progress.script = 1; render();
     }
   }
+  async function compatible(kind, error) {
+    if (navigating) return;
+    navigating = true;
+    record(kind, error);
+    await domReady;
+    if (assets.compatible) {
+      finished = true; clearTimeout(slow);
+      status('常规加载未成功，正在切换兼容模式…');
+      location.replace(new URL(assets.compatible, location.href));
+    } else api.fail('工作台加载失败，请重新加载。');
+  }
   if (assets) {
     render();
-    style().catch(() => api.fail('界面样式下载失败，请检查网络后重新加载。'));
-    app().catch(() => api.fail('工作台程序下载失败，请检查网络后重新加载。'));
+    style().catch(error => compatible('styles-unavailable', error));
+    app().catch(error => compatible('program-unavailable', error));
   }
 })();

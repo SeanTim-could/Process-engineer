@@ -13,7 +13,7 @@ const site='https://seantim-could.github.io/Process-engineer/';
  assert(index.length<16000,'The first website page should stay small');
  assert(shell.length<16000,'The application shell should not contain its JavaScript bundle');
  assert(!index.toString().includes('data:text/javascript;base64,'));
- const files=new Map([['index.html',index],['workbench.html',shell],['启动工程师工作台.html',await fs.readFile(path.join(root,'启动工程师工作台.html'))]]);
+ const files=new Map([['workbench-compatible.html',await fs.readFile(path.join(root,'workbench-compatible.html'))],['index.html',index],['workbench.html',shell],['启动工程师工作台.html',await fs.readFile(path.join(root,'启动工程师工作台.html'))]]);
  for(const file of await fs.readdir(path.join(root,'assets')))files.set('assets/'+file,await fs.readFile(path.join(root,'assets',file)));
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH??(require('node:fs').existsSync('/usr/bin/chromium')?'/usr/bin/chromium':chromium.executablePath()),headless:true,args:['--no-sandbox']});
  let releaseBundle,releaseTimeout,releaseStyle;const bundleGate=new Promise(resolve=>releaseBundle=resolve),timeoutGate=new Promise(resolve=>releaseTimeout=resolve),styleGate=new Promise(resolve=>releaseStyle=resolve);
@@ -57,6 +57,7 @@ const site='https://seantim-could.github.io/Process-engineer/';
   assert.equal(calls.filter(s=>s==='/rest/v1/workbench_profiles').length,1,'Live identity validation starts before the application bundle is available');
   assert.equal(await p.evaluate(()=>window.WorkbenchAuthBootstrap.take({url:'https://foreign.invalid',publicKey:'foreign'},{})),null);
   const screenshot=path.join(require('node:os').tmpdir(),'workbench-delayed-style.png');await p.screenshot({path:screenshot});
+  await p.getByRole('link',{name:'使用兼容模式打开',exact:true}).waitFor({state:'visible',timeout:15000});
   releaseStyle();
   await p.waitForFunction(()=>document.getElementById('web-startup-status')?.textContent.includes('12%'));
   assert.equal(await p.locator('.offline-bar').count(),0,'Download progress remains visible until the script arrives');
@@ -82,16 +83,17 @@ const site='https://seantim-could.github.io/Process-engineer/';
   const blocked=await context.newPage();blocked.on('pageerror',e=>errors.push(e.message));
   await blocked.addInitScript(({key})=>sessionStorage.setItem(key,JSON.stringify({access_token:'blocked-access',refresh_token:'fixture-refresh',expires_at:Math.floor(Date.now()/1000)+3600})),{key:'workbench-auth:'+config.url});
   await blocked.goto(site+'workbench.html');await blocked.getByRole('heading',{name:'登录你的工作台',exact:true}).waitFor();assert.equal(await blocked.locator('.offline-bar').count(),0,'a protected empty/disabled profile must not open a workspace');
+  await blocked.goto(site+'workbench-compatible.html');await blocked.getByRole('heading',{name:'登录你的工作台',exact:true}).waitFor();assert.equal(await blocked.locator('.offline-bar').count(),0,'Compatible mode must enforce the same live protected profile');
   const failed=await context.newPage();failed.on('pageerror',e=>errors.push(e.message));
   await failed.addInitScript(({key})=>sessionStorage.setItem(key,JSON.stringify({access_token:'fixture-access',refresh_token:'fixture-refresh',expires_at:Math.floor(Date.now()/1000)+3600})),{key:'workbench-auth:'+config.url});
-  await failed.route('**/assets/**',route=>/\.js(?:\.gz)?$/.test(route.request().url())?route.abort('failed'):route.fallback());await failed.goto(site+'workbench.html');await failed.getByText('工作台程序下载失败，请检查网络后重新加载。',{exact:true}).waitFor();assert(await failed.getByRole('button',{name:'重新加载',exact:true}).isVisible());
+  await failed.route('**/assets/**',route=>/\.js(?:\.gz)?$/.test(new URL(route.request().url()).pathname)?route.abort('failed'):route.fallback());await failed.goto(site+'workbench.html');await failed.waitForURL('**/workbench-compatible.html*');await failed.waitForFunction(()=>document.querySelector('.offline-bar')?.textContent.includes('速度测试员'));assert((await failed.evaluate(()=>JSON.parse(sessionStorage.getItem('workbench-startup-issues')))).some(row=>row.stage==='program-unavailable'));
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({passed:true,indexBytes:index.length,workbenchShellBytes:shell.length,checks:[
    'A usable login form appears while the full application JavaScript is withheld, without contacting Supabase',
    'Loading feedback paints while both stylesheet and script are withheld; live identity validation overlaps their download',
    'Login and restore use one token request and one protected-profile request, with no redundant Auth user request',
    'Existing Chinese-named website bookmarks reach the light login entry; mobile layout fits',
-   'Expired sessions refresh only once; empty protected profiles cannot open a workspace; failed program downloads show a retry button',
+   'Expired sessions refresh only once; empty protected profiles cannot open a workspace; failed program downloads open the authenticated same-origin compatible entry',
    'A stalled login times out with a retryable message instead of hanging indefinitely'
   ]},null,2));
  }finally{releaseBundle();releaseStyle();releaseTimeout();await browser.close();}

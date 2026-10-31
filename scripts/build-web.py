@@ -39,6 +39,14 @@ def compressed_asset(relative, content):
     return {'url':'./'+relative,'compressed':'./'+relative+'.gz','bytes':target.stat().st_size,
             'sha256':digest.hex(),'integrity':'sha256-'+base64.b64encode(digest).decode()}
 
+def inline_script(content):
+    # A literal closing tag in a JS string must not terminate the HTML script.
+    text=content.decode() if isinstance(content,bytes) else content
+    # These XML-comment markers occur in JS regex/string literals. Preserve
+    # their value without entering the HTML parser's script-escaped state.
+    text=text.replace('<!--',r'\x3c!--')
+    return '<script>'+re.sub(r'(?i)</script',lambda _:r'<\/script',text)+'</script>'
+
 def build(config_override=None):
     source=ROOT/'启动工程师工作台.html'
     html=source.read_text()
@@ -76,7 +84,7 @@ def build(config_override=None):
     script_url=asset(('workbench','js'),script)
     css='\n'.join(re.findall(r'<style\b[^>]*>(.*?)</style>',html,re.S))
     style_url=asset(('workbench','css'),css.encode())
-    startup_assets={'script':compressed_asset(script_url,script),'style':compressed_asset(style_url,css.encode())}
+    startup_assets={'script':compressed_asset(script_url,script),'style':compressed_asset(style_url,css.encode()),'compatible':'./workbench-compatible.html?v='+hashlib.sha256(script).hexdigest()[:16]}
     web=re.sub(r'<style\b[^>]*>.*?</style>','',html,flags=re.S)
     web=re.sub(r'<script id="web-entry-redirect">.*?</script>','',web,flags=re.S)
     web=re.sub(r'<script[^>]+src="data:text/javascript;base64,[^\"]+"[^>]*></script>','',web)
@@ -89,6 +97,16 @@ def build(config_override=None):
         warm='<link rel="preconnect" href="'+markup.escape(config['url'])+'" crossorigin>'
         web=web.replace('<link rel="icon"',guard+warm+bootstrap+'<link rel="icon"',1)
     web=re.sub(r'<main class="startup-screen".*?</main>',lambda _:LOADER,web,flags=re.S)
+    # A same-origin, self-contained entry still works when a browser cannot
+    # download the separate script/CSS assets. Its auth and IndexedDB namespace
+    # are identical; it must never redirect back into the failing loader.
+    compatible=web.replace('</head>','<style>'+css+'</style></head>',1)
+    embedded=inline_script((ROOT/'frontend/web-compatible.js').read_text())
+    embedded+=inline_script((ROOT/spreadsheet_url).read_bytes())+inline_script(script)
+    compatible=compatible.replace('</body>',embedded+'</body>',1)
+    (ROOT/'workbench-compatible.html').write_text(compatible)
+    compatible_link='<a id="web-startup-compatible" hidden href="'+markup.escape(startup_assets['compatible'],quote=True)+'" style="margin-left:12px;color:#087f5b">使用兼容模式打开</a>'
+    web=web.replace('</button></div></main>','</button>'+compatible_link+'</div></main>',1)
     startup='<script>window.WorkbenchAssets='+json.dumps(startup_assets)+';</script><script>'+(ROOT/'frontend/web-startup.js').read_text()+'</script>'
     web=web.replace('<link rel="icon"',startup+'<link rel="icon"',1)
     web=web.replace('</head>',f'<style>{LOADER_CSS}</style></head>',1)
@@ -115,6 +133,6 @@ SCRIPT</script></body></html>'''
     (ROOT/'index.html').write_text(page)
     # Keep previously published fingerprints: a cached page may still reference
     # them during deployment. Only the current pair is prefetched/downloaded.
-    return {'index_bytes':len(page.encode()),'workbench_html_bytes':len(web.encode()),'script':script_url,'style':style_url,'spreadsheet':spreadsheet_url,'startup_compressed_bytes':sum(v['bytes'] for v in startup_assets.values())}
+    return {'index_bytes':len(page.encode()),'workbench_html_bytes':len(web.encode()),'script':script_url,'style':style_url,'spreadsheet':spreadsheet_url,'compatible_html_bytes':len(compatible.encode()),'startup_compressed_bytes':sum(startup_assets[k]['bytes'] for k in ['script','style'])}
 
 if __name__=='__main__':print(json.dumps(build(),ensure_ascii=False))
