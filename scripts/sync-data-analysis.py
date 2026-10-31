@@ -33,6 +33,27 @@ def render(html):
         js=js[:start]+'(0,B.jsx)(DataAnalysis.Nav,{items:w$,current:c,onSelect:Fi,reportCount:vt?g.length+t.metricReports.length:0}),'+js[end:]
         replace('$e&&c==="lims"&&(0,B.jsx)(NN,', '["timeseries","capability","plotting"].includes(c)&&(0,B.jsx)(DataAnalysis.Page,{mode:c,refreshKey:Sr,onImport:()=>{He(null),z(!0)}},c),$e&&c==="lims"&&(0,B.jsx)(NN,')
 
+    # Canonicalize the small original-bundle integration before existing hooks.
+    light_hooks=[
+      ('function B1(e="production"){let pointVersion=', 'function B1(e="production",suspendSeries=false){let pointVersion='),
+      ('if(!S){d(""),c(null),l([]),h(!1);return}let I=new AbortController', 'if(!S||suspendSeries){d(""),c(null),l([]),h(!1);return}let I=new AbortController'),
+      ('[S?.id,p,pointVersion]);', '[S?.id,p,pointVersion,suspendSeries]);'),
+      ('function zN(){PointExclusions.useVersion();let e=Lu(),t=B1(),{unitId:r,month:a}=t.view,n=he=>t.selectUnit(he),i=he=>t.updateView({month:he,...t.dataset?{}:ni(he)}),[o,s]=(0,It.useState)(null),[l,u]=(0,It.useState)(null),[c,f]=(0,It.useState)(window.__WORKBENCH_LOCAL__?.view==="documents"?"documents":"overview"),',
+       'function zN(){PointExclusions.useVersion();let[c,f]=(0,It.useState)(window.__WORKBENCH_LOCAL__?.view==="documents"?"documents":"overview"),e=Lu(),t=B1("production",["live-data","excel-sync"].includes(c)),{unitId:r,month:a}=t.view,n=he=>t.selectUnit(he),i=he=>t.updateView({month:he,...t.dataset?{}:ni(he)}),[o,s]=(0,It.useState)(null),[l,u]=(0,It.useState)(null),'),
+    ]
+    for old,new in light_hooks:
+        if new in js:js=js.replace(new,old)
+
+    # Stage-only chunks never touch stored records. Avoid reloading/cloning every
+    # device's history for each 1,000-row transport packet.
+    old='async function Wwe(e){try{AccountAuth.assertWorkspace();let t=await KG();'
+    new='async function Wwe(e){try{AccountAuth.assertWorkspace();let excelAction;if(new URL(e.url).pathname==="/api/excel-sync"&&e.method==="POST"){const chunk=await Ha(e.clone());excelAction=chunk.action;if(["rows","cancel"].includes(chunk.action))return ExcelSync.stage(chunk);}let t=await KG();'
+    if old in js:js=js.replace(old,new)
+    if new not in js:raise ValueError('Excel staging route marker missing')
+    confirm_old='await ZG(n.state,t.revision);PointExclusions.seed(n.state.analytics);'
+    confirm_new='await ZG(n.state,t.revision);if(r.pathname==="/api/excel-sync"&&excelAction==="commit"||["/api/live-data","/api/formula-health","/api/calculations","/api/settings","/api/offline/restore"].includes(r.pathname))FormulaHealth.confirm(t.revision+1);PointExclusions.seed(n.state.analytics);'
+    js=js.replace(confirm_new,confirm_old)
+
     # Upgrade the former synchronous PI read route before applying guarded hooks.
     # A handler must finish before Wwe checks dirty state and commits IndexedDB.
     js=js.replace('a=LiveData.request(e)', 'a=await LiveData.request(e)')
@@ -121,6 +142,13 @@ def render(html):
     hook('let r=new URL(e.url),a;if(r.pathname', 'let r=new URL(e.url),a;if(e.method==="GET"&&["/api/series","/api/live-data","/api/formula-health"].includes(r.pathname))FormulaHealth.ensure(t.revision);if(r.pathname')
     hook('CrossUnit.recalculate(staged);Object.assign(n.state,staged);', 'FormulaHealth.recalculate(staged);Object.assign(n.state,staged);')
     hook('$e&&c==="data"&&rt&&(0,B.jsx)(kC,', '$e&&c==="data"&&rt&&(0,B.jsx)(FormulaHealth.Panel,{unitId:lt.id,from:t.view.from,to:t.view.to,refreshKey:Sr,onChanged:()=>{t.refresh();Qt(v=>v+1)}}),$e&&c==="data"&&rt&&(0,B.jsx)(kC,')
+
+    if js.count(confirm_old)!=1:raise ValueError('Formula check revision marker missing')
+    js=js.replace(confirm_old,confirm_new)
+
+    for old,new in light_hooks:
+        if js.count(old)!=1:raise ValueError('Light live-page integration marker missing: '+old[:60])
+        js=js.replace(old,new)
 
     if js.count(live_route)!=1:raise ValueError('Expected one awaited PI data route')
 

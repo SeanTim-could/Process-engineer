@@ -8,12 +8,13 @@ var ViewDefaults = (() => {
     const format=d=>d.toISOString().slice(0,16).replace('T',' ');
     return {from:format(start),to:format(end)};
   }
+  function today(now=Date.now()){const day=new Date(now+28800000);day.setUTCHours(0,0,0,0);const from=day.toISOString().slice(0,16);day.setUTCDate(day.getUTCDate()+1);return {from,to:day.toISOString().slice(0,16),exclusive:true};}
   function analysis(){const r=range();return {from:r.from.replace(' ','T'),to:r.to.replace(' ','T')};}
   function useOpeningRange(page,ready,update) {
     const R=Se(),previous=R.useRef(null);
     R.useEffect(()=>{if(!ready||previous.current===page)return;previous.current=page;if(['overview','trends','data','charts','lims','analysis','comparison'].includes(page))update(range());},[page,ready]);
   }
-  return {range,analysis,useOpeningRange};
+  return {range,analysis,today,useOpeningRange};
 })();
 
 if(typeof module!=='undefined'&&module.exports)module.exports=ViewDefaults;

@@ -89,7 +89,7 @@ class ExcelTests(unittest.TestCase):
         book = SimpleNamespace(FullName=str(self.path), Date1904=False, Worksheets=SimpleNamespace(Item=lambda name: sheet))
         app = SimpleNamespace(Ready=True, CalculationState=0, CalculateFull=lambda: events.append('CalculateFull'), Workbooks=SimpleNamespace(Count=1, Item=lambda i: book))
         @contextmanager
-        def active():
+        def active(path=None):
             yield app
         with patch('excel_reader.active_excel', active):
             result = self.reader.read({**self.body, 'fileId': selected['fileId']})
@@ -194,6 +194,7 @@ class ExcelHttpTests(ExcelTests):
         self.worker.start()
 
     def tearDown(self):
+        self.server.RequestHandlerClass.excel_scheduler.close()
         self.server.shutdown()
         self.server.server_close()
         self.worker.join(3)
@@ -214,7 +215,7 @@ class ExcelHttpTests(ExcelTests):
         self.assertEqual(status, 200)
         file_id = json.loads(body)['files'][0]['fileId']
         self.assertEqual(self.send('/local-api/excel/read', body={**self.body, 'fileId': file_id})[0], 200)
-        for path in ['files', 'sheets', 'read']:
+        for path in ['files', 'sheets', 'read', 'tasks/start', 'tasks/status', 'tasks/ack', 'tasks/now', 'tasks/stop']:
             self.assertEqual(self.send('/local-api/excel/' + path, body=self.body, headers={'Origin': 'https://seantim-could.github.io'})[0], 403)
             self.assertEqual(self.send('/local-api/excel/' + path, body=self.body, headers={'X-Workbench-Token': 'wrong'})[0], 403)
         self.assertEqual(self.send('/local-api/excel/read', body={**self.body, 'fileId': str(self.path)})[0], 400)

@@ -2,9 +2,9 @@
 var LiveChart = (() => {
   const R=Se(),h=R.createElement,W=1000,H=400,L=85,E=970,T=25,B=315;
   const date=t=>AnalysisMath.exactLocal(t).replace('T',' '),format=AnalysisPlots.format;
-  function geometry(series){
+  function geometry(series,config={}){
     const first=series.points[0]?.time??0,last=series.points.at(-1)?.time??first;
-    const x0=first===last?first-60000:first,x1=first===last?last+60000:last;
+    const from=AnalysisMath.time(config.from??''),to=AnalysisMath.time(config.to??''),bounded=from!==null&&to!==null&&to>from,x0=bounded?from:first===last?first-60000:first,x1=bounded?to:first===last?last+60000:last;
     const padding=(series.max-series.min)*.08||Math.max(1,Math.abs(series.min??0)*.05),y0=(series.min??0)-padding,y1=(series.max??1)+padding;
     if(!Number.isFinite(y1-y0)||!Number.isFinite(y0)||!Number.isFinite(y1))throw new Error('数值范围过大，请缩小数据范围后绘图。');
     const x=v=>L+(v-x0)/(x1-x0)*(E-L),y=v=>B-(v-y0)/(y1-y0)*(B-T);let previous=null,path='';
@@ -12,7 +12,7 @@ var LiveChart = (() => {
     return {x,y,x0,x1,y0,y1,path,time:at=>x0+(at-L)/(E-L)*(x1-x0)};
   }
   function Chart({series,config,color,onZoom,disabled=false}) {
-    const ref=R.useRef(null),drag=R.useRef(null),[hover,setHover]=R.useState(null),[selection,setSelection]=R.useState(null),[error,setError]=R.useState(''),g=R.useMemo(()=>geometry(series),[series]);
+    const ref=R.useRef(null),drag=R.useRef(null),[hover,setHover]=R.useState(null),[selection,setSelection]=R.useState(null),[error,setError]=R.useState(''),g=R.useMemo(()=>geometry(series,config),[series,config.from,config.to]);
     R.useEffect(()=>{drag.current=null;setHover(null);setSelection(null);},[series]);
     const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
     function position(event){const box=event.currentTarget.ownerSVGElement.getBoundingClientRect();return {x:clamp((event.clientX-box.left)/box.width*W,L,E),y:clamp((event.clientY-box.top)/box.height*H,T,B)};}

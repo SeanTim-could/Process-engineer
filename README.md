@@ -222,3 +222,5 @@ Excel同步回归：`python scripts/run-service-tests.py` 检查实际xlsx缓存
 新增回归：`node scripts/test-device-excel-profiles.cjs` 检查两装置参数/工作簿与网页目标恢复；`node scripts/test-live-defaults-and-formulas.cjs` 检查日历月边界、实时/汇总分离、两装置不同公式与列编号的旧结果修复和诊断。Python测试覆盖服务重启后已选文件能力恢复和损坏缓存处理。
 
 实时交互回归：`node scripts/test-live-interactions.cjs` 使用2万条/8指标检查有界响应、少量SVG节点、无明细表、保留极值/缺口、真实鼠标参考线/框选放大/返回、导出浮层清理、上次装置恢复、删除取消/过期保护及汇总/其他装置保留。`test-device-excel-profiles.cjs` 还验证实际Python弹窗同步在删除后停止并保留日均记录。
+
+Excel后台同步：新版启动器支持最多16组任务，由Python排队刷新、临时失败重试，只传新增或变化的读数；网页刷新可恢复仍打开的同步窗口。实时页默认北京时间当天24小时，并避免额外加载隐藏的完整历史曲线。更新时请关闭旧本机服务，重新下载并完整解压新版脚本包或便携包。详见[Excel自动同步使用说明](Excel自动同步使用说明.md)。

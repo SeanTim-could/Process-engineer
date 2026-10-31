@@ -150,7 +150,7 @@ def parse_rows(rows, columns, time_column, start_row, date1904=False):
 
 
 @contextmanager
-def active_excel():
+def active_excel(workbook_path=None):
     if sys.platform != 'win32':
         raise ValueError('读取已打开Excel需要 Windows、Excel 和 pywin32。')
     pythoncom = importlib.import_module('pythoncom')
@@ -158,7 +158,26 @@ def active_excel():
     pythoncom.CoInitialize()
     app = None
     try:
-        app = client.GetActiveObject('Excel.Application')
+        # The active Excel.Application may be a different independent instance.
+        # Bind only an already running workbook with the exact selected path.
+        try:
+            if workbook_path is not None:
+                expected = str(Path(workbook_path).resolve()).casefold()
+                table = pythoncom.GetRunningObjectTable()
+                context = pythoncom.CreateBindCtx(0)
+                for moniker in table.EnumRunning():
+                    try:
+                        name = moniker.GetDisplayName(context, None)
+                        if str(Path(name).resolve()).casefold() == expected:
+                            book = client.Dispatch(table.GetObject(moniker).QueryInterface(pythoncom.IID_IDispatch))
+                            app = book.Application
+                            break
+                    except Exception:
+                        continue
+        except Exception:
+            pass  # Some Office configurations do not publish workbook ROT entries.
+        if app is None:
+            app = client.GetActiveObject('Excel.Application')
         yield app
     except ValueError:
         raise
@@ -298,7 +317,7 @@ class ExcelReader:
     def describe(self, token):
         path, mode = self.source(token)
         if mode == 'open':
-            with active_excel() as app:
+            with active_excel(path) as app:
                 is_ready(app)
                 book = self.find_book(app, path)
                 return {'sheets': [book.Worksheets.Item(i).Name for i in range(1, book.Worksheets.Count + 1)]}
@@ -336,7 +355,7 @@ class ExcelReader:
         if width > 256:
             raise ValueError('读取区域请放在A至IV列内，或复制到专用同步工作表。')
         if mode == 'open':
-            with active_excel() as app:
+            with active_excel(path) as app:
                 is_ready(app)
                 book = self.find_book(app, path)
                 refresh = refresh_excel(app, book, body)
@@ -392,3 +411,161 @@ class ExcelReader:
         return {'version': 1, 'sourceId': source_id, 'filename': path.name, 'sheet': settings['sheet'],
                 'columns': columns, 'rows': parsed, 'issues': issues, 'details': details,
                 'digest': digest, 'mode': mode, 'refresh': refresh, 'readAt': datetime.now(BEIJING).isoformat()}
+
+
+class ExcelScheduler:
+    """One fair, serial Python worker; browser timers only deliver acknowledged deltas.
+
+    Tasks are explicitly authorized by the native popup. Nothing is uploaded to a
+    server. Unsaved deltas remain in memory until acknowledged, with a hard cap.
+    Service restart requires the user to start again; no silent startup consent.
+    """
+    def __init__(self, reader):
+        self.reader = reader
+        self.tasks = {}
+        self.condition = threading.Condition(threading.RLock())
+        self.worker = None
+        self.closed = False
+
+    def start(self, body):
+        owner = body.get('owner')
+        if not isinstance(owner, str) or not re.fullmatch(r'[a-f0-9-]{36}', owner):
+            raise ValueError('同步任务标识无效，请重新连接。')
+        settings = body.get('settings')
+        if not isinstance(settings, dict):
+            raise ValueError('同步参数无效。')
+        config(settings)
+        self.reader.source(settings.get('fileId'))
+        interval = integer(body.get('interval'), 60, 10, 86400, '同步周期')
+        with self.condition:
+            for task_id, task in self.tasks.items():
+                if task['owner'] == owner:
+                    if task['settings'] != settings or task['interval'] != interval:
+                        raise ValueError('此任务已运行，请先停止后修改参数。')
+                    return {'taskId': task_id}
+            if len(self.tasks) >= 16:
+                raise ValueError('最多同时运行16组Excel同步，请先停止不用的任务。')
+            task_id = secrets.token_urlsafe(24)
+            self.tasks[task_id] = {'owner': owner, 'settings': settings, 'interval': interval,
+                                  'next': time.monotonic(), 'reading': False, 'error': '',
+                                  'observed': {}, 'pending': {}, 'inflight': None, 'snapshot': None,
+                                  'sequence': 0, 'failures': 0, 'lastRun': 0}
+            if not self.worker or not self.worker.is_alive():
+                self.worker = threading.Thread(target=self._work, daemon=True, name='excel-scheduler')
+                self.worker.start()
+            self.condition.notify_all()
+            return {'taskId': task_id}
+
+    def _task(self, task_id):
+        task = self.tasks.get(task_id) if isinstance(task_id, str) else None
+        if not task:
+            raise ValueError('本机同步任务已停止或服务已重启，请重新预览并开始。')
+        return task
+
+    def status(self, task_id):
+        with self.condition:
+            task = self._task(task_id)
+            snapshot = task['snapshot']
+            result = {'running': True, 'reading': task['reading'], 'error': task['error'],
+                      'failures': task['failures'], 'pending': len(task['pending']),
+                      'readAt': snapshot['readAt'] if snapshot else None,
+                      'lastDataTime': snapshot['rows'][-1]['time'] if snapshot else None}
+            if task['pending'] and not task['inflight']:
+                rows = [{'time': stamp, 'values': dict(values)} for stamp, values in sorted(task['pending'].items())]
+                delivery = {**snapshot, 'rows': rows}
+                delivery['digest'] = hashlib.sha256(json.dumps([delivery['columns'], rows], sort_keys=True).encode()).hexdigest()
+                task['inflight'] = {'id': secrets.token_urlsafe(24), 'snapshot': delivery}
+            if task['inflight']:
+                result['delivery'] = task['inflight']
+            return result
+
+    def acknowledge(self, task_id, delivery_id):
+        with self.condition:
+            task = self._task(task_id)
+            frame = task['inflight']
+            if frame and frame['id'] == delivery_id:
+                # A read may update the same cell while the old frame is imported.
+                # Only remove values equal to this acknowledged immutable frame.
+                for row in frame['snapshot']['rows']:
+                    values = task['pending'].get(row['time'], {})
+                    for key, value in row['values'].items():
+                        if values.get(key) == value:
+                            values.pop(key, None)
+                    if not values:
+                        task['pending'].pop(row['time'], None)
+                task['inflight'] = None
+                self.condition.notify_all()
+            return {'ok': True}
+
+    def now(self, task_id):
+        with self.condition:
+            task = self._task(task_id)
+            task['next'] = time.monotonic()
+            task['rerun'] = task['reading']
+            self.condition.notify_all()
+            return {'ok': True}
+
+    def stop(self, task_id):
+        with self.condition:
+            self.tasks.pop(task_id, None)
+            self.condition.notify_all()
+            return {'ok': True}
+
+    def close(self):
+        with self.condition:
+            self.closed = True
+            self.tasks.clear()
+            self.condition.notify_all()
+
+    def _capture(self, task, snapshot):
+        old = task['observed']
+        changes = []
+        for row in snapshot['rows']:
+            values = {key: value for key, value in row['values'].items()
+                      if old.get(row['time'], {}).get(key) != value}
+            if values:
+                changes.append((row['time'], values))
+        new_times = {stamp for stamp, _ in changes} - task['pending'].keys()
+        if len(task['pending']) + len(new_times) > MAX_ROWS:
+            raise ValueError('待写入工作台的数据已达20000点，请恢复工作台窗口接收后再继续；已缓存数据保留。')
+        for stamp, values in changes:
+            task['pending'].setdefault(stamp, {}).update(values)
+        task['observed'] = {row['time']: dict(row['values']) for row in snapshot['rows']}
+        # Keep only metadata here; full current rows are represented by observed.
+        task['snapshot'] = {**snapshot, 'readCount': len(snapshot['rows']), 'lastDataTime': snapshot['rows'][-1]['time'],
+                            'rows': [{'time': snapshot['rows'][-1]['time']}]}
+        task['sequence'] += 1
+        task['error'], task['failures'] = '', 0
+
+    def _work(self):
+        while True:
+            with self.condition:
+                if self.closed or not self.tasks:
+                    self.worker = None
+                    return
+                now = time.monotonic()
+                task_id, task = min(self.tasks.items(), key=lambda pair: (pair[1]['next'], pair[1]['lastRun']))
+                delay = task['next'] - now
+                if delay > 0:
+                    self.condition.wait(min(delay, 30))
+                    continue
+                task['reading'] = True
+                task['lastRun'] = now
+            try:
+                snapshot = self.reader.read(task['settings'])
+                with self.condition:
+                    if self.tasks.get(task_id) is task:
+                        self._capture(task, snapshot)
+            except Exception as error:
+                with self.condition:
+                    if self.tasks.get(task_id) is task:
+                        task['error'] = str(error) if isinstance(error, (ValueError, ImportError)) else 'Excel读取暂时失败，请检查Excel和PI连接；将自动重试。'
+                        task['failures'] += 1
+            finally:
+                with self.condition:
+                    if self.tasks.get(task_id) is task:
+                        task['reading'] = False
+                        # Transient busy/connection errors retry, and never kill a task.
+                        wait = min(task['interval'], min(60, 5 * 2 ** min(task['failures'] - 1, 4))) if task['failures'] else task['interval']
+                        task['next'] = time.monotonic() + (0 if task.pop('rerun', False) else wait)
+                    self.condition.notify_all()

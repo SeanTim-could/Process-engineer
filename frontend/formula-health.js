@@ -2,6 +2,7 @@
 var FormulaHealth = (() => {
   const R=Se(),h=R.createElement,checked=new Map();
   function recalculate(state) {
+    if(!Object.values(state.datasets).some(e=>e.dataset.status==='ready'&&e.dataset.role==='ledger'&&e.dataset.columns.some(c=>c.formula)))return [];
     const before=new Map(Object.values(state.datasets).filter(e=>e.dataset.status==='ready'&&e.dataset.role==='ledger').map(e=>[e.dataset.id,JSON.stringify(e.points)]));
     for(const entry of Object.values(state.datasets))if(entry.dataset.status==='ready'&&entry.dataset.role==='ledger'&&entry.dataset.columns.some(c=>c.formula))entry.points=Ho(entry.dataset.columns,entry.points);
     CrossUnit.recalculate(state);
@@ -51,5 +52,5 @@ var FormulaHealth = (() => {
     async function calculate(){setBusy(true);setError('');try{const r=await T0('/api/formula-health',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'recalculate',unitId})}),v=await r.json();if(!r.ok)throw new Error(v.error);await load();setNotice(v.changed?'已按各装置已有公式重新计算，并更新相关引用结果。':'已检查，保存的计算结果与当前输入一致。');onChanged?.();}catch(e){setError(e.message);}finally{setBusy(false);}}
     return h('section',{className:'panel analysis-controls'},h('h3',null,'公式运行检查'),h('p',{className:'muted'},'各装置使用各自创建的公式。输入更新和打开数据时会检查重算；无结果时查看引用、分组和时间条件。'),h('p',{className:'small muted'},result.units.map(u=>u.name+'：'+u.formulas+'条公式').join('；')),h('button',{className:'button',disabled:busy,onClick:calculate},busy?'正在检查公式…':'重新计算本装置公式'),error&&h('p',{className:'error-banner',role:'alert'},error),notice&&h('p',{role:'status'},notice),!result.rows.length?h('p',{className:'muted'},'当前装置没有已保存的计算公式。'):h('div',{className:'table-wrap'},h('table',{className:'data-table','aria-label':'公式运行状态'},h('thead',null,h('tr',null,...['计算指标','状态 / 来源','全部有效结果','当前范围有效结果','原因 / 提示'].map(s=>h('th',{key:s},s)))),h('tbody',null,...result.rows.map(row=>h('tr',{key:row.key},h('td',null,row.label),h('td',null,row.status+' / '+(row.source==='lims'?'LIMS检验':'生产')),h('td',null,row.valid),h('td',null,row.inRange),h('td',null,row.reasons.join('；')||'计算正常。')))))));
   }
-  return {recalculate,ensure,diagnostic,request,Panel};
+  return {recalculate,ensure,diagnostic,request,Panel,confirm:revision=>checked.set(AccountAuth.storageKey(),revision)};
 })();

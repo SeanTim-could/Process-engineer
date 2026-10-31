@@ -52,6 +52,14 @@ var AccountAuth = (() => {
     if(!enabled)return;
     if(!session || session.expires_at*1000<=Date.now() || !identity || identity.must_change_password || expected&&expected!==storageKey())throw new Error("登录状态已变化，请重新登录后继续。");
   }
+  async function resumeWorkspace(expected){
+    if(!enabled)return true;
+    // Native windows can reconnect before the initial profile request finishes.
+    if(checking&&!identity)return false;
+    if(!session||!identity||identity.must_change_password||expected!==storageKey())throw Object.assign(new Error("登录状态已变化，请重新连接Excel。"),{workspaceChanged:true});
+    await token(); // A background tab may wake after its access token expired.
+    assertWorkspace(expected);return true;
+  }
   function isAdmin(){return enabled&&identity?.role==="admin"&&identity.active&&!identity.must_change_password;}
   async function account(action,body={}){return raw("/functions/v1/workbench-accounts","POST",{action,...body},await token());}
   async function flush(){await Ei();await T$;}
@@ -169,7 +177,7 @@ var AccountAuth = (() => {
         catch(e){await flush().catch(()=>{});store(null);identity=null;if(live){setOwn(null);setError(e.status?e.message:"无法连接账号服务，请检查网络后重试登录。");}}
         finally{checking=false;if(live)setLoading(false);}
       }
-      check(true);const timer=setInterval(()=>{if(!document.hidden)check();},60000);
+      check(true);const timer=setInterval(()=>{check();},60000);
       const visible=()=>{if(!document.hidden)check();};document.addEventListener("visibilitychange",visible);
       return()=>{live=false;clearInterval(timer);document.removeEventListener("visibilitychange",visible);};
     },[]);
@@ -180,5 +188,5 @@ var AccountAuth = (() => {
     if(own.must_change_password)return h("main",{className:"account-login"},h("section",null,h(Password,{required:true}),h("button",{className:"button",onClick:()=>leave().catch(e=>setError(e.message))},"退出登录")));
     return h(Context.Provider,{value:own},h(R.Fragment,{key:own.id},children));
   }
-  return {Gate,Controls,enabled,storageKey,decorate,assertWorkspace,isAdmin};
+  return {Gate,Controls,enabled,storageKey,decorate,assertWorkspace,resumeWorkspace,isAdmin};
 })();

@@ -24,6 +24,10 @@ sheet.title = 'PI'
 sheet.append(['时间', '温度'])
 for minute, value in [(0, 20), (5, 21), (10, 0)]:
     sheet.append([datetime(2026, 10, 28, 8, minute), value])
+second = book.create_sheet('PI-B')
+second.append(['时间', '压力'])
+for minute, value in [(0, 2), (5, 3), (10, 4)]:
+    second.append([datetime(2026, 10, 28, 8, minute), value])
 book.save(path)
 book.close()
 index = DocumentIndex(folder / 'index.dat')

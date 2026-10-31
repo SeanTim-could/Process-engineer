@@ -24,7 +24,7 @@ var LiveData = (() => {
   function bounds(value){
     const from=AnalysisMath.time((value.from??'').replace(' ','T')),to=AnalysisMath.time((value.to??'').replace(' ','T'));
     if(from!==null&&to!==null&&from>to)throw new Error('开始时间不能晚于结束时间。');
-    return {from:from??-Infinity,to:to===null?Infinity:to+(value.exact===true?1:60000)};
+    return {from:from??-Infinity,to:to===null?Infinity:to+(value.exclusive===true?0:value.exact===true?1:60000)};
   }
   function selection(state,value){
     const unitId=value.unitId,group=value.group;if(!state.settings.units.some(u=>u.id===unitId&&!u.archived)||!provenance(state).some(p=>p.unitId===unitId&&p.group===group))throw new Error('请选择已有PI采样分组。');
@@ -61,7 +61,7 @@ var LiveData = (() => {
     const state=$r().state,query=new URL(req.url).searchParams,pairs=new Set(provenance(state).map(identity)),units=catalog(state,pairs),unitId=query.get('unitId');
     if(!unitId)return Response.json({units});
     if(!units.some(u=>u.id===unitId))return Response.json({units,unavailable:true,columns:[],series:[],count:0});
-    const entry=state.datasets['ds_unit_'+unitId],group=query.get('group')??units.find(u=>u.id===unitId).groups[0]??'',range=bounds({from:query.get('from')??'',to:query.get('to')??'',exact:query.get('exact')==='1'});
+    const entry=state.datasets['ds_unit_'+unitId],group=query.get('group')??units.find(u=>u.id===unitId).groups[0]??'',range=bounds({from:query.get('from')??'',to:query.get('to')??'',exact:query.get('exact')==='1',exclusive:query.get('exclusive')==='1'});
     if(!entry||!pairs.has(identity({unitId,group})))return Response.json({units,unitId,group,columns:[],series:[],count:0});
     const rawKeys=new Set(entry.dataset.columns.filter(c=>!c.formula).map(c=>c.key));
     const source=entry.points.filter(p=>p.unit===unitId&&p.group===group&&p.time>=range.from&&p.time<range.to&&Object.keys(p.values).some(k=>rawKeys.has(k))).sort((a,b)=>a.time-b.time);

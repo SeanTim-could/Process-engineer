@@ -2,13 +2,15 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync]
     paths:
       - '*.html'
       - 'frontend/**'
       - 'local_service/**'
       - 'requirements-excel-sync.txt'
       - 'scripts/test-excel-sync.cjs'
+      - 'scripts/test-excel-background.cjs'
+      - 'scripts/test-excel-auth-resume.cjs'
       - 'scripts/test-pi-daily.cjs'
       - 'scripts/test-device-excel-profiles.cjs'
       - 'scripts/test-live-defaults-and-formulas.cjs'
@@ -45,6 +47,8 @@ on:
       - 'local_service/**'
       - 'requirements-excel-sync.txt'
       - 'scripts/test-excel-sync.cjs'
+      - 'scripts/test-excel-background.cjs'
+      - 'scripts/test-excel-auth-resume.cjs'
       - 'scripts/test-pi-daily.cjs'
       - 'scripts/test-device-excel-profiles.cjs'
       - 'scripts/test-live-defaults-and-formulas.cjs'
@@ -160,6 +164,8 @@ jobs:
           node scripts/test-workspace-files.cjs
           node scripts/test-process-capability-and-points.cjs
           node scripts/test-excel-sync.cjs
+          node scripts/test-excel-background.cjs
+          node scripts/test-excel-auth-resume.cjs
           node scripts/test-pi-daily.cjs
           node scripts/test-device-excel-profiles.cjs
           node scripts/test-live-defaults-and-formulas.cjs

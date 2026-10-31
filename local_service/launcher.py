@@ -10,7 +10,7 @@ import sys
 import webbrowser
 from urllib.parse import urlsplit
 from document_index import DocumentIndex, protect
-from excel_reader import ExcelReader
+from excel_reader import ExcelReader, ExcelScheduler
 
 PORT = 8765
 APP_HTML = '启动工程师工作台.html'
@@ -103,7 +103,10 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
     opener = opener or (lambda path: os.startfile(str(path)))
     excel = excel or ExcelReader(index.cache.with_name('excel-files.dat') if os.name == 'nt' else None, protect)
 
+    scheduler = ExcelScheduler(excel)
+
     class Handler(BaseHTTPRequestHandler):
+        excel_scheduler = scheduler
         server_version = 'WorkbenchLocal'
 
         def log_message(self, *_):
@@ -206,6 +209,16 @@ def make_handler(index, html_path, token, origin, picker=choose_folder, opener=N
                     return self.reply(200, excel.describe(body.get('fileId')))
                 if path == '/local-api/excel/restore':
                     return self.reply(200, excel.restore(body.get('fileId')))
+                if path == '/local-api/excel/tasks/start':
+                    return self.reply(200, scheduler.start(body))
+                if path == '/local-api/excel/tasks/status':
+                    return self.reply(200, scheduler.status(body.get('taskId')))
+                if path == '/local-api/excel/tasks/ack':
+                    return self.reply(200, scheduler.acknowledge(body.get('taskId'), body.get('deliveryId')))
+                if path == '/local-api/excel/tasks/now':
+                    return self.reply(200, scheduler.now(body.get('taskId')))
+                if path == '/local-api/excel/tasks/stop':
+                    return self.reply(200, scheduler.stop(body.get('taskId')))
                 if path == '/local-api/excel/read':
                     return self.reply(200, excel.read(body))
                 if path == '/local-api/folder':
@@ -297,6 +310,7 @@ def main(argv=None):
         pass
     finally:
         index.cancel.set()
+        server.RequestHandlerClass.excel_scheduler.close()
         server.server_close()
     return 0
 
