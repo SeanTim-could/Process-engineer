@@ -33,6 +33,9 @@ var AccountAuth = (() => {
     // The protected table's RLS verifies the JWT and returns only its active
     // owner's row. No additional sequential Auth /user round-trip is needed.
     const rows=await raw("/rest/v1/workbench_profiles?select=id,display_name,employee_id,role,active,must_change_password&limit=2","GET",undefined,access);
+    return acceptProfile(rows);
+  }
+  function acceptProfile(rows){
     if(!Array.isArray(rows)||rows.length!==1||!rows[0]?.active)throw Object.assign(new Error("账号未启用，请联系管理员。"),{status:403});
     identity=rows[0];return identity;
   }
@@ -173,7 +176,11 @@ var AccountAuth = (() => {
       let live=true;notify=value=>{if(live){setOwn(value);setLoading(false);setError("");}};
       async function check(initial=false){
         if(checking)return;checking=true;
-        try{if(initial)session=readSession();if(session){const data=await profile();if(!data.must_change_password)bindWorkspace();notify({...data});}}
+        try{if(initial)session=readSession();if(session){
+          const pending=initial?window.WorkbenchAuthBootstrap?.take(config,session):null;
+          const prepared=pending?await pending:null;
+          if(prepared)store(prepared.session);
+          const data=prepared?acceptProfile(prepared.rows):await profile();if(!data.must_change_password)bindWorkspace();notify({...data});}}
         catch(e){
           const temporary=!e.status||e.status===429||e.status>=500;
           if(temporary&&identity&&session){if(live)setError("账号服务暂时无法连接，正在重试。已有数据保留，身份续期完成后继续同步。");}

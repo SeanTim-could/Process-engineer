@@ -14,8 +14,8 @@ import re
 ROOT=Path(__file__).resolve().parents[1]
 ASSETS=ROOT/'assets'
 
-LOADER='''<main class="startup-screen" role="status" aria-live="polite"><div><b>工程师工作台</b><h1>正在加载工作台…</h1><p>首次打开需要下载界面资源，请稍候。</p></div></main>'''
-LOADER_CSS='''.startup-screen{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#e8f7ef,#f5f9fc);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#244435}.startup-screen div{max-width:440px}.startup-screen b{color:#087f5b}.startup-screen h1{font-size:26px;margin:12px 0}.startup-screen p{color:#66796f}'''
+LOADER='''<main class="startup-screen" role="status" aria-live="polite"><div><b>工程师工作台</b><h1>正在加载工作台…</h1><p id="web-startup-status">正在加载界面并验证身份，请稍候。</p><button id="web-startup-retry" type="button" hidden onclick="location.reload()">重新加载</button></div></main>'''
+LOADER_CSS='''html,body{margin:0}.startup-screen{box-sizing:border-box;min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#e8f7ef,#f5f9fc);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#244435}.startup-screen div{max-width:440px}.startup-screen b{color:#087f5b}.startup-screen h1{font-size:26px;margin:12px 0}.startup-screen p{color:#66796f}.startup-screen button{padding:10px 18px;border:0;border-radius:8px;background:#087f5b;color:white;font:inherit;cursor:pointer}'''
 REDIRECT='''<script id="web-entry-redirect">if(location.hostname==="seantim-could.github.io"&&decodeURIComponent(location.pathname).endsWith("/启动工程师工作台.html"))location.replace(new URL("./index.html",location.href));</script>'''
 
 def asset(name,content):
@@ -51,20 +51,29 @@ def build(config_override=None):
     match=re.search(r'<script[^>]+src="data:text/javascript;base64,([^\"]+)"[^>]*></script>',html)
     if not match:raise ValueError('Standalone application script not found')
     script=base64.b64decode(match[1])
+    # The loading screen can paint before the stylesheet arrives. Start the app
+    # after styles are ready, while its download and live auth request overlap.
+    script=b'(window.WorkbenchStartup?.styleReady||Promise.resolve()).then(()=>{\n'+script+'\nwindow.WorkbenchStartup?.ready();}).catch(()=>window.WorkbenchStartup?.fail("工作台未能加载，请重新加载。"));'.encode()
     script_url=asset(('workbench','js'),script)
     css='\n'.join(re.findall(r'<style\b[^>]*>(.*?)</style>',html,re.S))
     style_url=asset(('workbench','css'),css.encode())
     web=re.sub(r'<style\b[^>]*>.*?</style>','',html,flags=re.S)
     web=re.sub(r'<script id="web-entry-redirect">.*?</script>','',web,flags=re.S)
     web=re.sub(r'<script[^>]+src="data:text/javascript;base64,[^\"]+"[^>]*></script>',
-        f'<script defer src="./{script_url}"></script>',web)
+        f'<script defer src="./{script_url}" onerror="WorkbenchStartup.fail(\'工作台程序下载失败，请重新加载。\')"></script>',web)
     web=web.replace("script-src 'unsafe-inline' data: blob:","script-src 'self' 'unsafe-inline' data: blob:")
     web=web.replace("style-src 'unsafe-inline'","style-src 'self' 'unsafe-inline'")
     if config['enabled']:
         key=json.dumps('workbench-auth:'+config['url'])
         guard='<script>try{var s=JSON.parse(sessionStorage.getItem('+key+')||"null");if(!s||!s.access_token||!s.refresh_token)location.replace(new URL("./index.html",location.href));}catch(e){location.replace(new URL("./index.html",location.href));}</script>'
-        web=web.replace('<link rel="icon"',guard+'<link rel="icon"',1)
-    web=web.replace('</head>',f'<style>{LOADER_CSS}</style><link rel="stylesheet" href="./{style_url}"></head>',1)
+        bootstrap='<script>window.WorkbenchWebAuthConfig='+json.dumps(config,ensure_ascii=True)+';</script><script>'+(ROOT/'frontend/web-auth-bootstrap.js').read_text()+'</script>'
+        warm='<link rel="preconnect" href="'+markup.escape(config['url'])+'" crossorigin><link rel="preload" as="script" href="./'+script_url+'">'
+        web=web.replace('<link rel="icon"',guard+warm+bootstrap+'<link rel="icon"',1)
+    web=re.sub(r'<main class="startup-screen".*?</main>',lambda _:LOADER,web,flags=re.S)
+    startup='<script>'+(ROOT/'frontend/web-startup.js').read_text()+'</script>'
+    web=web.replace('<link rel="icon"',startup+'<link rel="icon"',1)
+    style_link=f'<link rel="preload" as="style" href="./{style_url}" onload="this.onload=null;this.rel=\'stylesheet\';WorkbenchStartup.styleLoaded()" onerror="WorkbenchStartup.fail(\'界面样式下载失败，请重新加载。\')">'
+    web=web.replace('</head>',f'<style>{LOADER_CSS}</style>'+style_link+'</head>',1)
     (ROOT/'workbench.html').write_text(web)
 
     public={**config,'prefetch':['./workbench.html','./'+script_url,'./'+style_url]}

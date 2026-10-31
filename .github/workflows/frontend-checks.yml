@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -36,6 +36,7 @@ on:
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
       - 'scripts/test-web-entry.cjs'
+      - 'scripts/test-web-auth-bootstrap.cjs'
       - 'scripts/test-general-labels.cjs'
       - 'assets/**'
       - 'supabase/**'
@@ -74,6 +75,7 @@ on:
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
       - 'scripts/test-web-entry.cjs'
+      - 'scripts/test-web-auth-bootstrap.cjs'
       - 'scripts/test-general-labels.cjs'
       - 'assets/**'
       - 'supabase/**'
@@ -103,6 +105,9 @@ jobs:
           git diff --exit-code -- '*.html' assets
           node --check frontend/cross-unit-calculations.js
           node --check frontend/account-auth.js
+          node --check frontend/web-auth-bootstrap.js
+          node --check frontend/web-startup.js
+          node scripts/test-web-auth-bootstrap.cjs
           node --check frontend/backup-merge.js
           node --check frontend/excel-sync.js
           node --check frontend/pi-daily.js
