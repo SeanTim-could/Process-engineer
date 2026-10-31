@@ -5,6 +5,7 @@ Run this after either embedded-module synchronizer changes that file.
 """
 from pathlib import Path
 import base64
+import gzip
 import hashlib
 import html as markup
 import importlib.util
@@ -23,6 +24,20 @@ def asset(name,content):
     relative=f'assets/{name[0]}.{digest}.{name[1]}'
     (ROOT/relative).write_bytes(content)
     return relative
+
+def compressed_asset(relative, content):
+    """Reuse a verified gzip fingerprint across Python/zlib versions in CI."""
+    target=ROOT/(relative+'.gz')
+    if target.exists():
+        if gzip.decompress(target.read_bytes())!=content:
+            raise ValueError('Compressed fingerprint does not match '+relative)
+    else:
+        with target.open('wb') as output:
+            with gzip.GzipFile(filename='',mode='wb',fileobj=output,mtime=0,compresslevel=9) as packed:
+                packed.write(content)
+    digest=hashlib.sha256(content).digest()
+    return {'url':'./'+relative,'compressed':'./'+relative+'.gz','bytes':target.stat().st_size,
+            'sha256':digest.hex(),'integrity':'sha256-'+base64.b64encode(digest).decode()}
 
 def build(config_override=None):
     source=ROOT/'启动工程师工作台.html'
@@ -51,32 +66,35 @@ def build(config_override=None):
     match=re.search(r'<script[^>]+src="data:text/javascript;base64,([^\"]+)"[^>]*></script>',html)
     if not match:raise ValueError('Standalone application script not found')
     script=base64.b64decode(match[1])
+    split_spec=importlib.util.spec_from_file_location('web_spreadsheet_split',ROOT/'scripts/split-web-spreadsheet.py')
+    splitter=importlib.util.module_from_spec(split_spec)
+    split_spec.loader.exec_module(splitter)
+    script,spreadsheet_url=splitter.split(script,asset)
     # The loading screen can paint before the stylesheet arrives. Start the app
     # after styles are ready, while its download and live auth request overlap.
     script=b'(window.WorkbenchStartup?.styleReady||Promise.resolve()).then(()=>{\n'+script+'\nwindow.WorkbenchStartup?.ready();}).catch(()=>window.WorkbenchStartup?.fail("工作台未能加载，请重新加载。"));'.encode()
     script_url=asset(('workbench','js'),script)
     css='\n'.join(re.findall(r'<style\b[^>]*>(.*?)</style>',html,re.S))
     style_url=asset(('workbench','css'),css.encode())
+    startup_assets={'script':compressed_asset(script_url,script),'style':compressed_asset(style_url,css.encode())}
     web=re.sub(r'<style\b[^>]*>.*?</style>','',html,flags=re.S)
     web=re.sub(r'<script id="web-entry-redirect">.*?</script>','',web,flags=re.S)
-    web=re.sub(r'<script[^>]+src="data:text/javascript;base64,[^\"]+"[^>]*></script>',
-        f'<script defer src="./{script_url}" onerror="WorkbenchStartup.fail(\'工作台程序下载失败，请重新加载。\')"></script>',web)
+    web=re.sub(r'<script[^>]+src="data:text/javascript;base64,[^\"]+"[^>]*></script>','',web)
     web=web.replace("script-src 'unsafe-inline' data: blob:","script-src 'self' 'unsafe-inline' data: blob:")
     web=web.replace("style-src 'unsafe-inline'","style-src 'self' 'unsafe-inline'")
     if config['enabled']:
         key=json.dumps('workbench-auth:'+config['url'])
         guard='<script>try{var s=JSON.parse(sessionStorage.getItem('+key+')||"null");if(!s||!s.access_token||!s.refresh_token)location.replace(new URL("./index.html",location.href));}catch(e){location.replace(new URL("./index.html",location.href));}</script>'
         bootstrap='<script>window.WorkbenchWebAuthConfig='+json.dumps(config,ensure_ascii=True)+';</script><script>'+(ROOT/'frontend/web-auth-bootstrap.js').read_text()+'</script>'
-        warm='<link rel="preconnect" href="'+markup.escape(config['url'])+'" crossorigin><link rel="preload" as="script" href="./'+script_url+'">'
+        warm='<link rel="preconnect" href="'+markup.escape(config['url'])+'" crossorigin>'
         web=web.replace('<link rel="icon"',guard+warm+bootstrap+'<link rel="icon"',1)
     web=re.sub(r'<main class="startup-screen".*?</main>',lambda _:LOADER,web,flags=re.S)
-    startup='<script>'+(ROOT/'frontend/web-startup.js').read_text()+'</script>'
+    startup='<script>window.WorkbenchAssets='+json.dumps(startup_assets)+';</script><script>'+(ROOT/'frontend/web-startup.js').read_text()+'</script>'
     web=web.replace('<link rel="icon"',startup+'<link rel="icon"',1)
-    style_link=f'<link rel="preload" as="style" href="./{style_url}" onload="this.onload=null;this.rel=\'stylesheet\';WorkbenchStartup.styleLoaded()" onerror="WorkbenchStartup.fail(\'界面样式下载失败，请重新加载。\')">'
-    web=web.replace('</head>',f'<style>{LOADER_CSS}</style>'+style_link+'</head>',1)
+    web=web.replace('</head>',f'<style>{LOADER_CSS}</style></head>',1)
     (ROOT/'workbench.html').write_text(web)
 
-    public={**config,'prefetch':['./workbench.html','./'+script_url,'./'+style_url]}
+    public={**config,'prefetch':['./workbench.html',startup_assets['script']['compressed'],startup_assets['style']['compressed']]}
     origin=config['url'] if config['enabled'] else ''
     connect="'self' "+origin if origin else "'self'"
     css=(ROOT/'frontend/account-auth.css').read_text()
@@ -97,6 +115,6 @@ SCRIPT</script></body></html>'''
     (ROOT/'index.html').write_text(page)
     # Keep previously published fingerprints: a cached page may still reference
     # them during deployment. Only the current pair is prefetched/downloaded.
-    return {'index_bytes':len(page.encode()),'workbench_html_bytes':len(web.encode()),'script':script_url,'style':style_url}
+    return {'index_bytes':len(page.encode()),'workbench_html_bytes':len(web.encode()),'script':script_url,'style':style_url,'spreadsheet':spreadsheet_url,'startup_compressed_bytes':sum(v['bytes'] for v in startup_assets.values())}
 
 if __name__=='__main__':print(json.dumps(build(),ensure_ascii=False))

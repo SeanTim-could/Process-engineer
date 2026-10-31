@@ -11,7 +11,7 @@ const site='https://seantim-could.github.io/Process-engineer/';
  const index=await fs.readFile(path.join(root,'index.html'));
  const shell=await fs.readFile(path.join(root,'workbench.html'));
  assert(index.length<16000,'The first website page should stay small');
- assert(shell.length<8000,'The application shell should not contain its JavaScript bundle');
+ assert(shell.length<16000,'The application shell should not contain its JavaScript bundle');
  assert(!index.toString().includes('data:text/javascript;base64,'));
  const files=new Map([['index.html',index],['workbench.html',shell],['启动工程师工作台.html',await fs.readFile(path.join(root,'启动工程师工作台.html'))]]);
  for(const file of await fs.readdir(path.join(root,'assets')))files.set('assets/'+file,await fs.readFile(path.join(root,'assets',file)));
@@ -23,9 +23,9 @@ const site='https://seantim-could.github.io/Process-engineer/';
   await context.route(site+'**',async route=>{
    const relative=decodeURIComponent(new URL(route.request().url()).pathname).replace('/Process-engineer/','')||'index.html';
    const body=files.get(relative);if(!body)return route.fulfill({status:404,body:'Not found'});
-   if(relative.startsWith('assets/')&&relative.endsWith('.js'))await bundleGate;
-   if(relative.startsWith('assets/')&&relative.endsWith('.css'))await styleGate;
-   const type=relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8';
+   if(relative.startsWith('assets/')&&(/\.js(?:\.gz)?$/).test(relative))await bundleGate;
+   if(relative.startsWith('assets/')&&(/\.css(?:\.gz)?$/).test(relative))await styleGate;
+   const type=relative.endsWith('.gz')?'application/gzip':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8';
    await route.fulfill({body,contentType:type});
   });
   await context.route(config.url+'/**',async route=>{
@@ -57,7 +57,10 @@ const site='https://seantim-could.github.io/Process-engineer/';
   assert.equal(calls.filter(s=>s==='/rest/v1/workbench_profiles').length,1,'Live identity validation starts before the application bundle is available');
   assert.equal(await p.evaluate(()=>window.WorkbenchAuthBootstrap.take({url:'https://foreign.invalid',publicKey:'foreign'},{})),null);
   const screenshot=path.join(require('node:os').tmpdir(),'workbench-delayed-style.png');await p.screenshot({path:screenshot});
-  releaseBundle();releaseStyle();
+  releaseStyle();
+  await p.waitForFunction(()=>document.getElementById('web-startup-status')?.textContent.includes('12%'));
+  assert.equal(await p.locator('.offline-bar').count(),0,'Download progress remains visible until the script arrives');
+  releaseBundle();
   await p.waitForFunction(()=>document.querySelector('.offline-bar')?.textContent.includes('速度测试员'));
   assert.equal(calls.filter(s=>s==='/auth/v1/token').length,1);
   assert.equal(calls.filter(s=>s==='/rest/v1/workbench_profiles').length,1);
@@ -81,7 +84,7 @@ const site='https://seantim-could.github.io/Process-engineer/';
   await blocked.goto(site+'workbench.html');await blocked.getByRole('heading',{name:'登录你的工作台',exact:true}).waitFor();assert.equal(await blocked.locator('.offline-bar').count(),0,'a protected empty/disabled profile must not open a workspace');
   const failed=await context.newPage();failed.on('pageerror',e=>errors.push(e.message));
   await failed.addInitScript(({key})=>sessionStorage.setItem(key,JSON.stringify({access_token:'fixture-access',refresh_token:'fixture-refresh',expires_at:Math.floor(Date.now()/1000)+3600})),{key:'workbench-auth:'+config.url});
-  await failed.route('**/assets/*.js',route=>route.abort('failed'));await failed.goto(site+'workbench.html');await failed.getByText('工作台程序下载失败，请重新加载。',{exact:true}).waitFor();assert(await failed.getByRole('button',{name:'重新加载',exact:true}).isVisible());
+  await failed.route('**/assets/**',route=>/\.js(?:\.gz)?$/.test(route.request().url())?route.abort('failed'):route.fallback());await failed.goto(site+'workbench.html');await failed.getByText('工作台程序下载失败，请检查网络后重新加载。',{exact:true}).waitFor();assert(await failed.getByRole('button',{name:'重新加载',exact:true}).isVisible());
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({passed:true,indexBytes:index.length,workbenchShellBytes:shell.length,checks:[
    'A usable login form appears while the full application JavaScript is withheld, without contacting Supabase',

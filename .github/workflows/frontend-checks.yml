@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -36,6 +36,8 @@ on:
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
+      - 'scripts/split-web-spreadsheet.py'
+      - 'scripts/test-web-downloads.cjs'
       - 'scripts/test-web-entry.cjs'
       - 'scripts/test-web-auth-bootstrap.cjs'
       - 'scripts/test-general-labels.cjs'
@@ -76,6 +78,8 @@ on:
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
+      - 'scripts/split-web-spreadsheet.py'
+      - 'scripts/test-web-downloads.cjs'
       - 'scripts/test-web-entry.cjs'
       - 'scripts/test-web-auth-bootstrap.cjs'
       - 'scripts/test-general-labels.cjs'
@@ -109,6 +113,7 @@ jobs:
           node --check frontend/account-auth.js
           node --check frontend/web-auth-bootstrap.js
           node --check frontend/web-startup.js
+          node --check frontend/web-spreadsheet.js
           node scripts/test-web-auth-bootstrap.cjs
           node --check frontend/backup-merge.js
           node --check frontend/excel-sync.js
@@ -167,6 +172,7 @@ jobs:
           node scripts/test-cross-unit-calculations.cjs
           node scripts/test-managed-accounts.cjs
           node scripts/test-web-entry.cjs
+          node scripts/test-web-downloads.cjs
           node scripts/test-general-labels.cjs
           node scripts/test-data-analysis.cjs
           node scripts/test-capability-reports.cjs
