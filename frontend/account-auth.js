@@ -5,7 +5,7 @@ var AccountAuth = (() => {
   const enabled=config.enabled===true;
   const nativeFetch=globalThis.fetch.bind(globalThis);
   const sessionKey="workbench-auth:"+config.url;
-  let session=null, identity=null, refreshTask=null, notify=()=>{}, namespace="", checking=false;
+  let session=null, identity=null, refreshTask=null, notify=()=>{}, namespace="", checking=false, initializing=enabled;
   function readSession(){try{return JSON.parse(sessionStorage.getItem(sessionKey)??"null");}catch{return null;}}
   function store(value){session=value;try{value?sessionStorage.setItem(sessionKey,JSON.stringify(value)):sessionStorage.removeItem(sessionKey);}catch{}}
   function accept(value){store({access_token:value.access_token,refresh_token:value.refresh_token,expires_at:value.expires_at??Math.floor(Date.now()/1000)+value.expires_in});}
@@ -55,7 +55,7 @@ var AccountAuth = (() => {
   async function resumeWorkspace(expected){
     if(!enabled)return true;
     // Native windows can reconnect before the initial profile request finishes.
-    if(checking&&!identity)return false;
+    if(initializing||checking&&!identity)return false;
     if(!session||!identity||identity.must_change_password||expected!==storageKey())throw Object.assign(new Error("登录状态已变化，请重新连接Excel。"),{workspaceChanged:true});
     await token(); // A background tab may wake after its access token expired.
     assertWorkspace(expected);return true;
@@ -169,13 +169,17 @@ var AccountAuth = (() => {
     const [own,setOwn]=R.useState(null),[loading,setLoading]=R.useState(enabled),[error,setError]=R.useState("");
     R.useEffect(()=>{
       if(!enabled)return;
-      if(location.protocol==="file:"){setLoading(false);return;}
+      if(location.protocol==="file:"){initializing=false;setLoading(false);return;}
       let live=true;notify=value=>{if(live){setOwn(value);setLoading(false);setError("");}};
       async function check(initial=false){
         if(checking)return;checking=true;
         try{if(initial)session=readSession();if(session){const data=await profile();if(!data.must_change_password)bindWorkspace();notify({...data});}}
-        catch(e){await flush().catch(()=>{});store(null);identity=null;if(live){setOwn(null);setError(e.status?e.message:"无法连接账号服务，请检查网络后重试登录。");}}
-        finally{checking=false;if(live)setLoading(false);}
+        catch(e){
+          const temporary=!e.status||e.status===429||e.status>=500;
+          if(temporary&&identity&&session){if(live)setError("账号服务暂时无法连接，正在重试。已有数据保留，身份续期完成后继续同步。");}
+          else {await flush().catch(()=>{});store(null);identity=null;if(live){setOwn(null);setError(e.status?e.message:"无法连接账号服务，请检查网络后重试登录。");}}
+        }
+        finally{if(initial)initializing=false;checking=false;if(live)setLoading(false);}
       }
       check(true);const timer=setInterval(()=>{check();},60000);
       const visible=()=>{if(!document.hidden)check();};document.addEventListener("visibilitychange",visible);
@@ -186,7 +190,7 @@ var AccountAuth = (() => {
     if(loading)return h("main",{className:"account-login"},h("section",{className:"account-form",role:"status"},"正在验证登录…"));
     if(!own)return h("main",{className:"account-login"},h("section",null,error&&h("p",{role:"alert",className:"error-banner"},error),h(Login)));
     if(own.must_change_password)return h("main",{className:"account-login"},h("section",null,h(Password,{required:true}),h("button",{className:"button",onClick:()=>leave().catch(e=>setError(e.message))},"退出登录")));
-    return h(Context.Provider,{value:own},h(R.Fragment,{key:own.id},children));
+    return h(Context.Provider,{value:own},h(R.Fragment,{key:own.id},error&&h("p",{role:"status",className:"analysis-notice"},error),children));
   }
   return {Gate,Controls,enabled,storageKey,decorate,assertWorkspace,resumeWorkspace,isAdmin};
 })();
