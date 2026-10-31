@@ -8,10 +8,13 @@
   const button=document.getElementById('web-login-submit');
   const status=document.getElementById('web-login-status');
   const sessionKey='workbench-auth:'+config.url;
+  const english={'正在打开你的工作台…':'Opening your workbench…','正在验证账号…':'Verifying your account…','请输入管理员发放的工号。':'Enter the employee ID issued by your administrator.','操作过于频繁，请稍后重试。':'Too many attempts. Please try again later.','工号或密码不正确，或账号尚未启用。':'Incorrect employee ID or password, or the account is inactive.','登录响应无效，请稍后重试。':'Invalid sign-in response. Please try again.','登录验证完成，正在打开工作台…':'Signed in. Opening the workbench…','账号服务连接超时，请检查网络后重试。':'Connection timed out. Check your network and try again.'};
+  function caption(node,text){node.textContent=text;node.dataset.en=english[text]??(text?'Unable to connect. Please try again.':'');}
+
   if(!config.enabled){location.replace(target);return;}
   try{
     const saved=JSON.parse(sessionStorage.getItem(sessionKey)??'null');
-    if(saved?.access_token&&saved?.refresh_token){status.textContent='正在打开你的工作台…';location.replace(target);return;}
+    if(saved?.access_token&&saved?.refresh_token){caption(status,'正在打开你的工作台…');location.replace(target);return;}
   }catch{}
   button.disabled=false;
   // Warm the heavy resources after the small form is visible. Prefetch has low
@@ -21,7 +24,7 @@
     if('requestIdleCallback' in window)requestIdleCallback(warm,{timeout:1000});else setTimeout(warm,0);
   }
   form.addEventListener('submit',async event=>{
-    event.preventDefault();button.disabled=true;error.hidden=true;status.textContent='正在验证账号…';
+    event.preventDefault();button.disabled=true;error.hidden=true;caption(status,'正在验证账号…');
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
     try{
       const employee=form.elements.employee.value.normalize('NFKC').trim().toLowerCase();
@@ -33,10 +36,10 @@
       if(!value.access_token||!value.refresh_token)throw new Error('登录响应无效，请稍后重试。');
       sessionStorage.setItem(sessionKey,JSON.stringify({access_token:value.access_token,refresh_token:value.refresh_token,
         expires_at:value.expires_at??Math.floor(Date.now()/1000)+value.expires_in}));
-      form.elements.password.value='';status.textContent='登录验证完成，正在打开工作台…';location.replace(target);
+      form.elements.password.value='';caption(status,'登录验证完成，正在打开工作台…');location.replace(target);
     }catch(reason){
-      error.textContent=controller.signal.aborted?'账号服务连接超时，请检查网络后重试。':reason.message;
-      error.hidden=false;status.textContent='';button.disabled=false;
+      caption(error,controller.signal.aborted?'账号服务连接超时，请检查网络后重试。':reason.message);
+      error.hidden=false;caption(status,'');button.disabled=false;
     }finally{clearTimeout(timer);}
   });
 })();

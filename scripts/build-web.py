@@ -74,6 +74,9 @@ def build(config_override=None):
     match=re.search(r'<script[^>]+src="data:text/javascript;base64,([^\"]+)"[^>]*></script>',html)
     if not match:raise ValueError('Standalone application script not found')
     script=base64.b64decode(match[1])
+    logo_data='data:image/webp;base64,'+base64.b64encode((ROOT/'frontend/company-logo.webp').read_bytes()).decode()
+    logo_url='./'+asset(('company-logo','webp'),(ROOT/'frontend/company-logo.webp').read_bytes())
+    script=script.replace(logo_data.encode(),logo_url.encode())
     split_spec=importlib.util.spec_from_file_location('web_spreadsheet_split',ROOT/'scripts/split-web-spreadsheet.py')
     splitter=importlib.util.module_from_spec(split_spec)
     split_spec.loader.exec_module(splitter)
@@ -102,7 +105,7 @@ def build(config_override=None):
     # are identical; it must never redirect back into the failing loader.
     compatible=web.replace('</head>','<style>'+css+'</style></head>',1)
     embedded=inline_script((ROOT/'frontend/web-compatible.js').read_text())
-    embedded+=inline_script((ROOT/spreadsheet_url).read_bytes())+inline_script(script)
+    embedded+=inline_script((ROOT/spreadsheet_url).read_bytes())+inline_script(script.replace(logo_url.encode(),logo_data.encode()))
     compatible=compatible.replace('</body>',embedded+'</body>',1)
     (ROOT/'workbench-compatible.html').write_text(compatible)
     compatible_link='<a id="web-startup-compatible" hidden href="'+markup.escape(startup_assets['compatible'],quote=True)+'" style="margin-left:12px;color:#087f5b">使用兼容模式打开</a>'
@@ -121,7 +124,7 @@ def build(config_override=None):
     page='''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src CONNECT; form-action 'none'; base-uri 'none'">
 <title>登录 · 工艺工程师工作台</title>PRECONNECT<style>STYLE</style></head><body><main class="account-login"><section><form id="web-login-form" class="account-form">
-<span class="account-brand">工程师工作台</span><h1>登录你的工作台</h1><p class="muted">请使用管理员发放的工号和密码。</p>
+<img class="company-logo" src="LOGO_URL" alt="ADISSEO · A Sinochem Company" width="210" height="74"><span class="account-brand">工程师工作台</span><h1>登录你的工作台</h1><p class="muted">请使用管理员发放的工号和密码。</p>
 <label class="form-label">登录工号<input aria-label="登录工号" name="employee" autocomplete="username" maxlength="40" required></label>
 <label class="form-label">登录密码<input aria-label="登录密码" name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
 <p id="web-login-error" class="error-banner" role="alert" hidden></p><button id="web-login-submit" type="submit" disabled>登录</button>
@@ -130,6 +133,12 @@ def build(config_override=None):
 SCRIPT</script></body></html>'''
     page=page.replace('PRECONNECT',f'<link rel="preconnect" href="{markup.escape(origin)}" crossorigin>' if origin else '').replace('CONNECT',markup.escape(connect,quote=True))
     page=page.replace('STYLE',css).replace('CONFIG',json.dumps(public,ensure_ascii=True)).replace('SCRIPT',script)
+    page=page.replace('LOGO_URL',logo_url)
+    page=page.replace('>登录工号<input','><span data-en="Employee ID">登录工号</span><input').replace('>登录密码<input','><span data-en="Password">登录密码</span><input')
+    terms={'登录你的工作台':'Sign in to your workbench','登录':'Sign in','工程师工作台':'Engineer Workbench','请使用管理员发放的工号和密码。':'Use the employee ID and password issued by your administrator.','没有账号或忘记密码，请联系管理员。':'Contact your administrator for an account or password reset.'}
+    for zh,en in terms.items():
+        page=page.replace('>'+zh+'<',' aria-label="'+zh+'" data-en="'+en+'">'+zh+'<')
+    page=page.replace('</style>','[data-en]::after{content:attr(data-en);display:block;font-size:.65em;opacity:.65;margin-top:4px}.company-logo{object-fit:contain;margin-bottom:18px}\n</style>',1)
     (ROOT/'index.html').write_text(page)
     # Keep previously published fingerprints: a cached page may still reference
     # them during deployment. Only the current pair is prefetched/downloaded.

@@ -13,7 +13,7 @@ async function fixture(options={}){
   await context.route(origin+'/Process-engineer/**',route=>{
    const relative=decodeURIComponent(new URL(route.request().url()).pathname).replace('/Process-engineer/','')||'index.html',file=path.join(root,relative);
    if(!fs.existsSync(file))return route.fulfill({status:404,body:'Not found'});
-   return route.fulfill({body:fs.readFileSync(file),contentType:relative.endsWith('.gz')?'application/gzip':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8'});
+   return route.fulfill({body:fs.readFileSync(file),contentType:relative.endsWith('.webp')?'image/webp':relative.endsWith('.gz')?'application/gzip':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8'});
   });
  }else await context.route(origin+'/Process-engineer/**',r=>r.fulfill({body:html,contentType:'text/html; charset=utf-8'}));
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));

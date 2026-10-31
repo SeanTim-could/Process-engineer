@@ -25,7 +25,7 @@ const site='https://seantim-could.github.io/Process-engineer/';
    const body=files.get(relative);if(!body)return route.fulfill({status:404,body:'Not found'});
    if(relative.startsWith('assets/')&&(/\.js(?:\.gz)?$/).test(relative))await bundleGate;
    if(relative.startsWith('assets/')&&(/\.css(?:\.gz)?$/).test(relative))await styleGate;
-   const type=relative.endsWith('.gz')?'application/gzip':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8';
+   const type=relative.endsWith('.webp')?'image/webp':relative.endsWith('.gz')?'application/gzip':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8';
    await route.fulfill({body,contentType:type});
   });
   await context.route(config.url+'/**',async route=>{

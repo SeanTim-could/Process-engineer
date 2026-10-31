@@ -26,8 +26,8 @@ var AnalysisPlots = (() => {
     const units=new Set(used.map(c=>c.unit??""));
     if(!single&&units.size>1&&!config.normalized)throw new Error("所选指标单位不同，请勾选归一化，或分别作图。");
     if(!rows.some(r=>used.some(c=>M.finite(r.values[c.key])))&&!boxGroups?.length)return h("p",{className:"analysis-empty"},"所选时段、分组和指标没有有效数值。");
-    const W=config.compact?720:1000,H=460,T=30,B=H-105,E=W-32,children=[],legend=[];let L=100;
-    const text=(x,y,value,props={})=>h("text",{x,y,fill:"#536879",fontSize:12,...props},value);
+    const W=config.compact?720:1000,H=460,T=50,B=H-125,E=W-32,children=[],legend=[];let L=100;
+    const text=(x,y,value,props={})=>Surface.svgText(x,y,value,{fill:"#536879",fontSize:12,...props});
     let xScale,yScale,xTicks=[],yTicks=[],xLabel="时间（北京时间）",yLabel=config.normalized?"归一化值（0–1）":used.length===1?used[0].label+(used[0].unit?" / "+used[0].unit:""):"数值 / "+(used[0].unit||"无单位");
     function scales(xs,ys,categorical=false,zeroBaseline=false){const xd=categorical?[0,Math.max(1,xs.length)]:extent(xs),yd=extent(ys);if(zeroBaseline)yd[0]=0;
       const ticks=ChartAxes.ticks(yd[0],yd[1]);L=ChartAxes.left(ticks);
@@ -51,7 +51,7 @@ var AnalysisPlots = (() => {
       const groups=boxGroups??(config.boxBy==="group"&&used.length===1?[...new Set(rows.map(r=>r.group))].slice(0,20).map((group,i)=>({label:group||"未分组",values:rows.filter(r=>r.group===group).map(r=>r.values[keys[0]]),color:palette[i%palette.length]})):used.map((c,i)=>({label:c.label,values:rows.map(r=>r.values[c.key]),color:palette[i%palette.length]})));
       const data=groups.map(g=>({...g,stats:M.boxes(g.values)})).filter(g=>g.stats.n);if(!data.length)return h("p",{className:"analysis-empty"},"没有可用的箱线图数据。");
       if(config.normalized)for(const g of data){const min=g.stats.min,span=g.stats.max-min||1;g.stats=M.boxes(g.values.filter(M.finite).map(v=>(v-min)/span));}
-      xLabel="分组 / 指标（箱体 Q1–Q3，须为1.5倍四分位距内最远点）";scales(data.map(g=>g.label),data.flatMap(g=>[g.stats.min,g.stats.max]),true);
+      xLabel="分组 / 指标";scales(data.map(g=>g.label),data.flatMap(g=>[g.stats.min,g.stats.max]),true);
       data.forEach((g,i)=>{const x=xScale(i+.5),s=g.stats,w=Math.min(75,(E-L)/data.length*.45),color=g.color??palette[i%palette.length];legend.push({label:g.label,color});
         children.push(h("g",{key:i},h("title",null,`${g.label}：n=${s.n}，中位数 ${format(s.median)}，Q1 ${format(s.q1)}，Q3 ${format(s.q3)}`),h("line",{x1:x,x2:x,y1:yScale(s.low),y2:yScale(s.high),stroke:color}),...[s.low,s.high].map((v,j)=>h("line",{key:j,x1:x-w/3,x2:x+w/3,y1:yScale(v),y2:yScale(v),stroke:color,strokeWidth:2})),h("rect",{x:x-w/2,y:yScale(s.q3),width:w,height:Math.max(1,yScale(s.q1)-yScale(s.q3)),fill:color,fillOpacity:.18,stroke:color,strokeWidth:2}),h("line",{x1:x-w/2,x2:x+w/2,y1:yScale(s.median),y2:yScale(s.median),stroke:color,strokeWidth:3}),...s.outliers.filter((_,j)=>j%Math.max(1,Math.ceil(s.outliers.length/300))===0).map((v,j)=>h("circle",{key:"o"+j,cx:x,cy:yScale(v),r:2.5,fill:"white",stroke:color}))));
       });
@@ -93,24 +93,24 @@ var AnalysisPlots = (() => {
       ...yTicks.map((t,i)=>h("g",{key:"y"+i},h("line",{x1:L,x2:E,y1:t.at,y2:t.at,stroke:"#e6edf2",strokeDasharray:"3 5"}),text(L-12,t.at+4,t.label,{textAnchor:"end","data-axis-tick":"y"}))),
       ...xTicks.map((t,i)=>h("g",{key:"x"+i},text(t.at,B+24,t.label,{textAnchor:"middle",fontSize:11}))),
       h("line",{x1:L,x2:E,y1:B,y2:B,stroke:"#aebec9"}),...children,
-      text((L+E)/2,H-8,xLabel,{textAnchor:"middle",fontSize:13}),text(18,(T+B)/2,ChartAxes.label(yLabel,B-T),{"data-axis-title":"y",textAnchor:"middle",fontSize:13,transform:`rotate(-90 18 ${(T+B)/2})`}),
-      ...legend.slice(0,config.compact?6:12).map((g,i)=>h("g",{key:"leg"+i},h("rect",{x:L+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),y:H-65+Math.floor(i/(config.compact?2:4))*16,width:10,height:3,fill:g.color}),text(L+15+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),H-60+Math.floor(i/(config.compact?2:4))*16,trunc(g.label,15),{fontSize:11}))));
+      text((L+E)/2,H-18,xLabel,{textAnchor:"middle",fontSize:13}),text(18,(T+B)/2,ChartAxes.label(yLabel,B-T),{"data-axis-title":"y",textAnchor:"middle",fontSize:13,transform:`rotate(-90 18 ${(T+B)/2})`}),
+      ...legend.slice(0,config.compact?6:12).map((g,i)=>h("g",{key:"leg"+i},h("rect",{x:L+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),y:H-85+Math.floor(i/(config.compact?2:4))*23,width:10,height:3,fill:g.color}),text(L+15+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),H-80+Math.floor(i/(config.compact?2:4))*23,trunc(g.label,15),{fontSize:11}))));
   }
   const escape=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  function download(content,filename,type){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement("a");a.href=url;a.download=filename.replace(/[\\/:*?"<>|]/g,"_");a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+  function download(content,filename,type){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement("a");a.href=url;a.download=filename.slice(0,120).replace(/[\\/:*?"<>|]/g,"_");a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
   async function saveSvg(svg,title,png=false){
     if(!svg)throw new Error("请先生成有效图表。");
     const clone=svg.cloneNode(true);clone.querySelectorAll('[data-live-overlay],[data-live-interaction]').forEach(node=>node.remove());const label=document.createElementNS("http://www.w3.org/2000/svg","text");
-    label.setAttribute("x",String((svg.viewBox.baseVal.width||1000)/2));label.setAttribute("y","21");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","16");label.setAttribute("fill","#244252");label.textContent=title;if(!svg.hasAttribute("data-complete-report")&&!svg.hasAttribute("data-complete-chart"))clone.appendChild(label);
+    label.setAttribute("x","24");label.setAttribute("y","21");label.setAttribute("text-anchor","start");label.setAttribute("font-size","16");label.setAttribute("fill","#244252");label.textContent=title;if(!svg.hasAttribute("data-complete-report")&&!svg.hasAttribute("data-complete-chart")){clone.appendChild(label);const english=label.cloneNode(true);english.setAttribute('y','35');english.setAttribute('font-size','10');english.textContent=Surface.en(title);clone.appendChild(english);}
     const source=new XMLSerializer().serializeToString(clone);
     if(!png){download(source,title+".svg","image/svg+xml;charset=utf-8");return;}
     const url=URL.createObjectURL(new Blob([source],{type:"image/svg+xml;charset=utf-8"}));
     try{await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{try{const canvas=document.createElement("canvas");const box=svg.viewBox.baseVal;canvas.width=(box.width||1000)*2;canvas.height=(box.height||460)*2;canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>{if(!blob){reject(new Error("图片导出失败。"));return;}download(blob,title+".png","image/png");resolve();},"image/png");}catch(e){reject(e);}};img.onerror=()=>reject(new Error("图表图片生成失败，请尝试导出 SVG。"));img.src=url;});}finally{URL.revokeObjectURL(url);}
   }
   class Boundary extends R.Component{constructor(props){super(props);this.state={error:null};}static getDerivedStateFromError(error){return {error};}componentDidUpdate(old){if(old.signature!==this.props.signature&&this.state.error)this.setState({error:null});}render(){return this.state.error?h("p",{role:"alert",className:"error-banner"},this.state.error.message):this.props.children;}}
-  function Figure(props){const ref=R.useRef(null),[error,setError]=R.useState("");const title=props.config.title||types[props.config.type];
+  function Figure(props){const ref=R.useRef(null),[error,setError]=R.useState("");const title=Surface.chartTitle(props.config,props.columns,props.config.title||types[props.config.type]);
     const groupCount=new Set(props.rows.map(r=>r.group)).size;
-    return h("section",{className:"analysis-figure panel",ref},h("div",{className:"analysis-figure-head"},h("div",null,h("h3",null,title),props.subtitle&&h("p",{className:"muted small"},props.subtitle)),h("div",{className:"button-row"},props.config.sourceId&&!props.pointQuery&&props.pin!==false&&h(Dashboard.Pin,{kind:"chart",config:props.config,control:props.references?.some(r=>r.label==="I图上控制限")}),props.config.sourceId&&h(PointExclusions.Tools,{...(props.pointQuery??props.config),title}),...[false,true].map(png=>h("button",{key:String(png),className:"button small-button",onClick:()=>saveSvg(ref.current?.querySelector("svg"),title,png).catch(e=>setError(e.message))},png?"导出 PNG":"导出 SVG")))),
+    return h("section",{className:"analysis-figure panel",ref},h("div",{className:"analysis-figure-head"},h("div",null,h("h3",null,title),null),h("div",{className:"button-row"},props.config.sourceId&&!props.pointQuery&&props.pin!==false&&h(Dashboard.Pin,{kind:"chart",config:props.config,control:props.references?.some(r=>r.label==="I图上控制限")}),props.config.sourceId&&h(PointExclusions.Tools,{...(props.pointQuery??props.config),title}),...[false,true].map(png=>h("button",{key:String(png),className:"button small-button",onClick:()=>saveSvg(ref.current?.querySelector("svg"),title,png).catch(e=>setError(e.message))},png?"导出 PNG":"导出 SVG")))),
       error&&h("p",{role:"alert",className:"error-banner"},error),h("div",{className:"analysis-svg-scroll"},h(Boundary,{signature:JSON.stringify(props.config)+JSON.stringify(props.columns)+props.rows.length},h(Svg,props))),h("p",{className:"analysis-mobile-hint small muted"},"可横向滑动查看完整图表。"),
       groupCount>20&&["line","area","box"].includes(props.config.type)&&h("p",{className:"small analysis-notice"},"当前有"+groupCount+"个采样分组，图形最多展示前20组。请选择具体分组查看其余数据；统计包含全部选中记录。"));
   }

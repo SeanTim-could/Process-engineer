@@ -19,7 +19,7 @@ async function api(p,url,method='GET',body){return p.evaluate(async({url,method,
   assert.deepEqual(await p.locator('[data-stat="n"] td:not([data-side="delta"])').allTextContents(),['636','636']);assert.deepEqual(await p.locator('[data-stat="subgroups"] td:not([data-side="delta"])').allTextContents(),['64','64']);
   const afterMean=await p.locator('[data-stat="mean"] td[data-side="after"]').textContent();assert(Number(afterMean.replaceAll(',',''))>10000,'t/h values must be converted before comparison: '+afterMean);assert.equal(await p.locator('[data-stat="Pp"] td[data-side="before"]').textContent(),'—');
   assert((await p.locator('[data-report="诊断报告"] svg').textContent()).includes('Anderson'));assert((await p.locator('[data-report="过程性能报告"] svg').textContent()).includes('PPM'));assert((await p.locator('[data-report="汇总报告"] svg').textContent()).includes('Levene'));
-  assert((await p.locator('.analysis-method').innerText()).includes('Levene'));assert((await p.locator('.capability-results').innerText()).includes('已换算为 kg/h'));
+  assert((await p.locator('.analysis-method').innerText()).includes('Levene'));assert((await p.locator('.capability-results').textContent()).includes('已换算为 kg/h'));
   for(const [index,kind] of ['汇总报告','诊断报告','过程性能报告'].entries()){
     const figure=p.locator('[data-report="'+kind+'"]');await figure.screenshot({path:path.join(dir,`report-${index}.png`)});
     const event=p.waitForEvent('download');await figure.getByRole('button',{name:'导出 PNG',exact:true}).click();const file=await event,out=path.join(dir,kind+'.png');await file.saveAs(out);const bytes=await fs.readFile(out);assert.equal(bytes.subarray(1,4).toString(),'PNG');assert.equal(bytes.readUInt32BE(16),2400);assert.equal(bytes.readUInt32BE(20),1880);

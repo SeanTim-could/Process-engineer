@@ -2,6 +2,8 @@
 from pathlib import Path
 import base64
 import re
+import importlib.util
+import json
 
 ROOT=Path(__file__).resolve().parents[1]
 START='/* data-analysis:start */'
@@ -11,6 +13,9 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
+    surface_spec=importlib.util.spec_from_file_location('surface_sync',ROOT/'scripts/sync-surface.py')
+    surface=importlib.util.module_from_spec(surface_spec);surface_spec.loader.exec_module(surface)
+    js=surface.prepare(js)
     navigation_hooks=[
       ('function B1(e="production",suspendSeries=false)', 'function B1(e="production",suspendSeries=false,viewPage=e==="lims"?"lims":"overview")'),
       ('t=B1("production",["live-data","excel-sync","dashboard"].includes(c))', 't=B1("production",["live-data","excel-sync","dashboard"].includes(c),c)'),
@@ -54,7 +59,8 @@ def render(html):
     ]
     for old,new in dashboard_hooks:
         if new in js:js=js.replace(new,old)
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['workspace-memory.js','view-defaults.js','analysis-math.js','analysis-point-math.js','formula-syntax.js','chart-axes.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js','dashboard.js','dashboard-page.js'])
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['vendor/tiny-pinyin.js','surface.js','workspace-memory.js','view-defaults.js','analysis-math.js','analysis-point-math.js','formula-syntax.js','chart-axes.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js','dashboard-totals.js','dashboard-overlay.js','dashboard.js','dashboard-page.js'])
+    code=code.replace('/*COMPANY_LOGO*/\'\'',json.dumps('data:image/webp;base64,'+base64.b64encode((ROOT/'frontend/company-logo.webp').read_bytes()).decode())).replace('/*ENGLISH_UI*/{}',(ROOT/'frontend/english-ui.json').read_text())
     block=START+'\n'+code+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]
@@ -207,8 +213,9 @@ def render(html):
 
     if js.count(live_route)!=1:raise ValueError('Expected one awaited PI data route')
 
+    js=surface.apply(js)
     html=html[:match.start(2)]+base64.b64encode(js.encode()).decode()+html[match.end(2):]
-    css='<style id="data-analysis-style">\n'+(ROOT/'frontend/data-analysis.css').read_text().rstrip()+'\n</style>'
+    css='<style id="data-analysis-style">\n'+((ROOT/'frontend/data-analysis.css').read_text()+'\n'+(ROOT/'frontend/surface.css').read_text()).rstrip()+'\n</style>'
     if 'id="data-analysis-style"' in html:html=re.sub(r'<style id="data-analysis-style">.*?</style>',lambda _:css,html,flags=re.S)
     else:html=html.replace('</head>',css+'\n</head>',1)
     return html

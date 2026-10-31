@@ -28,7 +28,7 @@ async function importFile(p,name,buffer,count){
    if(relative.endsWith('.gz')&&mode==='corrupt')return route.fulfill({contentType:'application/gzip',body:'corrupt fixture'});
    if(relative.endsWith('.gz')&&mode==='unpacked')return route.fulfill({contentType:'application/gzip',body:files.get(relative.slice(0,-3))});
    const body=files.get(relative);if(!body)return route.fulfill({status:404,body:'Not found'});
-   return route.fulfill({body,headers:mode==='blob-blocked'?{'Content-Security-Policy':"script-src 'self' 'unsafe-inline'"}:{},contentType:relative.endsWith('.gz')?'application/gzip':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8'});
+   return route.fulfill({body,headers:mode==='blob-blocked'?{'Content-Security-Policy':"script-src 'self' 'unsafe-inline'"}:{},contentType:relative.endsWith('.webp')?'image/webp':relative.endsWith('.gz')?'application/gzip':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8'});
   });
   await context.route(config.url+'/**',route=>route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':new URL(site).origin},body:JSON.stringify([{id:'11111111-1111-4111-8111-111111111111',display_name:'下载测试员',employee_id:'download',role:'staff',active:true,must_change_password:false}])}));
   const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(site+'workbench.html',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.querySelector('.offline-bar')?.textContent.includes('下载测试员'));
