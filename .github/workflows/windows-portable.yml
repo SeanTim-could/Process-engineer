@@ -13,6 +13,7 @@ on:
       - 'scripts/build-excel-python.py'
       - 'requirements-excel-sync.txt'
       - 'Excel自动同步使用说明.md'
+      - 'Dashboard使用说明.md'
       - 'licenses/**'
       - 'THIRD-PARTY-NOTICES.txt'
       - '*.html'
@@ -27,6 +28,7 @@ on:
       - 'scripts/build-excel-python.py'
       - 'requirements-excel-sync.txt'
       - 'Excel自动同步使用说明.md'
+      - 'Dashboard使用说明.md'
       - 'licenses/**'
       - 'THIRD-PARTY-NOTICES.txt'
       - '*.html'
@@ -120,6 +122,8 @@ jobs:
 
           下载 Workbench-Windows-Portable.zip，完整解压后双击 ProcessEngineerWorkbench.exe。
           请保留 _internal 文件夹及其他配套文件。仍需桌面版 Microsoft Office 和自己的文档读取权限。
+
+          新增Dashboard自选PI和Excel图表、保存布局、实时更新与图片导出，并修正坐标标题与刻度重叠。
 
           Excel自动同步：支持Python后台多任务排队刷新、临时失败重试、变化数据传输、网页刷新后恢复连接、当天24小时默认实时范围、按装置记住Excel参数/工作簿、轻量PI实时曲线、悬停参考线与框选放大、上次查看装置恢复、PI采样删除、公式运行检查和PI日均汇总。实际DataLink更新需在目标电脑核对。公司已授权python.exe时，可下载Workbench-Excel-Python.zip，安装依赖后运行启动脚本。网页“数据管理 → Excel自动同步”连接本机读取窗口。
 

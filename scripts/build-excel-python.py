@@ -6,7 +6,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = ['启动Excel同步Python.bat', '安装Excel同步依赖.bat', 'requirements-excel-sync.txt',
-         'Excel自动同步使用说明.md', '启动工程师工作台.html', 'THIRD-PARTY-NOTICES.txt',
+         'Excel自动同步使用说明.md', 'Dashboard使用说明.md', '启动工程师工作台.html', 'THIRD-PARTY-NOTICES.txt',
          *['local_service/' + name for name in ['launcher.py', 'document_index.py', 'office_reader.py',
                                                'excel_reader.py', 'excel_bridge.html']],
          *[str(p.relative_to(ROOT)) for p in sorted((ROOT / 'licenses').rglob('*')) if p.is_file()]]

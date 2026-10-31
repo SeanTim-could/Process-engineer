@@ -84,7 +84,7 @@ def main():
     print(build_result.stderr)
     distribution = build / 'dist' / 'ProcessEngineerWorkbench'
     for name in ('便携版使用说明.txt', '启动本地检索.bat', '启动工程师工作台.html',
-                 '本地检索网站接入说明.md', 'THIRD-PARTY-NOTICES.txt', 'Excel自动同步使用说明.md',
+                 '本地检索网站接入说明.md', 'THIRD-PARTY-NOTICES.txt', 'Excel自动同步使用说明.md', 'Dashboard使用说明.md',
                  '启动Excel同步.bat', '启动Excel同步Python.bat', '安装Excel同步依赖.bat', 'requirements-excel-sync.txt'):
         shutil.copy2(root / name, distribution / name)
     source_folder = distribution / 'local_service'

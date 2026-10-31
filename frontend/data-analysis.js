@@ -1,7 +1,7 @@
 // Read-only analysis over account-local data; saved chart recipes live in backups.
 var DataAnalysis = (() => {
   const R=Se(),h=R.createElement,M=AnalysisMath,P=AnalysisPlots;
-  const groups=[{id:"operations",label:"运行概览",items:["overview","live-data","trends","lims","reports"]},
+  const groups=[{id:"operations",label:"运行概览",items:["dashboard","overview","live-data","trends","lims","reports"]},
     {id:"analytics",label:"数据分析",items:["timeseries","capability","plotting","charts","comparison","analysis"]},
     {id:"data",label:"数据管理",items:["data","excel-sync","settings"]},{id:"personal",label:"文档与个人",items:["files","documents","profile"]}];
   const pages=[{id:"timeseries",label:"时序分析",en:"TIME SERIES",icon:Pm},{id:"capability",label:"前后能力分析",en:"BEFORE / AFTER",icon:jo},{id:"plotting",label:"自由作图",en:"CHART WORKSPACE",icon:Mn}];
@@ -26,10 +26,10 @@ var DataAnalysis = (() => {
       aggregation:value.aggregation==="sum"?"sum":"mean",boxBy:value.boxBy==="group"?"group":"metric",capabilitySize:Number.isInteger(value.capabilitySize)&&value.capabilitySize>=1&&value.capabilitySize<=100?value.capabilitySize:1,bins:Number.isInteger(value.bins)&&value.bins>=5&&value.bins<=100?value.bins:0,lsl,usl};
   }
   function normalize(value){
-    if(value===undefined)return {version:1,revision:0,charts:[],drafts:{},exclusionRevision:0,excludedPoints:[]};
+    if(value===undefined)return {version:1,revision:0,charts:[],drafts:{},exclusionRevision:0,excludedPoints:[],dashboard:Dashboard.normalize()};
     if(!value||value.version!==1||!Number.isSafeInteger(value.revision)||value.revision<0||!Array.isArray(value.charts)||value.charts.length>24)throw new Error("作图区备份格式无效，最多保存24张图表。");
     if(value.exclusionRevision!==undefined&&(!Number.isSafeInteger(value.exclusionRevision)||value.exclusionRevision<0))throw new Error("异常点版本无效。");
-    const ids=new Set();return {version:1,revision:value.revision,exclusionRevision:value.exclusionRevision??0,excludedPoints:AnalysisPointMath.normalize(value.excludedPoints),drafts:AnalysisDrafts.normalize(value.drafts),charts:value.charts.map(chart=>{
+    const ids=new Set();return {version:1,dashboard:Dashboard.normalize(value.dashboard),revision:value.revision,exclusionRevision:value.exclusionRevision??0,excludedPoints:AnalysisPointMath.normalize(value.excludedPoints),drafts:AnalysisDrafts.normalize(value.drafts),charts:value.charts.map(chart=>{
       if(!chart||!/^chart_[\w-]{1,80}$/.test(chart.id)||ids.has(chart.id))throw new Error("图表编号无效或重复。");ids.add(chart.id);
       for(const key of ["createdAt","updatedAt"])if(typeof chart[key]!=="string"||!Number.isFinite(Date.parse(chart[key])))throw new Error("图表保存时间无效。");
       return {...chartConfig(chart),id:chart.id,createdAt:chart.createdAt,updatedAt:chart.updatedAt};
@@ -147,5 +147,5 @@ var DataAnalysis = (() => {
         mode==="timeseries"&&h(P.Figure,{config:{...config,keys:["range"],type:"line",title:"移动极差 MR",normalized:false},pointQuery:{...config,keys:[column.key]},rows:M.movingRanges(rows,column.key),columns:[{key:"range",label:"相邻个体移动极差",unit:column.unit}],references:[{label:"MR均值",value:summary.mrbar,color:"#477be3"},{label:"MR上控制限",value:summary.mrbar===null?null:summary.mrbar*3.267,color:"#b08b48"},{label:"MR下控制限",value:0,color:"#b08b48"}],subtitle:"移动极差使用相邻有效读数的绝对差；不同分组分别计算。"}))),
       mode==="plotting"&&h("section",{className:"panel analysis-board"},h("div",{className:"analysis-figure-head"},h("div",null,h("h2",null,"我的作图区"),h("p",{className:"small muted"},"保存图表条件，后续打开自动读取当前数据；配置随账号隔离并包含在保存的工作台文件中。最多24张。")),h("button",{className:"button",onClick:()=>reload().catch(e=>setError(e.message))},"刷新图表列表")),!catalog.charts.length?h("p",{className:"analysis-empty"},"选好数据和图形后，点击“保存到作图区”，在这里积累常用图表。"):catalog.charts.map(chart=>h(SavedChart,{key:chart.id,chart,sources:catalog.sources,refreshKey,onLoad:load,onDelete:remove}))));
   }
-  return {Nav,pages,Page,request,normalize,chartConfig};
+  return {Nav,pages,Page,request,normalize,chartConfig,sources,series};
 })();

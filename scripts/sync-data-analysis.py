@@ -11,7 +11,21 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['view-defaults.js','analysis-math.js','analysis-point-math.js','formula-syntax.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js'])
+    dashboard_hooks=[
+      ('var B=oe(yt(),1),w$=[...LiveData.pages,...ExcelSync.pages,...DataAnalysis.pages,', 'var B=oe(yt(),1),w$=[...Dashboard.pages,...LiveData.pages,...ExcelSync.pages,...DataAnalysis.pages,'),
+      ('else if(r.pathname==="/api/live-data")', 'else if(r.pathname==="/api/dashboard"){a=await Dashboard.request(e)}else if(r.pathname==="/api/live-data")'),
+      ('c==="live-data"&&(0,B.jsx)(LiveData.Page,', 'c==="dashboard"&&(0,B.jsx)(Dashboard.Page,{refreshKey:Sr}),c==="live-data"&&(0,B.jsx)(LiveData.Page,'),
+      ('jsx)("h1",{children:c==="live-data"?', 'jsx)("h1",{children:c==="dashboard"?"Dashboard · 我的看板":c==="live-data"?'),
+      ('className:"page-description",children:c==="live-data"?', 'className:"page-description",children:c==="dashboard"?"自选PI实时和Excel指标图，集中查看，保存你的图表布局。":c==="live-data"?'),
+      ('"plotting","excel-sync","live-data"].includes(c),zs=', '"plotting","excel-sync","live-data","dashboard"].includes(c),zs='),
+      ('["live-data","excel-sync"].includes(c)', '["live-data","excel-sync","dashboard"].includes(c)'),
+      ('["/api/series","/api/live-data","/api/formula-health"].includes(r.pathname)', '["/api/series","/api/live-data","/api/formula-health","/api/dashboard"].includes(r.pathname)'),
+      ('AnalysisDrafts.reset(n.state.analytics?.drafts);ExcelSync.reset();', 'AnalysisDrafts.reset(n.state.analytics?.drafts);ExcelSync.reset();Dashboard.notify();'),
+      ('className:"panel auto-chart-card","data-column-key":e.key,children:[(0,ue.jsx)(PointExclusions.LegacyTools,{url:o,title:e.label}),', 'className:"panel auto-chart-card","data-column-key":e.key,children:[(0,ue.jsx)(Dashboard.LegacyPin,{url:o,title:e.label}),(0,ue.jsx)(PointExclusions.LegacyTools,{url:o,title:e.label}),'),
+    ]
+    for old,new in dashboard_hooks:
+        if new in js:js=js.replace(new,old)
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['view-defaults.js','analysis-math.js','analysis-point-math.js','formula-syntax.js','chart-axes.js','analysis-plots.js','point-exclusions.js','analysis-drafts.js','capability-math.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js','dashboard.js','dashboard-page.js'])
     block=START+'\n'+code+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]
@@ -148,6 +162,10 @@ def render(html):
 
     for old,new in light_hooks:
         if js.count(old)!=1:raise ValueError('Light live-page integration marker missing: '+old[:60])
+        js=js.replace(old,new)
+
+    for old,new in dashboard_hooks:
+        if js.count(old)!=1:raise ValueError('Dashboard integration marker missing: '+old[:70])
         js=js.replace(old,new)
 
     if js.count(live_route)!=1:raise ValueError('Expected one awaited PI data route')
