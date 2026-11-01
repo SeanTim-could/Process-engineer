@@ -26,7 +26,7 @@ const site='https://seantim-could.github.io/Process-engineer/';
    const body=files.get(relative);if(!body)return route.fulfill({status:404,body:'Not found'});
    if(relative.startsWith('assets/')&&(/\.js(?:\.gz)?$/).test(relative))await bundleGate;
    if(relative.startsWith('assets/')&&(/\.css(?:\.gz)?$/).test(relative))await styleGate;
-   const type=relative.endsWith('.webp')?'image/webp':relative.endsWith('.gz')?'application/gzip':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8';
+   const type=relative.endsWith('.webp')?'image/webp':/\.jpe?g$/.test(relative)?'image/jpeg':relative.endsWith('.png')?'image/png':relative.endsWith('.gz')?'application/gzip':relative.endsWith('.js')?'text/javascript':relative.endsWith('.css')?'text/css':'text/html; charset=utf-8';
    await route.fulfill({body,contentType:type});
   });
   await context.route(config.url+'/**',async route=>{
@@ -51,7 +51,7 @@ const site='https://seantim-could.github.io/Process-engineer/';
   assert.equal(await p.getByRole('button',{name:'另存为',exact:true}).count(),0);
   await p.getByRole('textbox',{name:'登录工号',exact:true}).fill('perf');await p.getByLabel('登录密码',{exact:true}).fill('FixturePass1234!');
   const profileStarted=p.waitForRequest(r=>r.url().includes('/rest/v1/workbench_profiles'));
-  await p.getByRole('button',{name:'登录',exact:true}).click();await p.waitForURL('**/workbench.html',{waitUntil:'commit'});
+  await p.getByRole('button',{name:'登录',exact:true}).click();await p.waitForURL('**/workbench.html*',{waitUntil:'commit'});
   await p.getByRole('heading',{name:'正在加载工作台…',exact:true}).waitFor();
   await profileStarted;
   await p.waitForFunction(()=>performance.getEntriesByType('paint').some(p=>p.name==='first-contentful-paint'));

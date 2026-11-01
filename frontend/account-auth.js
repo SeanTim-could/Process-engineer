@@ -123,7 +123,7 @@ var AccountAuth = (() => {
       const value=await raw("/auth/v1/token?grant_type=password","POST",{email:employee+"@workbench.invalid",password});accept(value);
       const own=await profile();if(!own.must_change_password)bindWorkspace();notify({...own});
     }catch(e){store(null);identity=null;setError(e.status===400?"工号或密码不正确，或账号尚未启用。":e.message);}finally{setBusy(false);}}
-    return h("form",{className:"account-form",onSubmit:login},h("span",{className:"account-brand"},"工程师工作台"),h("h1",null,"登录你的工作台"),
+    return h("form",{className:"account-form",onSubmit:login},h(Surface.Logo),h("span",{className:"account-brand"},"工程师工作台"),h("h1",null,"登录你的工作台"),
       h("p",{className:"muted"},"请使用管理员发放的工号和密码。"),
       h(Field,{label:"登录工号",value:id,onChange:setId,autoComplete:"username"}),h(Field,{label:"登录密码",type:"password",value:password,onChange:setPassword,autoComplete:"current-password"}),
       error&&h("p",{className:"error-banner",role:"alert"},error),h("button",{className:"button primary login-submit",disabled:busy},busy?"正在登录…":"登录"),

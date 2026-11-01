@@ -2,7 +2,7 @@
 // identity row before opening any account workspace or administration controls.
 (() => {
   const config=window.WorkbenchWebConfig;
-  const target=new URL('./workbench.html',location.href).href;
+  const target=new URL(config.entry??'./workbench.html',location.href).href;
   const form=document.getElementById('web-login-form');
   const error=document.getElementById('web-login-error');
   const button=document.getElementById('web-login-submit');

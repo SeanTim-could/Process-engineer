@@ -130,7 +130,7 @@ def build(config_override=None):
     web=web.replace('</head>',f'<style>{LOADER_CSS}</style></head>',1)
     (ROOT/'workbench.html').write_text(web)
 
-    public={**config,'prefetch':['./workbench.html',startup_assets['script']['compressed'],startup_assets['style']['compressed']]}
+    public={**config,'entry':'./workbench.html?v='+entry_version,'prefetch':['./workbench.html?v='+entry_version,startup_assets['script']['compressed'],startup_assets['style']['compressed']]}
     origin=config['url'] if config['enabled'] else ''
     connect="'self' "+origin if origin else "'self'"
     css=(ROOT/'frontend/account-auth.css').read_text()
