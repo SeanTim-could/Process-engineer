@@ -4,7 +4,7 @@ ROOT=Path(__file__).resolve().parents[1]
 TITLE=(ROOT/'scripts/surface-root-title-original.txt').read_text()
 PAIRS=[
  ((ROOT/'scripts/surface-workspace-card-original.txt').read_text(),'null/* workspace-summary-removed */'),
- ('Q=(0,It.useMemo)(()=>p3(),[]);ExcelSync.useImports','Q=(0,It.useMemo)(()=>p3(),[]);Surface.use(c);ExcelSync.useImports'),
+ ('Q=(0,It.useMemo)(()=>p3(),[]);ExcelSync.useImports','Q=(0,It.useMemo)(()=>p3(),[]);Surface.use(c,e.profile);ExcelSync.useImports'),
  ('(0,B.jsx)("span",{className:"brand-mark",children:(0,B.jsx)(Ks,{size:24})})','(0,B.jsx)(Surface.Logo,{})'),
  ('children:'+TITLE,'children:Surface.pageTitle(c)'),
  ('function Fi(he){he==="charts"','function Fi(he){if(he==="reports")return;he==="charts"'),
@@ -18,8 +18,19 @@ PAIRS=[
  ('_0(G.svg,', '_0(Surface.exportSvg(G.svg,Surface.comparisonTitle(i.lines)),'),
  ('m$(Q,Xe,ze,$e,`${He} \\u2192 ${Ke} \\xB7 ${z} \\u81F3 ${G}`)', 'Surface.exportSvg(m$(Q,Xe,ze,$e,`${He} \\u2192 ${Ke} \\xB7 ${z} \\u81F3 ${G}`),ze+" × "+$e)'),
  ('__html:ug(e.points,o,e.dataset.columns,"raw")', '__html:Surface.exportSvg(ug(e.points,o,e.dataset.columns,"raw"),Surface.chartTitle({sourceId:e.dataset.id},[o]))'),
+ ('function pD(e,t,r){var a=null;', 'function pD(e,t,r){if(typeof Surface!=="undefined"&&Surface)t=Surface.localize(e,t);var a=null;'),
+ ('return qC(e,i,n)};xt.createRef=', 'if(typeof Surface!=="undefined"&&Surface)n=Surface.localize(e,n);return qC(e,i,n)};xt.createRef='),
+ ('function yD({children:e}){let[t,r]', 'function yD({children:e}){Surface.useRefresh();let[t,r]'),
+ ('theme:t.theme}}function GC(', 'theme:t.theme,...t.language===undefined?{}:{language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()}}}function GC('),
+ ('document.documentElement.dataset.theme=a.theme;return()=>{document.documentElement.dataset.theme=e.theme}},[a.theme,e.theme]', 'document.documentElement.dataset.theme=a.theme;Surface.previewLanguage(a.language??"zh-CN");return()=>{document.documentElement.dataset.theme=e.theme;Surface.previewLanguage(e.language??"zh-CN")}},[a.theme,e.theme,a.language,e.language]'),
+ ('(0,ut.jsxs)("div",{className:"theme-settings",children:[', '(0,ut.jsx)(Surface.LanguageSettings,{value:a.language??"zh-CN",disabled:!r||i,onChange:language=>{n({...a,language}),c(!1)}}),(0,ut.jsxs)("div",{className:"theme-settings",children:['),
+ ('[Q,Xe,ze,$e,He,Ke,z,G]),rt=', '[Q,Xe,ze,$e,He,Ke,z,G,Surface.language()]),rt='),
+ ('children:[Number(b.slice(5)),"\\u6708"]', 'children:Surface.monthLabel(Number(b.slice(5)))'),
+ ('children:["\\u4E00","\\u4E8C","\\u4E09","\\u56DB","\\u4E94","\\u516D","\\u65E5"].map(b=>(0,et.jsx)("span",{children:b},b))', 'children:["\\u4E00","\\u4E8C","\\u4E09","\\u56DB","\\u4E94","\\u516D","\\u65E5"].map(b=>(0,et.jsx)("span",{children:Surface.weekday(b)},b))'),
 ]
 def prepare(js):
+ js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')
+ js=js.replace("Surface.use(c);ExcelSync.useImports","ExcelSync.useImports")
  for old,new in PAIRS:
   if new in js:js=js.replace(new,old)
  return js

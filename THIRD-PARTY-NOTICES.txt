@@ -104,3 +104,5 @@ Windows 运行时的许可会在打包时收集至 licenses/windows-runtime。
  */
 
 TinyPinyin 1.3.2 — MIT license (licenses/tiny-pinyin-LICENSE.txt). Used locally for romanizing custom labels when an English UI term is not defined.
+
+The embedded React element factories include a local presentation-label adapter for the selected interface language. React copyright and license notices are retained.

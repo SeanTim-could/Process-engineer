@@ -7,9 +7,11 @@
   const error=document.getElementById('web-login-error');
   const button=document.getElementById('web-login-submit');
   const status=document.getElementById('web-login-status');
+  const locale=(()=>{try{return localStorage.getItem('workbench-last-language')==='en'?'en':'zh-CN';}catch{return 'zh-CN';}})();
+  document.documentElement.lang=locale;for(const el of document.querySelectorAll('[data-en]')){if(locale==='en'){el.textContent=el.dataset.en;if(el.hasAttribute('aria-label'))el.setAttribute('aria-label',el.dataset.en);}el.removeAttribute('data-en');}if(locale==='en'){document.querySelector('[aria-label="登录工号"]').setAttribute('aria-label','Employee ID');document.querySelector('[aria-label="登录密码"]').setAttribute('aria-label','Password');document.title='Sign in · Engineer Workbench';}
   const sessionKey='workbench-auth:'+config.url;
   const english={'正在打开你的工作台…':'Opening your workbench…','正在验证账号…':'Verifying your account…','请输入管理员发放的工号。':'Enter the employee ID issued by your administrator.','操作过于频繁，请稍后重试。':'Too many attempts. Please try again later.','工号或密码不正确，或账号尚未启用。':'Incorrect employee ID or password, or the account is inactive.','登录响应无效，请稍后重试。':'Invalid sign-in response. Please try again.','登录验证完成，正在打开工作台…':'Signed in. Opening the workbench…','账号服务连接超时，请检查网络后重试。':'Connection timed out. Check your network and try again.'};
-  function caption(node,text){node.textContent=text;node.dataset.en=english[text]??(text?'Unable to connect. Please try again.':'');}
+  function caption(node,text){node.textContent=locale==='en'?(english[text]??(text?'Unable to connect. Please try again.':'')):text;node.removeAttribute('data-en');}
 
   if(!config.enabled){location.replace(target);return;}
   try{

@@ -97,11 +97,10 @@ var AnalysisPlots = (() => {
       ...legend.slice(0,config.compact?6:12).map((g,i)=>h("g",{key:"leg"+i},h("rect",{x:L+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),y:H-85+Math.floor(i/(config.compact?2:4))*23,width:10,height:3,fill:g.color}),text(L+15+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),H-80+Math.floor(i/(config.compact?2:4))*23,trunc(g.label,15),{fontSize:11}))));
   }
   const escape=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  function download(content,filename,type){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement("a");a.href=url;a.download=filename.slice(0,120).replace(/[\\/:*?"<>|]/g,"_");a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+  function download(content,filename,type){const url=URL.createObjectURL(new Blob([type.startsWith("text/html")?Surface.localizeDocument(content):content],{type})),a=document.createElement("a");a.href=url;a.download=filename.slice(0,120).replace(/[\\/:*?"<>|]/g,"_");a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
   async function saveSvg(svg,title,png=false){
     if(!svg)throw new Error("请先生成有效图表。");
-    const clone=svg.cloneNode(true);clone.querySelectorAll('[data-live-overlay],[data-live-interaction]').forEach(node=>node.remove());const label=document.createElementNS("http://www.w3.org/2000/svg","text");
-    label.setAttribute("x","24");label.setAttribute("y","21");label.setAttribute("text-anchor","start");label.setAttribute("font-size","16");label.setAttribute("fill","#244252");label.textContent=title;if(!svg.hasAttribute("data-complete-report")&&!svg.hasAttribute("data-complete-chart")){clone.appendChild(label);const english=label.cloneNode(true);english.setAttribute('y','35');english.setAttribute('font-size','10');english.textContent=Surface.en(title);clone.appendChild(english);}
+    const clone=svg.cloneNode(true);clone.querySelectorAll('[data-live-overlay],[data-live-interaction]').forEach(node=>node.remove());if(!svg.hasAttribute("data-complete-report")&&!svg.hasAttribute("data-complete-chart"))Surface.appendTitle(clone,title);
     const source=new XMLSerializer().serializeToString(clone);
     if(!png){download(source,title+".svg","image/svg+xml;charset=utf-8");return;}
     const url=URL.createObjectURL(new Blob([source],{type:"image/svg+xml;charset=utf-8"}));

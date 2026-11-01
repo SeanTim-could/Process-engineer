@@ -3,11 +3,12 @@ var CapabilityReports = (() => {
   const R=Se(),h=R.createElement,M=AnalysisMath,C=CapabilityMath,P=AnalysisPlots;
   const f=(v,d=3)=>!M.finite(v)?"—":v!==0&&Math.abs(v)<.5*10**(-d)?v.toExponential(2):v.toLocaleString("zh-CN",{maximumFractionDigits:d});
   const pText=p=>!M.finite(p)?"不可计算":p<.0001?"< 0.0001":p.toFixed(4);
-  const cut=(s,n=42)=>String(s).length>n?String(s).slice(0,n-1)+"…":String(s);
+  const cut=(s,n=42)=>{s=Surface.t(String(s));if(Surface.language()==="en")n=Math.floor(n*1.8);return s.length>n?s.slice(0,n-1)+"…":s;};
   const txt=(x,y,s,props={})=>Surface.svgText(x,y,String(s),{fontSize:15,fill:"#304653",...props});
   const line=(x1,y1,x2,y2,props={})=>h("line",{x1,y1,x2,y2,stroke:"#cad6dd",...props});
   function wrapped(x,y,s,width=500,size=15,color="#4c626e"){
-    const lines=[];let part="",units=0;for(const char of String(s)){const u=char.charCodeAt(0)>255?1.8:1;if(units+u>width/(size*.56)){lines.push(part);part="";units=0;}part+=char;units+=u;}if(part)lines.push(part);
+    s=Surface.t(String(s));if(Surface.language()==="en")size=Math.min(size,13);
+    const lines=[];let part="",units=0;if(Surface.language()==="en"){const capacity=Math.max(10,Math.floor(width/(size*.56)));for(const word of String(s).split(/\s+/)){if(part&&part.length+word.length+1>capacity){lines.push(part);part="";}part+=(part?" ":"")+word;}}else for(const char of String(s)){const u=char.charCodeAt(0)>255?1.8:1;if(units+u>width/(size*.56)){lines.push(part);part="";units=0;}part+=char;units+=u;}if(part)lines.push(part);
     return h("text",{x,y,fontSize:size,fill:color},...lines.map((s,i)=>h("tspan",{key:i,x,dy:i?size*1.6:0},s)));
   }
   function table(x,y,width,title,fields,before,after){

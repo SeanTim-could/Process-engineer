@@ -18,7 +18,10 @@
     : Promise.resolve();
   const progress = {script: 0, style: 0};
 
+  const english=(()=>{try{return localStorage.getItem('workbench-last-language')==='en';}catch{return false;}})();
+  domReady.then(()=>{if(english){document.documentElement.lang='en';for(const [k,v]of Object.entries({b:'Workbench',h1:'Loading…',button:'Reload',a:'Compatible mode'})){const e=document.querySelector('.startup-screen '+k);if(e)e.textContent=v;}}});
   function status(message) {
+    if(english)message=failed?'Unable to load. Please reload.':'Loading… '+(message.match(/\d+%/)?.[0]??'');
     const el = document.getElementById('web-startup-status');
     if (el) el.textContent = message;
     else domReady.then(() => {
