@@ -3,6 +3,11 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TITLE=(ROOT/'scripts/surface-root-title-original.txt').read_text()
 PAIRS=[
+ ('className:"panel chart-panel",children:[(0,B.jsx)(PointExclusions.Tools,{sourceId:"raw:"+t.id,keys:[d.id],allGroups:true,from:c??"",to:f??"",title:d.label}),', 'className:"panel chart-panel compact-chart-panel",children:['),
+ ('(0,B.jsxs)("div",{className:"segmented",children:[', '(0,B.jsx)(PointExclusions.Tools,{sourceId:"raw:"+t.id,keys:[d.id],allGroups:true,from:c??"",to:f??"",title:d.label}),(0,B.jsxs)("div",{className:"segmented",children:['),
+ ('className:"panel auto-chart-card","data-column-key":e.key,children:[(0,ue.jsx)(Dashboard.LegacyPin,{url:o,title:e.label}),(0,ue.jsx)(PointExclusions.LegacyTools,{url:o,title:e.label}),', 'className:"panel auto-chart-card compact-chart-card","data-column-key":e.key,children:['),
+ ('f.label]})]}),(0,ue.jsxs)("a",{className:"button small-button"', 'f.label]})]}),(0,ue.jsxs)("div",{className:"button-row chart-actions",children:[(0,ue.jsx)(Dashboard.LegacyPin,{url:o,title:e.label}),(0,ue.jsx)(PointExclusions.LegacyTools,{url:o,title:e.label}),(0,ue.jsxs)("a",{className:"button small-button"'),
+ ('children:[(0,ue.jsx)(ur,{size:15}),"PNG"]})]})', 'children:[(0,ue.jsx)(ur,{size:15}),"PNG"]})]})]})'),
  ((ROOT/'scripts/surface-workspace-card-original.txt').read_text(),'null/* workspace-summary-removed */'),
  ('Q=(0,It.useMemo)(()=>p3(),[]);ExcelSync.useImports','Q=(0,It.useMemo)(()=>p3(),[]);Surface.use(c,e.profile);ExcelSync.useImports'),
  ('(0,B.jsx)("span",{className:"brand-mark",children:(0,B.jsx)(Ks,{size:24})})','(0,B.jsx)(Surface.Logo,{})'),

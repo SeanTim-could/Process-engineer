@@ -879,5 +879,7 @@
   "应用时间": "Apply time",
   "当前时间": "Current time",
   "循环水用量": "Cooling water consumption",
-  "产品损失": "Product loss"
+  "产品损失": "Product loss",
+  "拖动鼠标框选多个异常点，也可点击读数或勾选明细，再确认。排除会同步到本账号各处图表和实时统计；原始数据、公式输入和已生成月报快照保留。": "Drag a rectangle to select multiple readings, or click readings or table checkboxes, then confirm. Exclusions apply across your charts and statistics. Original data and formula inputs are preserved.",
+  "可重复框选以追加选择，红色空心圆为本次选择；框内全部读数均会选中。大数据绘图保留极值并抽样。明细包含全部读数，可查找并跨页选择；删除一个指标读数不会移除同一时刻的其他指标。": "Draw additional rectangles to add readings. Red outlined points are selected; all readings in the box are included, even when the preview is sampled. The table includes all readings. Excluding one metric leaves other metrics at the same time intact."
 }

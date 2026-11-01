@@ -20,6 +20,8 @@ var AnalysisPlots = (() => {
     return result;
   }
   function Svg({config,rows,columns,references=[],split=null,distributions=null,boxGroups=null,pointSelection=null,normalCurves=[]}){
+    const drag=R.useRef(null),suppressClick=R.useRef(false),[selectionBox,setSelectionBox]=R.useState(null);
+    let selectInBox=null;
     const palette=palettes[config.palette]??palettes.coast,keys=config.keys.filter(k=>columns.some(c=>c.key===k)),chosen=keys.map(k=>columns.find(c=>c.key===k));
     if(!chosen.length)return h("p",{className:"analysis-empty"},"请选择至少一个指标。");
     const type=config.type??"line",single=["scatter","histogram"].includes(type),used=single?chosen.slice(0,1):chosen;
@@ -73,6 +75,11 @@ var AnalysisPlots = (() => {
       const spans=new Map(used.map(c=>{const s=M.summarize(rows.map(r=>r.values[c.key]));return [c.key,s];}));
       const value=(row,c)=>{const v=row.values[c.key],s=spans.get(c.key);return !M.finite(v)?null:config.normalized?(v-s.min)/(s.max-s.min||1):v;};
       scales(rows.map(r=>r.time),[...hasValue.flatMap(r=>used.map(c=>value(r,c))),...!config.normalized?ref.map(r=>r.value):[],...type==="area"?[0]:[]],false,used.length===1&&used[0].key==="range");
+      if(pointSelection)selectInBox=box=>{
+        const groups=new Set([...new Set(rows.map(row=>row.group))].slice(0,20)),chosen=[];
+        for(const row of rows)if(groups.has(row.group)&&xScale(row.time)>=box.x0&&xScale(row.time)<=box.x1)for(const c of used){const v=value(row,c),y=yScale(v);if(M.finite(v)&&y>=box.top&&y<=box.bottom)chosen.push({row,key:c.key});}
+        pointSelection.onSelect?.(chosen);
+      };
       used.forEach((c,j)=>{
         const groups=[...new Set(rows.map(r=>r.group))].slice(0,20);
         groups.forEach((group,k)=>{const data=rows.filter(r=>r.group===group&&Object.hasOwn(r.values,c.key)),color=palette[(j+k)%palette.length],points=thin(data,c.key);let previous=null,path="",area="",start=null;
@@ -81,18 +88,29 @@ var AnalysisPlots = (() => {
           if(type==="area")children.push(h("path",{key:`a${j}-${k}`,d:area,fill:color,fillOpacity:.14,stroke:"none"}));
           children.push(h("path",{key:`l${j}-${k}`,d:path,fill:"none",stroke:color,strokeWidth:2,strokeLinejoin:"round"}));
           for(const [i,p] of points.entries()){const selected=pointSelection?.selected.has(AnalysisPointMath.identity(AnalysisPointMath.observation(pointSelection.sourceId,p.row,c.key))),label=`${M.exactLocal(p.row.time).replace("T"," ")} · ${p.row.group||"未分组"} · ${c.label}：${format(p.row.values[c.key])}`;
-            children.push(h("circle",{key:`p${j}-${k}-${i}`,cx:xScale(p.row.time),cy:yScale(value(p.row,c)),r:pointSelection?5:data.length<=80?3:1.5,fill:selected?"white":color,stroke:selected?"#db405c":undefined,strokeWidth:selected?3:undefined,role:pointSelection?"button":undefined,tabIndex:pointSelection?0:undefined,"aria-label":pointSelection?"选择图中读数 "+label:undefined,"aria-pressed":pointSelection?!!selected:undefined,style:pointSelection?{cursor:"pointer"}:undefined,onClick:pointSelection?()=>pointSelection.onToggle(p.row,c.key):undefined,onKeyDown:pointSelection?e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pointSelection.onToggle(p.row,c.key);}}:undefined},h("title",null,label)));}
+            children.push(h("circle",{key:`p${j}-${k}-${i}`,cx:xScale(p.row.time),cy:yScale(value(p.row,c)),r:pointSelection?5:data.length<=80?3:1.5,fill:selected?"white":color,stroke:selected?"#db405c":undefined,strokeWidth:selected?3:undefined,role:pointSelection?"button":undefined,tabIndex:pointSelection?0:undefined,"aria-label":pointSelection?"选择图中读数 "+label:undefined,"aria-pressed":pointSelection?!!selected:undefined,style:pointSelection?{cursor:"pointer"}:undefined,onClick:pointSelection?()=>{if(!suppressClick.current)pointSelection.onToggle(p.row,c.key);}:undefined,onKeyDown:pointSelection?e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pointSelection.onToggle(p.row,c.key);}}:undefined},h("title",null,label)));}
           legend.push({label:c.label+(groups.length>1?" · "+(group||"未分组"):""),color});
         });
       });
       if(!config.normalized)for(const r of ref)children.push(h("g",{key:r.label},h("line",{x1:L,x2:E,y1:yScale(r.value),y2:yScale(r.value),stroke:r.color??"#d9665c",strokeDasharray:"6 4"}),text(E-2,yScale(r.value)-5,r.label+" "+format(r.value),{textAnchor:"end",fill:r.color??"#be5046"})));
       if(split!==null&&rows.length&&split>=rows[0].time&&split<=rows.at(-1).time)children.push(h("g",{key:"split"},h("line",{x1:xScale(split),x2:xScale(split),y1:T,y2:B,stroke:"#8b68c5",strokeWidth:2,strokeDasharray:"5 4"}),text(xScale(split)+5,T+15,"调整时间",{fill:"#805bbd"})));
     }
-    return h("svg",{xmlns:"http://www.w3.org/2000/svg",viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:"img","aria-label":config.title||types[type],style:{fontFamily:'"Microsoft YaHei",Arial,sans-serif',maxWidth:"100%",height:"auto"}},
+    const position=event=>{const svg=event.currentTarget,point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;const matrix=svg.getScreenCTM();if(!matrix)return null;const p=point.matrixTransform(matrix.inverse());return {x:Math.max(L,Math.min(E,p.x)),y:Math.max(T,Math.min(B,p.y)),inside:p.x>=L&&p.x<=E&&p.y>=T&&p.y<=B};};
+    const cancelSelection=()=>{drag.current=null;setSelectionBox(null);};
+    const selectionEvents=pointSelection&&selectInBox?{
+      'data-point-selection':'rectangle',tabIndex:0,onPointerDown:event=>{if(event.button!==0||!event.isPrimary)return;const p=position(event);if(!p?.inside)return;event.preventDefault();event.currentTarget.focus({preventScroll:true});suppressClick.current=false;drag.current={...p,clientX:event.clientX,clientY:event.clientY};setSelectionBox({...p,startX:p.x,startY:p.y});},
+      onPointerMove:event=>{if(!drag.current)return;if(Math.hypot(event.clientX-drag.current.clientX,event.clientY-drag.current.clientY)>5&&!event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.setPointerCapture(event.pointerId);const p=position(event);if(p)setSelectionBox({...p,startX:drag.current.x,startY:drag.current.y});},
+      onPointerUp:event=>{const start=drag.current,p=position(event);if(start&&p&&Math.hypot(event.clientX-start.clientX,event.clientY-start.clientY)>5){suppressClick.current=true;const x0=Math.min(start.x,p.x),x1=Math.max(start.x,p.x);
+        // Use the plotted scale directly: the box includes unsampled observations too.
+        selectInBox({top:Math.min(start.y,p.y),bottom:Math.max(start.y,p.y),x0,x1});}
+        cancelSelection();if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);},
+      onPointerCancel:cancelSelection,onLostPointerCapture:cancelSelection,onPointerLeave:event=>{if(drag.current&&!event.currentTarget.hasPointerCapture(event.pointerId))cancelSelection();},onClickCapture:event=>{if(suppressClick.current){suppressClick.current=false;event.preventDefault();event.stopPropagation();}},onKeyDown:event=>{if(event.key==='Escape'&&drag.current){event.preventDefault();event.stopPropagation();cancelSelection();}}
+    }:{};
+    return h("svg",{xmlns:"http://www.w3.org/2000/svg",...selectionEvents,viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:"img","aria-label":config.title||types[type],style:{fontFamily:'"Microsoft YaHei",Arial,sans-serif',maxWidth:"100%",height:"auto",...pointSelection?{cursor:'crosshair',touchAction:'none',userSelect:'none'}:{}}},
       h("rect",{width:W,height:H,fill:"#fff"}),
       ...yTicks.map((t,i)=>h("g",{key:"y"+i},h("line",{x1:L,x2:E,y1:t.at,y2:t.at,stroke:"#e6edf2",strokeDasharray:"3 5"}),text(L-12,t.at+4,t.label,{textAnchor:"end","data-axis-tick":"y"}))),
       ...xTicks.map((t,i)=>h("g",{key:"x"+i},text(t.at,B+24,t.label,{textAnchor:"middle",fontSize:11}))),
-      h("line",{x1:L,x2:E,y1:B,y2:B,stroke:"#aebec9"}),...children,
+      h("line",{x1:L,x2:E,y1:B,y2:B,stroke:"#aebec9"}),...children,selectionBox&&h("rect",{"data-point-selection-box":"",x:Math.min(selectionBox.startX,selectionBox.x),y:Math.min(selectionBox.startY,selectionBox.y),width:Math.abs(selectionBox.x-selectionBox.startX),height:Math.abs(selectionBox.y-selectionBox.startY),fill:"#d93659",fillOpacity:.12,stroke:"#c92f51",strokeDasharray:"5 3",pointerEvents:"none"}),
       text((L+E)/2,H-18,xLabel,{textAnchor:"middle",fontSize:13}),text(18,(T+B)/2,ChartAxes.label(yLabel,B-T),{"data-axis-title":"y",textAnchor:"middle",fontSize:13,transform:`rotate(-90 18 ${(T+B)/2})`}),
       ...legend.slice(0,config.compact?6:12).map((g,i)=>h("g",{key:"leg"+i},h("rect",{x:L+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),y:H-85+Math.floor(i/(config.compact?2:4))*23,width:10,height:3,fill:g.color}),text(L+15+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),H-80+Math.floor(i/(config.compact?2:4))*23,trunc(g.label,15),{fontSize:11}))));
   }
@@ -100,7 +118,7 @@ var AnalysisPlots = (() => {
   function download(content,filename,type){const url=URL.createObjectURL(new Blob([type.startsWith("text/html")?Surface.localizeDocument(content):content],{type})),a=document.createElement("a");a.href=url;a.download=filename.slice(0,120).replace(/[\\/:*?"<>|]/g,"_");a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
   async function saveSvg(svg,title,png=false){
     if(!svg)throw new Error("请先生成有效图表。");
-    const clone=svg.cloneNode(true);clone.querySelectorAll('[data-live-overlay],[data-live-interaction]').forEach(node=>node.remove());if(!svg.hasAttribute("data-complete-report")&&!svg.hasAttribute("data-complete-chart"))Surface.appendTitle(clone,title);
+    const clone=svg.cloneNode(true);clone.querySelectorAll('[data-live-overlay],[data-live-interaction],[data-point-selection-box]').forEach(node=>node.remove());if(!svg.hasAttribute("data-complete-report")&&!svg.hasAttribute("data-complete-chart"))Surface.appendTitle(clone,title);
     const source=new XMLSerializer().serializeToString(clone);
     if(!png){download(source,title+".svg","image/svg+xml;charset=utf-8");return;}
     const url=URL.createObjectURL(new Blob([source],{type:"image/svg+xml;charset=utf-8"}));
@@ -109,7 +127,7 @@ var AnalysisPlots = (() => {
   class Boundary extends R.Component{constructor(props){super(props);this.state={error:null};}static getDerivedStateFromError(error){return {error};}componentDidUpdate(old){if(old.signature!==this.props.signature&&this.state.error)this.setState({error:null});}render(){return this.state.error?h("p",{role:"alert",className:"error-banner"},this.state.error.message):this.props.children;}}
   function Figure(props){const ref=R.useRef(null),[error,setError]=R.useState("");const title=Surface.chartTitle(props.config,props.columns,props.config.title||types[props.config.type]);
     const groupCount=new Set(props.rows.map(r=>r.group)).size;
-    return h("section",{className:"analysis-figure panel",ref},h("div",{className:"analysis-figure-head"},h("div",null,h("h3",null,title),null),h("div",{className:"button-row"},props.config.sourceId&&!props.pointQuery&&props.pin!==false&&h(Dashboard.Pin,{kind:"chart",config:props.config,control:props.references?.some(r=>r.label==="I图上控制限")}),props.config.sourceId&&h(PointExclusions.Tools,{...(props.pointQuery??props.config),title}),...[false,true].map(png=>h("button",{key:String(png),className:"button small-button",onClick:()=>saveSvg(ref.current?.querySelector("svg"),title,png).catch(e=>setError(e.message))},png?"导出 PNG":"导出 SVG")))),
+    return h("section",{className:"analysis-figure panel",ref},h("div",{className:"analysis-figure-head"},h("div",null,h("h3",null,title),null),h("div",{className:"button-row"},props.config.sourceId&&!props.pointQuery&&props.pin!==false&&h(Dashboard.Pin,{kind:"chart",config:props.config,control:props.references?.some(r=>r.label==="I图上控制限")}),props.config.sourceId&&h(PointExclusions.Tools,{...(props.pointQuery??props.config),title}),...[false,true].map(png=>h("button",{key:String(png),className:"button small-button",onClick:()=>saveSvg(ref.current?.querySelector('svg[role="img"]'),title,png).catch(e=>setError(e.message))},png?"导出 PNG":"导出 SVG")))),
       error&&h("p",{role:"alert",className:"error-banner"},error),h("div",{className:"analysis-svg-scroll"},h(Boundary,{signature:JSON.stringify(props.config)+JSON.stringify(props.columns)+props.rows.length},h(Svg,props))),h("p",{className:"analysis-mobile-hint small muted"},"可横向滑动查看完整图表。"),
       groupCount>20&&["line","area","box"].includes(props.config.type)&&h("p",{className:"small analysis-notice"},"当前有"+groupCount+"个采样分组，图形最多展示前20组。请选择具体分组查看其余数据；统计包含全部选中记录。"));
   }

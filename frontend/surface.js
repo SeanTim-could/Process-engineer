@@ -16,7 +16,22 @@ var Surface=(()=>{
  function language(){return active;}
  function validLanguage(value){if(value!==undefined&&!['zh-CN','en'].includes(value))throw new Error('请选择有效的界面语言。');return value??'zh-CN';}
  function t(value){if(typeof value!=='string'||active!=='en'||!han.test(value)||names.has(value.trim())||[...value.trim()].length===1&&[...names].some(name=>name.startsWith(value.trim())))return value;const lead=value.match(/^\s*/)[0],tail=value.match(/\s*$/)[0];const translated=en(value.trim()).replace(/[，。；：（）]/g,char=>({'，':',','。':'.','；':';','：':':','（':'(','）':')'}[char])).replace(/\s+([,.;:])/g,'$1');return untranslated.has(value.trim())?value:lead+translated+tail;}
+ const neutralText=new Set(['#536879','#587180','#526a7b','#60736e','#8d9a8b','#7c8e7b','#718579','#6f8178','#849187','#325363','#304653','#303a40','#85928f','#6e8278','#6e8287','#586c73','#728375','#4c626e']);
+ function chartIcon(label){
+  const paths=label==='pin'?['M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 17h7 M17.5 13.5v7']:label==='exclude'?['M4 8V4h4 M16 4h4v4 M20 16v4h-4 M8 20H4v-4 M8 8l8 8 M16 8l-8 8']:['M12 3v11 M7 9l5 5 5-5 M4 15v5h16v-5'];
+  return h('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.7,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,focusable:false},...paths.map((d,i)=>h('path',{key:i,d})),['png','svg'].includes(label)&&h('text',{x:12,y:23,fill:'currentColor',stroke:'none',fontSize:5,fontWeight:700,textAnchor:'middle','data-no-localize':true},label.toUpperCase()));
+ }
+ function present(type,props){
+  if(!props||typeof type!=='string')return props;
+  if(type==='text'&&neutralText.has(String(props.fill).toLowerCase()))return {...props,fill:'#000000'};
+  if(!['button','a'].includes(type)||!/(^|\s)button(\s|$)/.test(props.className??''))return props;
+  const content=v=>typeof v==='string'?v:Array.isArray(v)?v.map(content).join(''):'';
+  const text=content(props.children).trim(),kind=text==='加入Dashboard'||text==='正在加入…'?'pin':text==='删除异常点'?'exclude':['导出 PNG','PNG'].includes(text)?'png':text==='导出 SVG'?'svg':null;
+  if(!kind)return props;
+  return {...props,className:props.className+' chart-action','data-chart-action':kind,'aria-label':props['aria-label']??text,title:props.title??text,...type==='button'?{type:props.type??'button'}:{},children:chartIcon(kind)};
+ }
  function localize(type,props){
+  props=present(type,props);
   if(active!=='en'||typeof type!=='string'||!props||props['data-no-localize'])return props;
   let out=props;const set=(key,value)=>{if(value!==props[key]){if(out===props)out={...props};out[key]=value;}},compact=/(^|\s)(avatar|profile-preview-avatar)(\s|$)/.test(props.className??''),choice=type==='option'&&['zh-CN','en'].includes(props.value);
   const children=value=>{if(typeof value==='string')return t(value);if(!Array.isArray(value))return value;const mapped=value.map(children);return mapped.some((item,i)=>item!==value[i])?mapped:value;};
@@ -37,7 +52,7 @@ var Surface=(()=>{
  function exportSvg(source,title){
   const doc=new DOMParser().parseFromString(source,'image/svg+xml'),svg=doc.documentElement;if(svg.tagName!=='svg')return source;
   const box=(svg.getAttribute('viewBox')??'0 0 '+(svg.getAttribute('width')??900)+' '+(svg.getAttribute('height')??360)).split(/[ ,]+/).map(Number),W=box[2],H=box[3];
-  for(const text of svg.querySelectorAll('text')){const y=Number(text.getAttribute('y')),label=text.textContent;if(han.test(label)&&y<45&&!text.closest('[transform]')||/各曲线保留|空白不补零|缺失值不补|统计使用全部|已跨过缺失|个有效点|均值使用全部有效/.test(label)){text.remove();continue;}if(y>H*.78&&/有效|缺失|覆盖|基于|绘制|抽样|积分/.test(label)){const at=label.search(/有效|缺失|覆盖|基于|绘制|抽样|积分/),prefix=label.slice(0,at).replace(/[·；;，,\s]+$/,'');if(at>0&&/·/.test(prefix))text.textContent=prefix;else text.remove();}}
+  for(const text of svg.querySelectorAll('text')){if(neutralText.has((text.getAttribute('fill')??'').toLowerCase()))text.setAttribute('fill','#000000');const y=Number(text.getAttribute('y')),label=text.textContent;if(han.test(label)&&y<45&&!text.closest('[transform]')||/各曲线保留|空白不补零|缺失值不补|统计使用全部|已跨过缺失|个有效点|均值使用全部有效/.test(label)){text.remove();continue;}if(y>H*.78&&/有效|缺失|覆盖|基于|绘制|抽样|积分/.test(label)){const at=label.search(/有效|缺失|覆盖|基于|绘制|抽样|积分/),prefix=label.slice(0,at).replace(/[·；;，,\s]+$/,'');if(at>0&&/·/.test(prefix))text.textContent=prefix;else text.remove();}}
   if(active==='en')for(const text of svg.querySelectorAll('text,title'))for(const node of text.childNodes)if(node.nodeType===3)node.nodeValue=t(node.nodeValue);
   const group=doc.createElementNS(svg.namespaceURI,'g');group.setAttribute('transform','translate(0,40)');while(svg.firstChild)group.appendChild(svg.firstChild);svg.appendChild(group);svg.setAttribute('height',String(H+44));svg.setAttribute('viewBox',`0 0 ${W} ${H+44}`);
   const background=doc.createElementNS(svg.namespaceURI,'rect');background.setAttribute('width',W);background.setAttribute('height',H+44);background.setAttribute('fill','white');svg.insertBefore(background,group);appendTitle(svg,title);return new XMLSerializer().serializeToString(svg);

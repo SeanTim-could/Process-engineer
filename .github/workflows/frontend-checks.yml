@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -18,6 +18,7 @@ on:
       - 'scripts/test-dashboard.cjs'
       - 'scripts/test-enterprise-dashboard.cjs'
       - 'scripts/test-theme-and-language.cjs'
+      - 'scripts/test-chart-tools-and-selection.cjs'
       - 'scripts/sync-surface.py'
       - 'scripts/surface-root-title-original.txt'
       - 'scripts/surface-workspace-card-original.txt'
@@ -67,6 +68,7 @@ on:
       - 'scripts/test-dashboard.cjs'
       - 'scripts/test-enterprise-dashboard.cjs'
       - 'scripts/test-theme-and-language.cjs'
+      - 'scripts/test-chart-tools-and-selection.cjs'
       - 'scripts/sync-surface.py'
       - 'scripts/surface-root-title-original.txt'
       - 'scripts/surface-workspace-card-original.txt'
@@ -207,6 +209,7 @@ jobs:
           node scripts/test-live-interactions.cjs
           node scripts/test-dashboard.cjs
           node scripts/test-enterprise-dashboard.cjs
+          node scripts/test-chart-tools-and-selection.cjs
           node scripts/test-theme-and-language.cjs
           WORKBENCH_LANGUAGE_ENTRY=workbench.html node scripts/test-theme-and-language.cjs
           node scripts/test-workspace-memory.cjs
