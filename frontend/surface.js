@@ -5,7 +5,7 @@ var Surface=(()=>{
  let active='zh-CN',page='overview',scope='',names=new Set();const listeners=new Set();
  try{const last=localStorage.getItem('workbench-last-language');if(last==='en')active='en';}catch{}
  function en(value){const s=String(value??'').trim();if(!han.test(s))return s;if(englishCache.has(s))return englishCache.get(s);if(englishCache.size>3000){englishCache.clear();untranslated.clear();}let out=lex[s];if(!out){let left=s,result='';while(left){const token=(starts.get(left[0])??[]).find(t=>left.startsWith(t));if(token){result+=' '+lex[token]+' ';left=left.slice(token.length);}else{result+=left[0];left=left.slice(1);}}if(han.test(result))untranslated.add(s);out=han.test(result)?result.replace(/[\u3400-\u9fff]+/g,part=>TinyPinyin.convertToPinyin(part,' ',true)):result;out=out.replace(/\s+/g,' ').trim();}englishCache.set(s,out);return out;}
- const titles={overview:'运行总览',dashboard:'Dashboard',trends:'趋势分析',lims:'LIMS检验',comparison:'多指标对比',analysis:'关系分析',timeseries:'时序分析',capability:'前后能力分析',plotting:'自由作图',charts:'自动图表',data:'数据中心','excel-sync':'Excel自动同步','live-data':'实时数据',documents:'文档检索',files:'文件索引',profile:'个人中心',settings:'指标设置'};
+ const titles={pca:'PCA监控',overview:'运行总览',dashboard:'Dashboard',trends:'趋势分析',lims:'LIMS检验',comparison:'多指标对比',analysis:'关系分析',timeseries:'时序分析',capability:'前后能力分析',plotting:'自由作图',charts:'自动图表',data:'数据中心','excel-sync':'Excel自动同步','live-data':'实时数据',documents:'文档检索',files:'文件索引',profile:'个人中心',settings:'指标设置'};
  function pageTitle(id){return titles[id]??'工作台';}
  function chartTitle(config={},columns=[],fallback=''){
   let state;try{state=$r().state;}catch{return fallback;}

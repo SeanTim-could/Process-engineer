@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -31,6 +31,9 @@ on:
       - 'scripts/test-managed-accounts.cjs'
       - 'scripts/test-backup-merge.cjs'
       - 'scripts/sync-data-analysis.py'
+      - 'scripts/test-pca-math.cjs'
+      - 'scripts/test-pca-workspace.cjs'
+      - 'scripts/fixtures/pca-python-reference.json'
       - 'scripts/test-analysis-math.cjs'
       - 'scripts/test-analysis-point-math.cjs'
       - 'scripts/test-process-capability-and-points.cjs'
@@ -83,6 +86,9 @@ on:
       - 'scripts/test-managed-accounts.cjs'
       - 'scripts/test-backup-merge.cjs'
       - 'scripts/sync-data-analysis.py'
+      - 'scripts/test-pca-math.cjs'
+      - 'scripts/test-pca-workspace.cjs'
+      - 'scripts/fixtures/pca-python-reference.json'
       - 'scripts/test-analysis-math.cjs'
       - 'scripts/test-analysis-point-math.cjs'
       - 'scripts/test-process-capability-and-points.cjs'
@@ -153,6 +159,10 @@ jobs:
           node --check frontend/workspace-memory.js
           node --check frontend/formula-health.js
           node --check frontend/shared-formulas.js
+          node --check frontend/pca-math.js
+          node --check frontend/pca-workspace.js
+          node --check frontend/pca-charts.js
+          node --check frontend/pca-page.js
           node --check frontend/analysis-math.js
           node --check frontend/analysis-point-math.js
           node --check frontend/formula-syntax.js
@@ -165,6 +175,7 @@ jobs:
           node --check frontend/capability-split-chart.js
           node --check frontend/analysis-drafts.js
           node --check frontend/workspace-files.js
+          node scripts/test-pca-math.cjs
           node scripts/test-analysis-math.cjs
           node scripts/test-analysis-point-math.cjs
           node scripts/test-capability-math.cjs
@@ -200,6 +211,8 @@ jobs:
           node scripts/test-login-surface-and-sidebar.cjs
           node scripts/test-web-downloads.cjs
           node scripts/test-general-labels.cjs
+          node scripts/test-pca-workspace.cjs
+          WORKBENCH_PCA_ENTRY=workbench-compatible.html node scripts/test-pca-workspace.cjs
           node scripts/test-data-analysis.cjs
           node scripts/test-capability-reports.cjs
           node scripts/test-analysis-session.cjs

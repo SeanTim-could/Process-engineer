@@ -2,9 +2,9 @@
 var DataAnalysis = (() => {
   const R=Se(),h=R.createElement,M=AnalysisMath,P=AnalysisPlots;
   const groups=[{id:"operations",label:"运行概览",items:["dashboard","overview","live-data","trends","lims"]},
-    {id:"analytics",label:"数据分析",items:["timeseries","capability","plotting","charts","comparison","analysis"]},
+    {id:"analytics",label:"数据分析",items:["pca","timeseries","capability","plotting","charts","comparison","analysis"]},
     {id:"data",label:"数据管理",items:["data","excel-sync","settings"]},{id:"personal",label:"文档与个人",items:["files","documents","profile"]}];
-  const pages=[{id:"timeseries",label:"时序分析",en:"TIME SERIES",icon:Pm},{id:"capability",label:"前后能力分析",en:"BEFORE / AFTER",icon:jo},{id:"plotting",label:"自由作图",en:"CHART WORKSPACE",icon:Mn}];
+  const pages=[{id:"pca",label:"PCA监控",en:"PCA",icon:jo},{id:"timeseries",label:"时序分析",en:"TIME SERIES",icon:Pm},{id:"capability",label:"前后能力分析",en:"BEFORE / AFTER",icon:jo},{id:"plotting",label:"自由作图",en:"CHART WORKSPACE",icon:Mn}];
   function Nav({items,current,onSelect,reportCount}){
     const active=groups.find(g=>g.items.includes(current))?.id,[open,setOpen]=R.useState(()=>new Set([active]));
     R.useEffect(()=>setOpen(old=>new Set([...old,active])),[active]);
@@ -26,10 +26,10 @@ var DataAnalysis = (() => {
       aggregation:value.aggregation==="sum"?"sum":"mean",boxBy:value.boxBy==="group"?"group":"metric",capabilitySize:Number.isInteger(value.capabilitySize)&&value.capabilitySize>=1&&value.capabilitySize<=100?value.capabilitySize:1,bins:Number.isInteger(value.bins)&&value.bins>=5&&value.bins<=100?value.bins:0,lsl,usl};
   }
   function normalize(value){
-    if(value===undefined)return {version:1,revision:0,charts:[],drafts:{},exclusionRevision:0,excludedPoints:[],dashboard:Dashboard.normalize()};
+    if(value===undefined)return {version:1,revision:0,charts:[],drafts:{},exclusionRevision:0,excludedPoints:[],dashboard:Dashboard.normalize(),pca:PCAWorkspace.normalize()};
     if(!value||value.version!==1||!Number.isSafeInteger(value.revision)||value.revision<0||!Array.isArray(value.charts)||value.charts.length>24)throw new Error("作图区备份格式无效，最多保存24张图表。");
     if(value.exclusionRevision!==undefined&&(!Number.isSafeInteger(value.exclusionRevision)||value.exclusionRevision<0))throw new Error("异常点版本无效。");
-    const ids=new Set();return {version:1,dashboard:Dashboard.normalize(value.dashboard),revision:value.revision,exclusionRevision:value.exclusionRevision??0,excludedPoints:AnalysisPointMath.normalize(value.excludedPoints),drafts:AnalysisDrafts.normalize(value.drafts),charts:value.charts.map(chart=>{
+    const ids=new Set();return {version:1,pca:PCAWorkspace.normalize(value.pca),dashboard:Dashboard.normalize(value.dashboard),revision:value.revision,exclusionRevision:value.exclusionRevision??0,excludedPoints:AnalysisPointMath.normalize(value.excludedPoints),drafts:AnalysisDrafts.normalize(value.drafts),charts:value.charts.map(chart=>{
       if(!chart||!/^chart_[\w-]{1,80}$/.test(chart.id)||ids.has(chart.id))throw new Error("图表编号无效或重复。");ids.add(chart.id);
       for(const key of ["createdAt","updatedAt"])if(typeof chart[key]!=="string"||!Number.isFinite(Date.parse(chart[key])))throw new Error("图表保存时间无效。");
       return {...chartConfig(chart),id:chart.id,createdAt:chart.createdAt,updatedAt:chart.updatedAt};

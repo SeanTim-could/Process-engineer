@@ -6,6 +6,8 @@
 
 ## 发布网址
 
+PCA监控的建模、固定基准分析和图表操作见 [PCA使用说明](PCA使用说明.md)。
+
 将本目录中的 `index.html`、`workbench.html`、`assets/`、`.nojekyll` 和 `启动工程师工作台.html` 一起提交到 GitHub 的 `main` 分支。在支持 GitHub Pages 的仓库中：
 
 1. 打开仓库 **Settings → Pages**。
