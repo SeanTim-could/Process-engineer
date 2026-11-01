@@ -884,5 +884,14 @@
   "可重复框选以追加选择，红色空心圆为本次选择；框内全部读数均会选中。大数据绘图保留极值并抽样。明细包含全部读数，可查找并跨页选择；删除一个指标读数不会移除同一时刻的其他指标。": "Draw additional rectangles to add readings. Red outlined points are selected; all readings in the box are included, even when the preview is sampled. The table includes all readings. Excluding one metric leaves other metrics at the same time intact.",
   "拖到图表上叠加；拖到工具栏排序": "Drop on a chart to combine; drop on the toolbar to reorder",
   "拖动排序": "Drag to reorder",
-  "保存高清 PNG": "Save high-resolution PNG"
+  "保存高清 PNG": "Save high-resolution PNG",
+  "请选择保存位置…": "Choose where to save…",
+  "正在准备保存…": "Preparing to save…",
+  "正在整理工作台数据…": "Preparing workspace data…",
+  "正在下载工作台副本…": "Downloading a workspace copy…",
+  "正在写入工作台文件…": "Writing the workspace file…",
+  "保存未完成，请重试。": "Save did not finish. Please try again.",
+  "浏览器未允许选择文件位置，已下载工作台副本：": "The browser blocked the file chooser. A workspace copy was downloaded: ",
+  "。原文件关联保持不变。": ". The original file association is unchanged.",
+  "。请在浏览器下载列表中查看文件。": ". Check your browser downloads for the file."
 }

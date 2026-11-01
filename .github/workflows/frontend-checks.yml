@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -40,6 +40,7 @@ on:
       - 'scripts/sync-workspace-files.py'
       - 'scripts/test-analysis-session.cjs'
       - 'scripts/test-workspace-files.cjs'
+      - 'scripts/test-save-actions.cjs'
       - 'scripts/workbench-browser-fixture.cjs'
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
@@ -91,6 +92,7 @@ on:
       - 'scripts/sync-workspace-files.py'
       - 'scripts/test-analysis-session.cjs'
       - 'scripts/test-workspace-files.cjs'
+      - 'scripts/test-save-actions.cjs'
       - 'scripts/workbench-browser-fixture.cjs'
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
@@ -202,6 +204,7 @@ jobs:
           node scripts/test-capability-reports.cjs
           node scripts/test-analysis-session.cjs
           node scripts/test-workspace-files.cjs
+          node scripts/test-save-actions.cjs
           node scripts/test-process-capability-and-points.cjs
           node scripts/test-excel-sync.cjs
           node scripts/test-excel-background.cjs
