@@ -22,7 +22,7 @@ var PCAPage = (() => {
     const updateChoice=change=>setChoice(old=>({...old,...change}));
     const selectedModel=catalog.models.find(m=>m.id===choice.modelId),buildSource=catalog.sources.find(s=>s.unitId===build.unitId&&s.id===build.sourceId),latest=catalog.models.filter(m=>m.unitId===build.unitId).at(-1);
     R.useEffect(()=>{let live=true;setLoading(true);api().then(value=>{if(!live)return;setCatalog(value);setError('');}).catch(e=>live&&setError(e.message)).finally(()=>live&&setLoading(false));return()=>{live=false;};},[refreshKey,store.version,generation]);
-    const today=ViewDefaults.today(),followRange={from:today.from,to:AnalysisMath.local(AnalysisMath.time(today.to)-60000)},params={modelId:choice.modelId,unitId:selectedModel?.unitId??'',sourceId:choice.sourceId,group:choice.group,from:choice.follow?followRange.from:choice.from,to:choice.follow?followRange.to:choice.to,exact:choice.exact?'1':'0'},query=JSON.stringify(params);currentQuery.current=query;
+    const today=ViewDefaults.today(),followRange={from:today.from,to:AnalysisMath.local(AnalysisMath.time(today.to)-60000)},params={modelId:choice.modelId,unitId:selectedModel?.unitId??'',sourceId:choice.sourceId,group:choice.group,from:choice.follow?followRange.from:choice.from,to:choice.follow?followRange.to:choice.to,exact:!choice.follow&&choice.exact?'1':'0'},query=JSON.stringify(params);currentQuery.current=query;
     const [day,changeDay]=R.useState(today.from);R.useEffect(()=>{if(!choice.follow||tab!=='analysis')return;const timer=setInterval(()=>changeDay(ViewDefaults.today().from),60000);return()=>clearInterval(timer);},[choice.follow,tab]);
     R.useEffect(()=>{
       if(tab!=='analysis'||!selectedModel||!choice.sourceId){setFrame(null);return;}
