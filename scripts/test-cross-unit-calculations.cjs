@@ -56,7 +56,7 @@ const values=(d,key,group='P')=>d.points.filter(p=>p.group===group&&Object.hasOw
   // deployed account project. The complete login flow has its own browser suite.
   const html=execFileSync('python',['-c',"import importlib.util,pathlib,sys; p=pathlib.Path(sys.argv[1]); spec=importlib.util.spec_from_file_location('auth_sync',p/'scripts/sync-account-auth.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);sys.stdout.buffer.write(m.render((p/'启动工程师工作台.html').read_text(),{'enabled':False,'url':'','publicKey':''}).encode('utf-8'))",root],{maxBuffer:8*1024*1024});
   await context.route('https://seantim-could.github.io/Process-engineer/**',r=>r.fulfill({contentType:'text/html; charset=utf-8',body:html}));
-  const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(site);await fixture(p);
+  const p=await context.newPage();await p.clock.setFixedTime(new Date('2026-11-01T12:00:00+08:00'));p.on('pageerror',e=>errors.push(e.message));await p.goto(site);await fixture(p);
   const legacy=await save(p,{label:'原有本装置公式',expression:ref('流量')+' * 2'});
   assert.deepEqual(values(await dataset(p),legacy.result.column.key),[200,400,600,800,1000,1200]);
   report.push('Existing same-device formulas retain their original calculation behavior.');
@@ -120,7 +120,7 @@ const values=(d,key,group='P')=>d.points.filter(p=>p.group===group&&Object.hasOw
   // Backup/restore in a second browser must retain source IDs and recompute equally.
   const complete=await backup(p),secondContext=await browser.newContext();
   await secondContext.route('https://seantim-could.github.io/Process-engineer/**',r=>r.fulfill({contentType:'text/html; charset=utf-8',body:html}));
-  const second=await secondContext.newPage();await second.goto(site);
+  const second=await secondContext.newPage();await second.clock.setFixedTime(new Date('2026-11-01T12:00:00+08:00'));await second.goto(site);
   assert.equal(Object.keys((await backup(second)).state.datasets).length,0);
   await api(second,'/api/offline/restore','POST',complete);
   assert.deepEqual(values(await dataset(second),key),values(await dataset(p),key));

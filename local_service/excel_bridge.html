@@ -18,7 +18,7 @@
 <p class="muted">开启刷新时，先重算<code>=NOW()</code>和DataLink公式，再读取稳定结果；刷新失败时本轮不写入。刷新命令完成不代表PI服务器一定返回新数据，请首次与手动Update核对。Excel错误值、空值和无效时间会跳过，不清空工作台已有有效值。</p>
 </main><script>/*LOCAL_CONFIG*/
 (()=>{'use strict';
-const el=id=>document.getElementById(id),params=new URLSearchParams(location.hash.slice(1)),nonce=params.get('nonce'),targetOrigin=params.get('origin'),allowed=new Set(['https://seantim-could.github.io',location.origin]);
+const el=id=>document.getElementById(id),params=new URLSearchParams(location.hash.slice(1)),nonce=params.get('nonce'),targetOrigin=params.get('origin'),allowed=new Set(['https://workbench.myprocessworkbench.com','https://seantim-could.github.io',location.origin]);
 let binding=null,running=false,busy=false,timer=null,previewed=false,lastDigest='',pending=null,request=null,restoring=false,taskId=null,starting=false;
 const post=(kind,extra={})=>{if(binding&&window.opener&&!window.opener.closed)window.opener.postMessage({channel:'workbench-excel',nonce,kind,...extra},targetOrigin);};
 const error=message=>{el('error').textContent=message;el('error').hidden=!message;};

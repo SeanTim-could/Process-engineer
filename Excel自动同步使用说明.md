@@ -1,5 +1,15 @@
 # Python读取Excel并自动加入工作台
 
+## 新域名与旧入口
+
+工作台新入口：<https://workbench.myprocessworkbench.com/>。新版“启动Excel同步Python.bat”和便携启动器默认打开此网址；本机连接同时允许新域名、原GitHub网址和本机工作台。
+
+旧版本机程序只认识原GitHub来源。换用新域名时，先关闭旧的同步窗口和本机服务，再下载新版Python脚本包或便携包，完整解压后启动。读取Excel、PI刷新、定时任务、公式和日均汇总的逻辑保持原样；同一Windows用户、同一浏览器的本机读取设置继续按账号及装置保存在127.0.0.1的本机窗口中。升级后仍需预览并明确允许同步，不自动启动读取任务。
+
+网页数据按域名隔离。先在旧站“另存为”完整工作台JSON，再用同一个账号登录新站并“打开”该JSON，迁移数据、公式、Dashboard、PCA模型及同步目标设置，然后重新连接本机Excel。工作簿路径和本机读取权限不包含在JSON中。
+
+账号服务还需在 Supabase 的 `WORKBENCH_ALLOWED_ORIGINS` 中加入 `https://workbench.myprocessworkbench.com`，保留原值，见[账号服务启用说明](账号服务启用说明.md)。新站仍使用原Supabase项目和账号。
+
 本功能读取你已在Excel中建立好的PI DataLink结果。不改变位号、时间范围、取样间隔和均值设置。已打开模式可在每轮读取前强制重算Excel/PI公式，或调用本工作簿内的PI刷新宏，等待完成后读取稳定结果；不保存、关闭原文件。
 
 ## 推荐：使用公司已授权的Python

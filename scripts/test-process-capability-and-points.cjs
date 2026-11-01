@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),{fixture}=require('./workbench-browser-fixture.cjs'),M=require('../frontend/analysis-math.js'),C=require('../frontend/capability-math.js');
 (async()=>{const f=await fixture(),{page:p,api,nav}=f,dir=await fs.mkdtemp(path.join(os.tmpdir(),'capability-points-'));try{
- await p.goto(f.site);p.on('dialog',d=>d.accept());const backup=await api('/api/offline/backup'),start=Date.parse('2026-10-01T08:00:00+08:00');
+ await p.clock.setFixedTime(new Date('2026-11-01T12:00:00+08:00'));await p.goto(f.site);p.on('dialog',d=>d.accept());const backup=await api('/api/offline/backup'),start=Date.parse('2026-10-01T08:00:00+08:00');
  const col=(key,label,source)=>({key,index:Number(key.slice(2)),header:label,label,unit:'kg/h',source,module:'other',kind:'reading',aggregation:'auto',recognized:true,enabled:true,scale:1,limit:null,maxGapHours:null,showTotal:true});
  const points=Array.from({length:60},(_,i)=>({unit:'mmp2',time:start+i*60000,group:'P',values:{c_1:i===10?100:10+Math.sin(i),c_2:20+Math.cos(i)}}));
  backup.state.datasets={ds_unit_mmp2:{dataset:{id:'ds_unit_mmp2',name:'装置指标',filename:'fixture.csv',sheet:'data',columns:[col('c_1','流量（校正）','production'),col('c_2','检验值','lims')],count:60,expectedCount:60,unitIds:['mmp2'],groups:['P'],start,end:points.at(-1).time,createdAt:'2026-10-01T00:00:00Z',status:'ready',role:'ledger'},points}};

@@ -193,7 +193,7 @@ var AccountAuth = (() => {
       return()=>{live=false;clearInterval(timer);document.removeEventListener("visibilitychange",visible);};
     },[]);
     if(!enabled)return children;
-    if(location.protocol==="file:")return h("main",{className:"account-login"},h("section",{className:"account-form"},h("h2",null,"请通过网站或本机启动器登录"),h("p",null,"账号版需要联网验证身份。请打开工作台网址，或使用 Windows 便携启动器。"),h("a",{className:"button primary",href:"https://seantim-could.github.io/Process-engineer/"},"打开工作台网站")));
+    if(location.protocol==="file:")return h("main",{className:"account-login"},h("section",{className:"account-form"},h("h2",null,"请通过网站或本机启动器登录"),h("p",null,"账号版需要联网验证身份。请打开工作台网址，或使用 Windows 便携启动器。"),h("a",{className:"button primary",href:"https://workbench.myprocessworkbench.com/"},"打开工作台网站")));
     if(loading)return h("main",{className:"account-login"},h("section",{className:"account-form",role:"status"},"正在验证登录…"));
     if(!own)return h("main",{className:"account-login"},h("section",null,error&&h("p",{role:"alert",className:"error-banner"},error),h(Login)));
     if(own.must_change_password)return h("main",{className:"account-login"},h("section",null,h(Password,{required:true}),h("button",{className:"button",onClick:()=>leave().catch(e=>setError(e.message))},"退出登录")));

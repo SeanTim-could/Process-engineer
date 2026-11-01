@@ -10,7 +10,7 @@ async function call(p,url,method='GET',body,ok=true){const value=await p.evaluat
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH??(require('node:fs').existsSync('/usr/bin/chromium')?'/usr/bin/chromium':chromium.executablePath()),headless:true,args:['--no-sandbox']});
  try{
   const context=await browser.newContext({viewport:{width:1460,height:1100},acceptDownloads:true});await context.route('https://seantim-could.github.io/Process-engineer/**',r=>r.fulfill({body:html,contentType:'text/html; charset=utf-8'}));
-  const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(site);await p.locator('.grouped-nav').waitFor();
+  const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.clock.setFixedTime(new Date('2026-11-01T12:00:00+08:00'));await p.goto(site);await p.locator('.grouped-nav').waitFor();
   assert.equal(await p.locator('.nav-group-toggle').count(),4);
   const backup=await call(p,'/api/offline/backup'),s=backup.state,now=Date.parse('2026-10-01T08:00:00+08:00');
   const col=(key,label,unit='kg/h',source='production')=>({key,index:Number(key.slice(2)),header:label,label,unit,source,module:'other',kind:'reading',aggregation:'auto',recognized:true,enabled:true,scale:1,limit:null,maxGapHours:null,showTotal:true});

@@ -17,7 +17,7 @@ ASSETS=ROOT/'assets'
 
 LOADER='''<main class="startup-screen" role="status" aria-live="polite"><div><b>工程师工作台</b><h1>正在加载工作台…</h1><p id="web-startup-status">正在加载界面并验证身份，请稍候。</p><button id="web-startup-retry" type="button" onclick="location.reload()">重新加载</button></div></main>'''
 LOADER_CSS='''html,body{margin:0}.startup-screen{box-sizing:border-box;min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#e8f7ef,#f5f9fc);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#244435}.startup-screen div{max-width:440px}.startup-screen b{color:#087f5b}.startup-screen h1{font-size:26px;margin:12px 0}.startup-screen p{color:#66796f}.startup-screen button{padding:10px 18px;border:0;border-radius:8px;background:#087f5b;color:white;font:inherit;cursor:pointer}'''
-REDIRECT='''<script id="web-entry-redirect">if(location.hostname==="seantim-could.github.io"&&decodeURIComponent(location.pathname).endsWith("/启动工程师工作台.html"))location.replace(new URL("./index.html",location.href));</script>'''
+REDIRECT='''<script id="web-entry-redirect">if(["seantim-could.github.io","workbench.myprocessworkbench.com"].includes(location.hostname)&&decodeURIComponent(location.pathname).endsWith("/启动工程师工作台.html"))location.replace(new URL("./index.html",location.href));</script>'''
 
 def asset(name,content):
     digest=hashlib.sha256(content).hexdigest()[:16]
@@ -68,7 +68,9 @@ def build(config_override=None):
     config=auth.normalize_config(config_override if config_override is not None else json.loads((ROOT/'frontend/auth-config.json').read_text()))
     html=auth.render(html,config)
     ASSETS.mkdir(exist_ok=True)
-    if 'id="web-entry-redirect"' not in html:
+    if 'id="web-entry-redirect"' in html:
+        html=re.sub(r'<script id="web-entry-redirect">.*?</script>',lambda _:REDIRECT,html,flags=re.S)
+    else:
         html=html.replace('<link rel="icon"',REDIRECT+'<link rel="icon"',1)
     if 'id="startup-screen-style"' not in html:
         html=html.replace('</head>','<style id="startup-screen-style">'+LOADER_CSS+'</style></head>',1)

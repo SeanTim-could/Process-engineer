@@ -216,7 +216,9 @@ class ExcelHttpTests(ExcelTests):
         file_id = json.loads(body)['files'][0]['fileId']
         self.assertEqual(self.send('/local-api/excel/read', body={**self.body, 'fileId': file_id})[0], 200)
         for path in ['files', 'sheets', 'read', 'tasks/start', 'tasks/status', 'tasks/ack', 'tasks/now', 'tasks/stop']:
-            self.assertEqual(self.send('/local-api/excel/' + path, body=self.body, headers={'Origin': 'https://seantim-could.github.io'})[0], 403)
+            for origin in ['https://seantim-could.github.io', 'https://workbench.myprocessworkbench.com']:
+                with self.subTest(path=path, origin=origin):
+                    self.assertEqual(self.send('/local-api/excel/' + path, body=self.body, headers={'Origin': origin})[0], 403)
             self.assertEqual(self.send('/local-api/excel/' + path, body=self.body, headers={'X-Workbench-Token': 'wrong'})[0], 403)
         self.assertEqual(self.send('/local-api/excel/read', body={**self.body, 'fileId': str(self.path)})[0], 400)
 

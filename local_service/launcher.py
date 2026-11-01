@@ -13,6 +13,7 @@ from document_index import DocumentIndex, protect
 from excel_reader import ExcelReader, ExcelScheduler
 
 PORT = 8765
+WORKBENCH_URL = 'https://workbench.myprocessworkbench.com/'
 APP_HTML = '启动工程师工作台.html'
 
 
@@ -299,7 +300,7 @@ def main(argv=None):
     print('读取停住时，请查看 Office 的授权、密码或文件打开提示。取消将在当前文件结束后生效。')
     if not args.no_browser:
         if args.excel_sync:
-            webbrowser.open('https://seantim-could.github.io/Process-engineer/')
+            webbrowser.open(WORKBENCH_URL)
             print('登录后打开“数据管理 → Excel自动同步”，点击“连接本机Excel”。')
         else:
             documents = args.documents or bool(getattr(sys, 'frozen', False))
