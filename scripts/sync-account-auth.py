@@ -42,7 +42,7 @@ def render(html,config):
     origin=config['url'] if config['enabled'] else ''
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     js=base64.b64decode(match[2]).decode()
-    module=(ROOT/'frontend/backup-merge.js').read_text()+'\n'+(ROOT/'frontend/account-auth.js').read_text()
+    module=(ROOT/'frontend/login-interactions.js').read_text()+'\n'+(ROOT/'frontend/backup-merge.js').read_text()+'\n'+(ROOT/'frontend/account-auth.js').read_text()
     block=START+'\nvar AccountAuthConfig='+json.dumps(config,ensure_ascii=True)+';\n'+module+'\n'+END
     if START in js:
         js=js[:js.index(START)]+block+js[js.index(END)+len(END):]
@@ -51,7 +51,13 @@ def render(html,config):
         if js.count(marker)!=1:raise ValueError('Personal API marker missing')
         js=js.replace(marker,block+marker)
     html=html[:match.start(2)]+base64.b64encode(js.encode()).decode()+html[match.end(2):]
-    css='<style id="managed-accounts-style">\n'+(ROOT/'frontend/account-auth.css').read_text()+'\n</style>'
+    account_css=(ROOT/'frontend/account-auth.css').read_text()
+    photos=[p for p in ROOT.glob('frontend/login-background.*') if p.suffix.lower() in ('.jpg','.jpeg','.png','.webp')]
+    if len(photos)>1:raise ValueError('Keep exactly one original login background photograph')
+    if photos:
+        photo=photos[0];mime='image/jpeg' if photo.suffix.lower() in ('.jpg','.jpeg') else 'image/'+photo.suffix[1:].lower()
+        account_css+='\n:root{--login-photo:url("data:'+mime+';base64,'+base64.b64encode(photo.read_bytes()).decode()+'")}\n'
+    css='<style id="managed-accounts-style">\n'+account_css+'\n</style>'
     if 'id="managed-accounts-style"' in html:
         html=re.sub(r'<style id="managed-accounts-style">.*?</style>',lambda _:css,html,flags=re.S)
     else:html=html.replace('</head>',css+'\n</head>',1)
