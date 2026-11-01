@@ -1,9 +1,10 @@
 // The website downloads compressed, content-verified assets in parallel. The
 // standalone HTML remains self-contained. Older browsers use the raw assets.
 (() => {
+  if(window.WorkbenchUseCompatible)return;
   const assets = window.WorkbenchAssets;
   const nativeFetch = window.fetch.bind(window);
-  let resolveStyle, rejectStyle, finished = false, failed = false, executed = false, navigating = false, authMessage = '';
+  let resolveStyle, rejectStyle, finished = false, failed = false, executed = false, navigating = false, authMessage = '', mountObserver=null;
   const reloading = performance.getEntriesByType('navigation')[0]?.type === 'reload';
   const issues = [];
   function record(stage, error) {
@@ -49,15 +50,19 @@
       : authMessage || '界面下载完成，正在打开工作台…');
   }
   const slow = setTimeout(() => { if (!finished) { render(); retry(); } }, 10000);
+  const deadline=setTimeout(()=>{if(!finished)compatible('startup-stalled',new Error('Startup deadline exceeded'));},25000);
   const api = Object.freeze({
     styleReady,
     progress(message) { authMessage = message; render(); },
     styleLoaded() { resolveStyle(); },
-    ready() { finished = true; clearTimeout(slow); },
+    ready() {
+      const root=document.getElementById('root'),check=()=>{if(root?.firstElementChild&&!root.querySelector('.startup-screen')){finished=true;clearTimeout(slow);clearTimeout(deadline);mountObserver?.disconnect();}};
+      check();if(!finished&&root){mountObserver=new MutationObserver(check);mountObserver.observe(root,{childList:true});}
+    },
     executed() { executed = true; },
     fail(message) {
       if (failed) return;
-      failed = true; finished = true; clearTimeout(slow);
+      failed = true; finished = true; clearTimeout(slow);clearTimeout(deadline);mountObserver?.disconnect();
       status(message); retry(); rejectStyle(new Error(message));
     }
   });
@@ -171,9 +176,8 @@
     if (navigating) return;
     navigating = true;
     record(kind, error);
-    await domReady;
     if (assets.compatible) {
-      finished = true; clearTimeout(slow);
+      finished = true; clearTimeout(slow);clearTimeout(deadline);mountObserver?.disconnect();
       status('常规加载未成功，正在切换兼容模式…');
       location.replace(new URL(assets.compatible, location.href));
     } else api.fail('工作台加载失败，请重新加载。');

@@ -1,9 +1,6 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://edfvegskicolbnnrbuld.supabase.co; form-action 'none'; base-uri 'none'"><script>try{var s=JSON.parse(sessionStorage.getItem("workbench-auth:https://edfvegskicolbnnrbuld.supabase.co")||"null");if(!s||!s.access_token||!s.refresh_token)location.replace(new URL("./index.html",location.href));}catch(e){location.replace(new URL("./index.html",location.href));}</script><link rel="preconnect" href="https://edfvegskicolbnnrbuld.supabase.co" crossorigin><script>window.WorkbenchWebAuthConfig={"enabled": true, "url": "https://edfvegskicolbnnrbuld.supabase.co", "publicKey": "sb_publishable_follC-N3FfiZLBo5U7EWVg_MANuirih"};</script><script>// Website-only: start the protected identity request while the application loads.
-// Nothing from the identity response is persisted or accepted without its live
-// request, current access token, project, expiry and one-use freshness checks.
-(() => {
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://edfvegskicolbnnrbuld.supabase.co; form-action 'none'; base-uri 'none'"><script>try{if(localStorage.getItem("workbench-entry-mode")==="compatible"){window.WorkbenchUseCompatible=true;location.replace(new URL("./workbench-compatible.html?v=28cb93b2ea3dc26b",location.href));}}catch{}</script><script>try{var s=JSON.parse(sessionStorage.getItem("workbench-auth:https://edfvegskicolbnnrbuld.supabase.co")||"null");if(!s||!s.access_token||!s.refresh_token)location.replace(new URL("./index.html",location.href));}catch(e){location.replace(new URL("./index.html",location.href));}</script><link rel="preconnect" href="https://edfvegskicolbnnrbuld.supabase.co" crossorigin><script>window.WorkbenchWebAuthConfig={"enabled": true, "url": "https://edfvegskicolbnnrbuld.supabase.co", "publicKey": "sb_publishable_follC-N3FfiZLBo5U7EWVg_MANuirih"};</script><script>(() => {
   const config=window.WorkbenchWebAuthConfig;
-  if(!config?.enabled)return;
+  if(window.WorkbenchUseCompatible||!config?.enabled)return;
   const key='workbench-auth:'+config.url,nativeFetch=window.fetch.bind(window);
   const read=()=>{try{return JSON.parse(sessionStorage.getItem(key)||'null');}catch{return null;}};
   const initial=read();if(!initial?.access_token||!initial?.refresh_token)return;
@@ -44,13 +41,11 @@
       });
     }
   })});
-})();
-</script><script>window.WorkbenchAssets={"script": {"url": "./assets/workbench.3355af2898000554.js", "compressed": "./assets/workbench.3355af2898000554.js.gz", "bytes": 439784, "sha256": "3355af289800055451badcb492af0175fb4b708aa7c0347643302ef205dc76b2", "integrity": "sha256-M1WvKJgABVRRuty0kq8BdftLcIqnwDR2QzAu8gXcdrI="}, "style": {"url": "./assets/workbench.e24a7754d70d01be.css", "compressed": "./assets/workbench.e24a7754d70d01be.css.gz", "bytes": 61711, "sha256": "e24a7754d70d01bee550e62beb9588d2809a8c66c002da257c649f4b912e197d", "integrity": "sha256-4kp3VNcNAb7lUOYr65WI0oCajGbAAtolfGSfS5EuGX0="}, "compatible": "./workbench-compatible.html?v=3355af2898000554"};</script><script>// The website downloads compressed, content-verified assets in parallel. The
-// standalone HTML remains self-contained. Older browsers use the raw assets.
-(() => {
+})();</script><script>window.WorkbenchAssets={"script": {"url": "./assets/workbench.28cb93b2ea3dc26b.js", "compressed": "./assets/workbench.28cb93b2ea3dc26b.js.gz", "bytes": 440143, "sha256": "28cb93b2ea3dc26bbe46be69eb9504be263dfbaadb744166ba8315bc50d07c4a", "integrity": "sha256-KMuTsuo9wmu+Rr5p65UEviY9+6rbdEFmuoMVvFDQfEo="}, "style": {"url": "./assets/workbench.a87bac498c9ebf37.css", "compressed": "./assets/workbench.a87bac498c9ebf37.css.gz", "bytes": 61784, "sha256": "a87bac498c9ebf371e35d535fee3d4151f2ae2d994a092a8600e5ffeab8e79b6", "integrity": "sha256-qHusSYyevzceNdU1/uPUFR8q4tmUoJKoYA5f/quOebY="}, "compatible": "./workbench-compatible.html?v=28cb93b2ea3dc26b"};</script><script>(() => {
+  if(window.WorkbenchUseCompatible)return;
   const assets = window.WorkbenchAssets;
   const nativeFetch = window.fetch.bind(window);
-  let resolveStyle, rejectStyle, finished = false, failed = false, executed = false, navigating = false, authMessage = '';
+  let resolveStyle, rejectStyle, finished = false, failed = false, executed = false, navigating = false, authMessage = '', mountObserver=null;
   const reloading = performance.getEntriesByType('navigation')[0]?.type === 'reload';
   const issues = [];
   function record(stage, error) {
@@ -96,15 +91,19 @@
       : authMessage || '界面下载完成，正在打开工作台…');
   }
   const slow = setTimeout(() => { if (!finished) { render(); retry(); } }, 10000);
+  const deadline=setTimeout(()=>{if(!finished)compatible('startup-stalled',new Error('Startup deadline exceeded'));},25000);
   const api = Object.freeze({
     styleReady,
     progress(message) { authMessage = message; render(); },
     styleLoaded() { resolveStyle(); },
-    ready() { finished = true; clearTimeout(slow); },
+    ready() {
+      const root=document.getElementById('root'),check=()=>{if(root?.firstElementChild&&!root.querySelector('.startup-screen')){finished=true;clearTimeout(slow);clearTimeout(deadline);mountObserver?.disconnect();}};
+      check();if(!finished&&root){mountObserver=new MutationObserver(check);mountObserver.observe(root,{childList:true});}
+    },
     executed() { executed = true; },
     fail(message) {
       if (failed) return;
-      failed = true; finished = true; clearTimeout(slow);
+      failed = true; finished = true; clearTimeout(slow);clearTimeout(deadline);mountObserver?.disconnect();
       status(message); retry(); rejectStyle(new Error(message));
     }
   });
@@ -139,8 +138,6 @@
       const packed = new Uint8Array(count);
       let offset = 0;
       for (const chunk of chunks) { packed.set(chunk, offset); offset += chunk.length; }
-      // Some proxies already unpack .gz responses. Verify the final bytes in
-      // either case before making them executable or using them as CSS.
       const bytes = packed[0] === 31 && packed[1] === 139
         ? new Uint8Array(await new Response(new Blob([packed]).stream()
           .pipeThrough(new DecompressionStream('gzip'))).arrayBuffer())
@@ -191,8 +188,6 @@
       if (typeof DecompressionStream !== 'function' || !globalThis.crypto?.subtle) throw new Error('Use compatible resource');
       const bytes = await compressed('script');
       await domReady;
-      // The verified code has the same trust as our original inline bootstrap.
-      // Avoid blob: execution, which some browsers and browser policies reject.
       const inline = document.createElement('script');
       inline.textContent = new TextDecoder().decode(bytes) + '\n;window.WorkbenchStartup.executed();';
       document.head.appendChild(inline);
@@ -204,7 +199,6 @@
       try { await script(assets.script.url, assets.script.integrity); }
       catch (error) {
         record('standard-program', error);
-        // A cached failed request must not make every reload fail identically.
         if (!error.message.includes('timed out')) {
           const fresh = new URL(assets.script.url, location.href);
           fresh.searchParams.set('wb_retry', Date.now());
@@ -218,9 +212,8 @@
     if (navigating) return;
     navigating = true;
     record(kind, error);
-    await domReady;
     if (assets.compatible) {
-      finished = true; clearTimeout(slow);
+      finished = true; clearTimeout(slow);clearTimeout(deadline);mountObserver?.disconnect();
       status('常规加载未成功，正在切换兼容模式…');
       location.replace(new URL(assets.compatible, location.href));
     } else api.fail('工作台加载失败，请重新加载。');
@@ -230,8 +223,7 @@
     style().catch(error => compatible('styles-unavailable', error));
     app().catch(error => compatible('program-unavailable', error));
   }
-})();
-</script><link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Crect%20width%3D%2248%22%20height%3D%2248%22%20rx%3D%2212%22%20fill%3D%22%2317332d%22%2F%3E%3Cpath%20d%3D%22m24%2010%2014%208-14%208-14-8%2014-8Zm-14%2015%2014%208%2014-8M10%2032l14%208%2014-8%22%20fill%3D%22none%22%20stroke%3D%22%23cadd9d%22%20stroke-width%3D%223%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E%0A"><title>工艺工程师工作台</title>
+})();</script><link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Crect%20width%3D%2248%22%20height%3D%2248%22%20rx%3D%2212%22%20fill%3D%22%2317332d%22%2F%3E%3Cpath%20d%3D%22m24%2010%2014%208-14%208-14-8%2014-8Zm-14%2015%2014%208%2014-8M10%2032l14%208%2014-8%22%20fill%3D%22none%22%20stroke%3D%22%23cadd9d%22%20stroke-width%3D%223%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E%0A"><title>工艺工程师工作台</title>
 
 
-<style>html,body{margin:0}.startup-screen{box-sizing:border-box;min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#e8f7ef,#f5f9fc);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#244435}.startup-screen div{max-width:440px}.startup-screen b{color:#087f5b}.startup-screen h1{font-size:26px;margin:12px 0}.startup-screen p{color:#66796f}.startup-screen button{padding:10px 18px;border:0;border-radius:8px;background:#087f5b;color:white;font:inherit;cursor:pointer}</style></head><body><div id="root"><main class="startup-screen" role="status" aria-live="polite"><div><b>工程师工作台</b><h1>正在加载工作台…</h1><p id="web-startup-status">正在加载界面并验证身份，请稍候。</p><button id="web-startup-retry" type="button" hidden onclick="location.reload()">重新加载</button><a id="web-startup-compatible" hidden href="./workbench-compatible.html?v=3355af2898000554" style="margin-left:12px;color:#087f5b">使用兼容模式打开</a></div></main></div><noscript>请启用浏览器 JavaScript。此网页在本机离线运行。</noscript></body></html>
+<style>html,body{margin:0}.startup-screen{box-sizing:border-box;min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#e8f7ef,#f5f9fc);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#244435}.startup-screen div{max-width:440px}.startup-screen b{color:#087f5b}.startup-screen h1{font-size:26px;margin:12px 0}.startup-screen p{color:#66796f}.startup-screen button{padding:10px 18px;border:0;border-radius:8px;background:#087f5b;color:white;font:inherit;cursor:pointer}</style></head><body><div id="root"><main class="startup-screen" role="status" aria-live="polite"><div><b>工程师工作台</b><h1>正在加载工作台…</h1><p id="web-startup-status">正在加载界面并验证身份，请稍候。</p><button id="web-startup-retry" type="button" onclick="location.reload()">重新加载</button><a id="web-startup-compatible" href="./workbench-compatible.html?v=28cb93b2ea3dc26b" style="margin-left:12px;color:#087f5b">使用兼容模式打开</a></div></main></div><noscript>请启用浏览器 JavaScript。此网页在本机离线运行。</noscript></body></html>

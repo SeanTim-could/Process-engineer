@@ -16,7 +16,8 @@ const site='https://seantim-could.github.io/Process-engineer/';
  const files=new Map([['workbench-compatible.html',await fs.readFile(path.join(root,'workbench-compatible.html'))],['index.html',index],['workbench.html',shell],['启动工程师工作台.html',await fs.readFile(path.join(root,'启动工程师工作台.html'))]]);
  for(const file of await fs.readdir(path.join(root,'assets')))files.set('assets/'+file,await fs.readFile(path.join(root,'assets',file)));
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH??(require('node:fs').existsSync('/usr/bin/chromium')?'/usr/bin/chromium':chromium.executablePath()),headless:true,args:['--no-sandbox']});
- let releaseBundle,releaseTimeout,releaseStyle;const bundleGate=new Promise(resolve=>releaseBundle=resolve),timeoutGate=new Promise(resolve=>releaseTimeout=resolve),styleGate=new Promise(resolve=>releaseStyle=resolve);
+ let releaseBundle,releaseTimeout,releaseStyle,releaseStall;const bundleGate=new Promise(resolve=>releaseBundle=resolve),timeoutGate=new Promise(resolve=>releaseTimeout=resolve),styleGate=new Promise(resolve=>releaseStyle=resolve);
+ const stallGate=new Promise(resolve=>releaseStall=resolve);
  const errors=[],calls=[];
  try{
   const context=await browser.newContext({viewport:{width:1280,height:900}});
@@ -87,6 +88,8 @@ const site='https://seantim-could.github.io/Process-engineer/';
   const failed=await context.newPage();failed.on('pageerror',e=>errors.push(e.message));
   await failed.addInitScript(({key})=>sessionStorage.setItem(key,JSON.stringify({access_token:'fixture-access',refresh_token:'fixture-refresh',expires_at:Math.floor(Date.now()/1000)+3600})),{key:'workbench-auth:'+config.url});
   await failed.route('**/assets/**',route=>/\.js(?:\.gz)?$/.test(new URL(route.request().url()).pathname)?route.abort('failed'):route.fallback());await failed.goto(site+'workbench.html');await failed.waitForURL('**/workbench-compatible.html*');await failed.waitForFunction(()=>document.querySelector('.offline-bar')?.textContent.includes('速度测试员'));assert((await failed.evaluate(()=>JSON.parse(sessionStorage.getItem('workbench-startup-issues')))).some(row=>row.stage==='program-unavailable'));
+  await failed.waitForFunction(()=>localStorage.getItem('workbench-entry-mode')==='compatible');const assets=[];failed.on('request',r=>{if(r.url().includes('/assets/'))assets.push(r.url());});await failed.goto(site+'workbench.html');await failed.waitForURL('**/workbench-compatible.html*');await failed.locator('.offline-bar').waitFor();assert.equal(assets.length,0,'A successful compatible workspace is remembered by old normal bookmarks');
+  const stalled=await context.newPage();stalled.on('pageerror',e=>errors.push(e.message));await stalled.addInitScript(({key})=>{localStorage.removeItem('workbench-entry-mode');sessionStorage.setItem(key,JSON.stringify({access_token:'fixture-access',refresh_token:'fixture-refresh',expires_at:Math.floor(Date.now()/1000)+3600}));},{key:'workbench-auth:'+config.url});await stalled.route('**/assets/**',async r=>{await stallGate;try{await r.abort('failed');}catch{}});await stalled.clock.install();await stalled.goto(site+'workbench.html',{waitUntil:'domcontentloaded'});assert(await stalled.getByRole('button',{name:'重新加载',exact:true}).isVisible());assert(await stalled.getByRole('link',{name:'使用兼容模式打开',exact:true}).isVisible());await stalled.clock.runFor(25100);await stalled.waitForURL('**/workbench-compatible.html*');await stalled.locator('.offline-bar').waitFor();assert((await stalled.evaluate(()=>JSON.parse(sessionStorage.getItem('workbench-startup-issues')))).some(i=>i.stage==='startup-stalled'),'A hung download switches to compatibility instead of chaining long waits');releaseStall();
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({passed:true,indexBytes:index.length,workbenchShellBytes:shell.length,checks:[
    'A usable login form appears while the full application JavaScript is withheld, without contacting Supabase',
@@ -94,7 +97,8 @@ const site='https://seantim-could.github.io/Process-engineer/';
    'Login and restore use one token request and one protected-profile request, with no redundant Auth user request',
    'Existing Chinese-named website bookmarks reach the light login entry; mobile layout fits',
    'Expired sessions refresh only once; empty protected profiles cannot open a workspace; failed program downloads open the authenticated same-origin compatible entry',
-   'A stalled login times out with a retryable message instead of hanging indefinitely'
+   'A stalled login times out with a retryable message instead of hanging indefinitely',
+   'Recovery controls are visible immediately; a fully stalled download switches to compatibility within 25 seconds; successful compatibility is remembered by old bookmarks without fetching separate assets'
   ]},null,2));
- }finally{releaseBundle();releaseStyle();releaseTimeout();await browser.close();}
+ }finally{releaseBundle();releaseStyle();releaseTimeout();releaseStall();await browser.close();}
 })().catch(e=>{console.error(e);console.error('::error::'+String(e.stack??e).replace(/%/g,'%25').replace(/\n/g,'%0A'));process.exitCode=1});

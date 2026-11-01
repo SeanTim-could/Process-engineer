@@ -15,7 +15,7 @@ import re
 ROOT=Path(__file__).resolve().parents[1]
 ASSETS=ROOT/'assets'
 
-LOADER='''<main class="startup-screen" role="status" aria-live="polite"><div><b>工程师工作台</b><h1>正在加载工作台…</h1><p id="web-startup-status">正在加载界面并验证身份，请稍候。</p><button id="web-startup-retry" type="button" hidden onclick="location.reload()">重新加载</button></div></main>'''
+LOADER='''<main class="startup-screen" role="status" aria-live="polite"><div><b>工程师工作台</b><h1>正在加载工作台…</h1><p id="web-startup-status">正在加载界面并验证身份，请稍候。</p><button id="web-startup-retry" type="button" onclick="location.reload()">重新加载</button></div></main>'''
 LOADER_CSS='''html,body{margin:0}.startup-screen{box-sizing:border-box;min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#e8f7ef,#f5f9fc);font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#244435}.startup-screen div{max-width:440px}.startup-screen b{color:#087f5b}.startup-screen h1{font-size:26px;margin:12px 0}.startup-screen p{color:#66796f}.startup-screen button{padding:10px 18px;border:0;border-radius:8px;background:#087f5b;color:white;font:inherit;cursor:pointer}'''
 REDIRECT='''<script id="web-entry-redirect">if(location.hostname==="seantim-could.github.io"&&decodeURIComponent(location.pathname).endsWith("/启动工程师工作台.html"))location.replace(new URL("./index.html",location.href));</script>'''
 
@@ -38,6 +38,10 @@ def compressed_asset(relative, content):
     digest=hashlib.sha256(content).digest()
     return {'url':'./'+relative,'compressed':'./'+relative+'.gz','bytes':target.stat().st_size,
             'sha256':digest.hex(),'integrity':'sha256-'+base64.b64encode(digest).decode()}
+
+def loader_source(name):
+    # Keep readable source comments out of the size-bounded first document.
+    return '\n'.join(line for line in (ROOT/'frontend'/name).read_text().splitlines() if not line.lstrip().startswith('//'))
 
 def inline_script(content):
     # A literal closing tag in a JS string must not terminate the HTML script.
@@ -96,22 +100,24 @@ def build(config_override=None):
     if config['enabled']:
         key=json.dumps('workbench-auth:'+config['url'])
         guard='<script>try{var s=JSON.parse(sessionStorage.getItem('+key+')||"null");if(!s||!s.access_token||!s.refresh_token)location.replace(new URL("./index.html",location.href));}catch(e){location.replace(new URL("./index.html",location.href));}</script>'
-        bootstrap='<script>window.WorkbenchWebAuthConfig='+json.dumps(config,ensure_ascii=True)+';</script><script>'+(ROOT/'frontend/web-auth-bootstrap.js').read_text()+'</script>'
+        bootstrap='<script>window.WorkbenchWebAuthConfig='+json.dumps(config,ensure_ascii=True)+';</script><script>'+loader_source('web-auth-bootstrap.js')+'</script>'
         warm='<link rel="preconnect" href="'+markup.escape(config['url'])+'" crossorigin>'
         web=web.replace('<link rel="icon"',guard+warm+bootstrap+'<link rel="icon"',1)
     web=re.sub(r'<main class="startup-screen".*?</main>',lambda _:LOADER,web,flags=re.S)
     # A same-origin, self-contained entry still works when a browser cannot
     # download the separate script/CSS assets. Its auth and IndexedDB namespace
     # are identical; it must never redirect back into the failing loader.
-    compatible=web.replace('</head>','<style>'+css+'</style></head>',1)
-    embedded=inline_script((ROOT/'frontend/web-compatible.js').read_text())
-    embedded+=inline_script((ROOT/spreadsheet_url).read_bytes())+inline_script(script.replace(logo_url.encode(),logo_data.encode()))
+    compatible=web.replace('</head>',inline_script(loader_source('web-compatible.js'))+'<style>'+css+'</style></head>',1)
+    compatible=compatible.replace('</button></div></main>','</button><a href="./workbench-compatible.html?v='+hashlib.sha256(script).hexdigest()[:16]+'" style="margin-left:12px;color:#087f5b">重新打开兼容入口</a></div></main>',1)
+    embedded=inline_script((ROOT/spreadsheet_url).read_bytes())+inline_script(script.replace(logo_url.encode(),logo_data.encode()))
     compatible=compatible.replace('</body>',embedded+'</body>',1)
     (ROOT/'workbench-compatible.html').write_text(compatible)
-    compatible_link='<a id="web-startup-compatible" hidden href="'+markup.escape(startup_assets['compatible'],quote=True)+'" style="margin-left:12px;color:#087f5b">使用兼容模式打开</a>'
+    compatible_link='<a id="web-startup-compatible" href="'+markup.escape(startup_assets['compatible'],quote=True)+'" style="margin-left:12px;color:#087f5b">使用兼容模式打开</a>'
     web=web.replace('</button></div></main>','</button>'+compatible_link+'</div></main>',1)
-    startup='<script>window.WorkbenchAssets='+json.dumps(startup_assets)+';</script><script>'+(ROOT/'frontend/web-startup.js').read_text()+'</script>'
+    startup='<script>window.WorkbenchAssets='+json.dumps(startup_assets)+';</script><script>'+loader_source('web-startup.js')+'</script>'
     web=web.replace('<link rel="icon"',startup+'<link rel="icon"',1)
+    preference=inline_script('try{if(localStorage.getItem("workbench-entry-mode")==="compatible"){window.WorkbenchUseCompatible=true;location.replace(new URL('+json.dumps(startup_assets['compatible'])+',location.href));}}catch{}')
+    web=web.replace('<script>',preference+'<script>',1)
     web=web.replace('</head>',f'<style>{LOADER_CSS}</style></head>',1)
     (ROOT/'workbench.html').write_text(web)
 

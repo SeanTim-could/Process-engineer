@@ -18,15 +18,15 @@ var Surface=(()=>{
  function t(value){if(typeof value!=='string'||active!=='en'||!han.test(value)||names.has(value.trim())||[...value.trim()].length===1&&[...names].some(name=>name.startsWith(value.trim())))return value;const lead=value.match(/^\s*/)[0],tail=value.match(/\s*$/)[0];const translated=en(value.trim()).replace(/[，。；：（）]/g,char=>({'，':',','。':'.','；':';','：':':','（':'(','）':')'}[char])).replace(/\s+([,.;:])/g,'$1');return untranslated.has(value.trim())?value:lead+translated+tail;}
  const neutralText=new Set(['#536879','#587180','#526a7b','#60736e','#8d9a8b','#7c8e7b','#718579','#6f8178','#849187','#325363','#304653','#303a40','#85928f','#6e8278','#6e8287','#586c73','#728375','#4c626e']);
  function chartIcon(label){
-  const paths=label==='pin'?['M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 17h7 M17.5 13.5v7']:label==='exclude'?['M4 8V4h4 M16 4h4v4 M20 16v4h-4 M8 20H4v-4 M8 8l8 8 M16 8l-8 8']:['M12 3v11 M7 9l5 5 5-5 M4 15v5h16v-5'];
-  return h('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.7,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,focusable:false},...paths.map((d,i)=>h('path',{key:i,d})),['png','svg'].includes(label)&&h('text',{x:12,y:23,fill:'currentColor',stroke:'none',fontSize:5,fontWeight:700,textAnchor:'middle','data-no-localize':true},label.toUpperCase()));
+  const shapes={pin:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 17h7 M17.5 13.5v7',exclude:'M4 8V4h4 M16 4h4v4 M20 16v4h-4 M8 20H4v-4 M8 8l8 8 M16 8l-8 8',png:'M3 3h18v14H3z M7 7h.01 M3 14l5-5 5 5 3-3 5 5 M12 18v4 M9 19l3 3 3-3',svg:'M14 2H5v20h14V7z M14 2v5h5 M10 11l-3 3 3 3 M14 11l3 3-3 3',drag:'M9 4h.01 M15 4h.01 M9 12h.01 M15 12h.01 M9 20h.01 M15 20h.01',up:'M12 20V4 M5 11l7-7 7 7',down:'M12 4v16 M5 13l7 7 7-7',wide:'M9 4H4v5 M4 4l6 6 M15 20h5v-5 M20 20l-6-6',narrow:'M4 10h6V4 M10 10L4 4 M20 14h-6v6 M14 14l6 6',edit:'M14 5l5 5 M4 20l5-1L21 7l-5-5L4 14z',split:'M3 4h7v16H3z M14 4h7v16h-7z',remove:'M4 6h16 M9 6V3h6v3 M6 6l1 15h10l1-15 M10 10v7 M14 10v7'};
+  return h('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:label==='drag'?3:1.7,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true,focusable:false},h('path',{d:shapes[label]}));
  }
  function present(type,props){
   if(!props||typeof type!=='string')return props;
   if(type==='text'&&neutralText.has(String(props.fill).toLowerCase()))return {...props,fill:'#000000'};
   if(!['button','a'].includes(type)||!/(^|\s)button(\s|$)/.test(props.className??''))return props;
   const content=v=>typeof v==='string'?v:Array.isArray(v)?v.map(content).join(''):'';
-  const text=content(props.children).trim(),kind=text==='加入Dashboard'||text==='正在加入…'?'pin':text==='删除异常点'?'exclude':['导出 PNG','PNG'].includes(text)?'png':text==='导出 SVG'?'svg':null;
+  const text=content(props.children).trim(),kind=text==='加入Dashboard'||text==='正在加入…'?'pin':text==='删除异常点'?'exclude':['导出 PNG','PNG'].includes(text)?'png':text==='导出 SVG'?'svg':/\bdashboard-action\b/.test(props.className??'')?({'↕':'drag','上移':'up','下移':'down','跨列显示':'wide','恢复普通宽度':'narrow','编辑卡片':'edit','拆分图表':'split','移除卡片':'remove'}[text]??null):null;
   if(!kind)return props;
   return {...props,className:props.className+' chart-action','data-chart-action':kind,'aria-label':props['aria-label']??text,title:props.title??text,...type==='button'?{type:props.type??'button'}:{},children:chartIcon(kind)};
  }

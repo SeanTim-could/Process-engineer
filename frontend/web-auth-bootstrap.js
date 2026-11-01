@@ -3,7 +3,7 @@
 // request, current access token, project, expiry and one-use freshness checks.
 (() => {
   const config=window.WorkbenchWebAuthConfig;
-  if(!config?.enabled)return;
+  if(window.WorkbenchUseCompatible||!config?.enabled)return;
   const key='workbench-auth:'+config.url,nativeFetch=window.fetch.bind(window);
   const read=()=>{try{return JSON.parse(sessionStorage.getItem(key)||'null');}catch{return null;}};
   const initial=read();if(!initial?.access_token||!initial?.refresh_token)return;

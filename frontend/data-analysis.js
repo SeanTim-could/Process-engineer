@@ -8,9 +8,9 @@ var DataAnalysis = (() => {
   function Nav({items,current,onSelect,reportCount}){
     const active=groups.find(g=>g.items.includes(current))?.id,[open,setOpen]=R.useState(()=>new Set([active]));
     R.useEffect(()=>setOpen(old=>new Set([...old,active])),[active]);
-    return h("nav",{className:"grouped-nav","aria-label":"工作空间导航"},...groups.map(group=>h("section",{key:group.id,className:"nav-group"},
-      h("button",{className:"nav-group-toggle","aria-expanded":open.has(group.id),"aria-controls":"nav-"+group.id,onClick:()=>setOpen(old=>{const next=new Set(old);next.has(group.id)?next.delete(group.id):next.add(group.id);return next;})},h("span",null,group.label),h("span",{"aria-hidden":true},open.has(group.id)?"−":"+")),
-      h("div",{id:"nav-"+group.id,hidden:!open.has(group.id),className:"nav-group-items"},...group.items.map(id=>{const item=items.find(i=>i.id===id);return item&&h("button",{key:id,onClick:()=>onSelect(id),className:current===id?"nav-item nav-child active":"nav-item nav-child","aria-current":current===id?"page":undefined},h(item.icon,{size:17}),h("span",null,item.label),id==="reports"&&reportCount>0&&h("small",null,reportCount),current===id&&h("i"));})))));
+    return h("nav",{className:"grouped-nav","aria-label":"工作空间导航"},...groups.map(group=>{const expanded=open.has(group.id);return h("section",{key:group.id,className:"nav-group"},
+      h("button",{className:"nav-group-toggle","aria-expanded":expanded,"aria-controls":"nav-"+group.id,onClick:()=>setOpen(old=>{const next=new Set(old);next.has(group.id)?next.delete(group.id):next.add(group.id);return next;})},h("span",null,group.label),h("span",{"aria-hidden":true},expanded?"−":"+")),
+      h("div",{id:"nav-"+group.id,"data-open":expanded,"aria-hidden":!expanded,inert:!expanded,className:"nav-group-items"},h("div",{className:"nav-group-clip"},h("div",{className:"nav-group-inner"},...group.items.map(id=>{const item=items.find(i=>i.id===id);return item&&h("button",{key:id,onClick:()=>onSelect(id),className:current===id?"nav-item nav-child active":"nav-item nav-child","aria-current":current===id?"page":undefined},h(item.icon,{size:17}),h("span",null,item.label),id==="reports"&&reportCount>0&&h("small",null,reportCount),current===id&&h("i"));})))));}));
   }
   const text=(value,max,label)=>{if(typeof value!=="string"||value.length>max)throw new Error(label+"格式无效。");return value;};
   function chartConfig(value){
