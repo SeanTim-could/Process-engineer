@@ -1,0 +1,1 @@
+(0,B.jsxs)("div",{className:"workspace-card",children:[(0,B.jsx)("span",{className:"workspace-icon",children:(0,B.jsx)(ic,{size:17})}),(0,B.jsxs)("div",{children:[(0,B.jsx)("b",{children:"\u6211\u7684\u5DE5\u827A\u5DE5\u4F5C\u7A7A\u95F4"}),(0,B.jsx)("small",{children:"\u6570\u636E \xB7 \u5206\u6790 \xB7 \u6587\u4EF6"})]}),(0,B.jsx)(Mm,{size:13})]})

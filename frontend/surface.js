@@ -1,7 +1,7 @@
 // Local bilingual display and presentation. Never rewrites user data or labels.
 var Surface=(()=>{
- const R=Se(),h=R.createElement,logo=/*COMPANY_LOGO*/'',lex=/*ENGLISH_UI*/{},han=/[\u3400-\u9fff]/,terms=Object.keys(lex).sort((a,b)=>b.length-a.length),englishCache=new Map();let page='overview';
- function en(value){const s=String(value??'').trim();if(!han.test(s))return s;if(englishCache.has(s))return englishCache.get(s);let out=lex[s];if(!out){let left=s,result='';while(left){const token=terms.find(t=>left.startsWith(t));if(token){result+=' '+lex[token]+' ';left=left.slice(token.length);}else{result+=left[0];left=left.slice(1);}}out=han.test(result)?result.replace(/[\u3400-\u9fff]+/g,part=>TinyPinyin.convertToPinyin(part,' ',true)):result;out=out.replace(/\s+/g,' ').trim();}if(englishCache.size>3000)englishCache.clear();englishCache.set(s,out);return out;}
+ const R=Se(),h=R.createElement,logo=/*COMPANY_LOGO*/'',lex=/*ENGLISH_UI*/{},han=/[\u3400-\u9fff]/,terms=Object.keys(lex).sort((a,b)=>b.length-a.length),englishCache=new Map(),untranslated=new Set();let page='overview';
+ function en(value){const s=String(value??'').trim();if(!han.test(s))return s;if(englishCache.has(s))return englishCache.get(s);if(englishCache.size>3000){englishCache.clear();untranslated.clear();}let out=lex[s];if(!out){let left=s,result='';while(left){const token=terms.find(t=>left.startsWith(t));if(token){result+=' '+lex[token]+' ';left=left.slice(token.length);}else{result+=left[0];left=left.slice(1);}}if(han.test(result))untranslated.add(s);out=han.test(result)?result.replace(/[\u3400-\u9fff]+/g,part=>TinyPinyin.convertToPinyin(part,' ',true)):result;out=out.replace(/\s+/g,' ').trim();}englishCache.set(s,out);return out;}
  const titles={overview:'运行总览',dashboard:'Dashboard',trends:'趋势分析',lims:'LIMS检验',comparison:'多指标对比',analysis:'关系分析',timeseries:'时序分析',capability:'前后能力分析',plotting:'自由作图',charts:'自动图表',data:'数据中心','excel-sync':'Excel自动同步','live-data':'实时数据',documents:'文档检索',files:'文件索引',profile:'个人中心',settings:'指标设置'};
  function pageTitle(id){return titles[id]??'工作台';}
  function chartTitle(config={},columns=[],fallback=''){
@@ -9,6 +9,7 @@ var Surface=(()=>{
   const source=state.datasets?.[config.sourceId],unitId=config.unitId??(config.sourceId?.startsWith('raw:')?config.sourceId.slice(4):source?.dataset.unitIds[0]),name=state.settings?.units.find(u=>u.id===unitId)?.name,used=config.keys?.length?columns.filter(c=>config.keys.includes(c.key)):columns,labels=used.map(c=>c.label).filter(Boolean),metric=labels.join(' / ')||fallback||config.title||'数据图表';return name?name+' · '+metric:metric;
  }
  function comparisonTitle(lines){let state;try{state=$r().state;}catch{return '多指标对比';}return [...new Set(lines.map(l=>{const id=l.datasetId??l.id;return chartTitle({sourceId:id,unitId:l.unitId,keys:[l.key]},state.datasets?.[id]?.dataset.columns??[]);} ))].join(' + ')||'多指标对比';}
+ function caption(value){const s=String(value??'').trim();if(!han.test(s)||[...s].length===1)return '';const translated=en(s);return untranslated.has(s)?'':translated;}
  function Logo(){return h('img',{className:'company-logo',src:logo,alt:'ADISSEO · A Sinochem Company',width:210,height:74,decoding:'async'});}
  function svgText(x,y,value,props={}){const text=String(value),size=Number(props.fontSize??12),translated=en(text),english=size>=18?8:6;return h('text',{x,y,...props},h('tspan',{x},text),han.test(text)&&h('tspan',{x,dy:size>=18?10:7,fontSize:english,fontWeight:400,opacity:.75},translated));}
  function exportSvg(source,title){
@@ -28,11 +29,13 @@ var Surface=(()=>{
    const keepHelp=['documents','excel-sync'].includes(page),isMessage=el.matches('[role="alert"],[role="status"],.error-banner,.analysis-empty,.empty-panel,.analysis-notice,.latest-reading,[data-process-normality]');
    if(!keepHelp&&!isMessage&&(el.matches('.page-description,.data-guide,.analysis-method,.analysis-mobile-hint,.chart-foot,.auto-chart-note,.shared-file-caption,.shared-source-caption,.calendar-hint')||el.tagName==='P'&&text.length>25&&!el.closest('.capability-comparison')&&!el.querySelector('button,a,input'))){el.setAttribute('data-ui-note','true');continue;}
    if(el.matches('button,a')&&/月报/.test(text)){el.setAttribute('data-ui-note','true');continue;}
-   if(han.test(text)&&!el.matches('option,input,textarea')){const translated=en(text);if(translated&&translated!==text){el.dataset.en=translated;el.setAttribute('aria-description',translated);
-     for(const target of [el,el.closest('button,a,h1,h2,h3,h4,summary')].filter(Boolean)){if(target.matches('button,a,h1,h2,h3,h4,summary')&&(!target.hasAttribute('aria-label')||target.dataset.autoAria)){const walker=document.createTreeWalker(target,NodeFilter.SHOW_TEXT);let n,label='';while(n=walker.nextNode())if(!n.parentElement.closest('svg,[aria-hidden="true"]'))label+=n.nodeValue;target.setAttribute('aria-label',label.trim());target.dataset.autoAria='true';}}}}
+   const target=el.closest('button,a,h1,h2,h3,h4,summary');if(target&&(!target.hasAttribute('aria-label')||target.dataset.autoAria)){const walker=document.createTreeWalker(target,NodeFilter.SHOW_TEXT);let n,label='';while(n=walker.nextNode())if(!n.parentElement.closest('svg,[aria-hidden="true"]'))label+=n.nodeValue;if(label.trim()){target.setAttribute('aria-label',label.trim());target.dataset.autoAria='true';}}
+   const compact=!!el.closest('.avatar,.profile-preview-avatar,.profile>span:first-child,.profile b,.icon-button,.badge,.private-label,.mode-badge'),translated=!compact&&!el.matches('option,input,textarea')?caption(text):'';
+   if(translated&&translated!==text){el.dataset.en=translated;el.setAttribute('aria-description',translated);
+   }
    else if(el.hasAttribute('data-en')){el.removeAttribute('data-en');el.removeAttribute('aria-description');}
-   if(el.matches('option')&&han.test(el.textContent)){el.label=el.textContent+' / '+en(el.textContent);el.setAttribute('aria-label',el.textContent);}
-   if(el.matches('input,textarea')&&el.placeholder&&han.test(el.placeholder)&&!el.dataset.enPlaceholder){el.dataset.enPlaceholder='1';el.placeholder+=' / '+en(el.placeholder);}
+   if(el.matches('option')&&han.test(el.textContent)){const english=caption(el.textContent);el.label=el.textContent+(english?' / '+english:'');el.setAttribute('aria-label',el.textContent);}
+   if(el.matches('input,textarea')&&el.placeholder&&han.test(el.placeholder)&&!el.dataset.enPlaceholder){el.dataset.enPlaceholder='1';const english=caption(el.placeholder);if(english)el.placeholder+=' / '+english;}
   }
  }
  function use(current){

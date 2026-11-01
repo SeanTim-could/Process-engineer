@@ -740,5 +740,11 @@
   "正态预测超规格相对减少": "Relative reduction in expected defects",
   "正态预测超规格相对增加": "Relative increase in expected defects",
   "占比": "Share",
-  "本机Excel连接": "Local Excel connections"
+  "本机Excel连接": "Local Excel connections",
+  "添加 / 删除显示指标与配置": "Manage visible metrics",
+  "指标与显示配置": "Metric & display settings",
+  "显示指标与配置": "Metric & display settings",
+  "显示配置": "Display settings",
+  "配置": "Settings",
+  "请选择调整时间。": "Select a change point."
 }
