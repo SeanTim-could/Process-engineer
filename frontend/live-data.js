@@ -68,7 +68,7 @@ var LiveData = (() => {
     const keys=new Set();for(const row of source)for(const key of Object.keys(row.values))keys.add(key);const columns=entry.dataset.columns.filter(c=>c.enabled&&c.kind!=='limit'&&keys.has(c.key));
     if(query.get('mode')==='export')return Response.json({sourceId:entry.dataset.id,unitId,group,columns,points:source});
     const count=Number(query.get('limit')??6);if(!Number.isInteger(count)||count<1||count>100)throw new Error('指标数量无效。');
-    const rows=PointExclusions.apply(entry.dataset.id,source),series=columns.slice(0,count).map(column=>({column,...LiveSeries.sample(rows,column.key)}));
+    const rows=PointExclusions.apply(entry.dataset.id,source),prior=PeriodMath.previous(range),previousRows=prior?PointExclusions.apply(entry.dataset.id,entry.points.filter(p=>p.unit===unitId&&p.group===group&&p.time>=prior.from&&p.time<prior.to)):[],comparisonRows=[...rows,...previousRows],series=columns.slice(0,count).map(column=>({column,...LiveSeries.sample(rows,column.key),comparison:PeriodMath.compare(comparisonRows,column.key,range)}));
     return Response.json({units,unitId,group,sourceId:entry.dataset.id,columns,series,count:source.length});
   }
   return {pages,groups,provenance,seed,summary,request,Page:LivePage.Page};

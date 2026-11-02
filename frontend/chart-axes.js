@@ -25,7 +25,7 @@ var ChartAxes = (() => {
     if(!Number.isFinite(min)||!Number.isFinite(max)||max<min)return [];
     const offset=28800000,day=86400000,span=max-min,local=t=>new Date(t+offset),sameDay=local(min).toISOString().slice(0,10)===local(max).toISOString().slice(0,10),gap=span<60000?112:span<2*day&&!sameDay?112:span<day?72:span>180*day?88:72,count=Math.max(2,Math.min(maxCount,Math.floor(width/gap)+1)),target=span/(count-1);
     const choices=[1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,15000,30000,60000,120000,300000,600000,900000,1800000,3600000,7200000,10800000,21600000,43200000,day,2*day,7*day,14*day,30.4375*day,60.875*day,91.3125*day,182.625*day,365.25*day,730.5*day,1826.25*day];
-    const step=choices.reduce((best,v)=>Math.abs(Math.log(v/(target||1)))<Math.abs(Math.log(best/(target||1)))?v:best,choices[0]),values=[];
+    const step=choices.find(v=>v>=target)??choices.at(-1),values=[];
     if(step>=30*day){
       const months=step>=1826*day?60:step>=730*day?24:step>=365*day?12:step>=182*day?6:step>=91*day?3:step>=60*day?2:1,start=local(min);let index=Math.floor((start.getUTCFullYear()*12+start.getUTCMonth())/months)*months;
       for(let i=0;i<50;i++,index+=months){const t=Date.UTC(Math.floor(index/12),index%12,1)-offset;if(t>max)break;if(t>=min)values.push(t);}

@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login, codex/previous-period-means]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -20,6 +20,8 @@ on:
       - 'scripts/test-pi-minute-data.cjs'
       - 'scripts/test-dashboard.cjs'
       - 'scripts/test-chart-axes.cjs'
+      - 'scripts/test-period-math.cjs'
+      - 'scripts/test-period-comparison.cjs'
       - 'scripts/test-responsive-chart-axes.cjs'
       - 'scripts/test-enterprise-dashboard.cjs'
       - 'scripts/test-theme-and-language.cjs'
@@ -84,6 +86,8 @@ on:
       - 'scripts/test-pi-minute-data.cjs'
       - 'scripts/test-dashboard.cjs'
       - 'scripts/test-chart-axes.cjs'
+      - 'scripts/test-period-math.cjs'
+      - 'scripts/test-period-comparison.cjs'
       - 'scripts/test-responsive-chart-axes.cjs'
       - 'scripts/test-enterprise-dashboard.cjs'
       - 'scripts/test-theme-and-language.cjs'
@@ -168,6 +172,8 @@ jobs:
           node --check frontend/live-page.js
           node --check frontend/live-chart.js
           node --check frontend/chart-axes.js
+          node --check frontend/period-math.js
+          node --check frontend/period-comparison.js
           node --check frontend/surface.js
           node --check frontend/metric-removal.js
           node --check frontend/dashboard-totals.js
@@ -198,6 +204,7 @@ jobs:
           node scripts/test-pca-math.cjs
           node scripts/test-live-series.cjs
           node scripts/test-chart-axes.cjs
+          node scripts/test-period-math.cjs
           node scripts/test-analysis-math.cjs
           node scripts/test-analysis-point-math.cjs
           node scripts/test-capability-math.cjs
@@ -257,6 +264,7 @@ jobs:
           node scripts/test-live-defaults-and-formulas.cjs
           node scripts/test-pi-minute-data.cjs
           node scripts/test-live-interactions.cjs
+          node scripts/test-period-comparison.cjs
           node scripts/test-responsive-chart-axes.cjs
           node scripts/test-dashboard.cjs
           node scripts/test-enterprise-dashboard.cjs

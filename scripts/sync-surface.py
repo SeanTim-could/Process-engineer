@@ -3,6 +3,9 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TITLE=(ROOT/'scripts/surface-root-title-original.txt').read_text()
 PAIRS=[
+ ('let b=x.column,S=pg(x.points,b,l.columns,u);', 'let b=x.column,S=pg(PointExclusions.apply(l.id,x.points),b,l.columns,u);'),
+ ('(0,ue.jsxs)("b",{children:[(0,ue.jsx)("small",{className:"stat-value-label",children:"\\u5747\\u503C"}),nt(c.mean,3),(0,ue.jsx)("small",{children:c.meanUnit})]})', '(0,ue.jsxs)("div",{className:"mean-period-row",children:[(0,ue.jsxs)("b",{children:[(0,ue.jsx)("small",{className:"stat-value-label",children:"\\u5747\\u503C"}),nt(c.mean,3),(0,ue.jsx)("small",{children:c.meanUnit})]}),(0,ue.jsx)(PeriodComparison.Legacy,{rows:l,column:e,range:n,current:c})]})'),
+ ('className:"kpi-value",children:[nt(S.mean,3),(0,Z.jsx)("small",{children:S.meanUnit})]', 'className:"kpi-value kpi-period-value",children:[(0,Z.jsxs)("span",{children:[nt(S.mean,3),(0,Z.jsx)("small",{children:S.meanUnit})]}),(0,Z.jsx)(PeriodComparison.Legacy,{rows:x.points,column:b,range:u,current:S,sourceId:l.id})]'),
  ('function AN({columns:e,onChange:t,importing:r=!1,onDelete:a}){', 'function AN({columns:e,onChange:t,importing:r=!1,onDelete:a,removalSelection:removal}){'),
  ('className:"table-wrap recognition-table",children:[(0,se.jsxs)("table",{children:[(0,se.jsx)("thead",{children:(0,se.jsxs)("tr",{children:[', 'className:"table-wrap recognition-table",children:[(0,se.jsxs)("table",{children:[(0,se.jsx)("thead",{children:(0,se.jsxs)("tr",{children:[removal&&(0,se.jsx)(MetricRemoval.Header,{selection:removal}),'),
  ('children:e.map(o=>(0,se.jsxs)("tr",{className:o.enabled?"":"column-disabled",children:[', 'children:e.map(o=>(0,se.jsxs)("tr",{className:o.enabled?"":"column-disabled",children:[removal&&(0,se.jsx)(MetricRemoval.Check,{selection:removal,column:o}),'),
@@ -46,6 +49,6 @@ def prepare(js):
 
 def apply(js):
  for old,new in PAIRS:
-  if js.count(old)!=(2 if old=='children:[b.label,x.label?' else 1):raise ValueError('Surface integration marker missing: '+old[:85])
+  if js.count(old)!=(2 if old in ['children:[b.label,x.label?','let b=x.column,S=pg(x.points,b,l.columns,u);'] else 1):raise ValueError('Surface integration marker missing: '+old[:85])
   js=js.replace(old,new)
  return js

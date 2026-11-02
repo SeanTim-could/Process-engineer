@@ -1010,5 +1010,18 @@
   "多选": "Select",
   "已选择": "Selected",
   "个条目": "items",
-  "清空选择": "Clear selection"
+  "清空选择": "Clear selection",
+  "上期均值": "Previous mean",
+  "本期时段": "Current period",
+  "上期时段": "Previous period",
+  "与上一周期比较": "Previous period comparison",
+  "请选择起止时间": "Select a start and end time",
+  "本期暂无有效数据": "No valid data in this period",
+  "上期暂无有效数据": "No valid data in the previous period",
+  "暂无可比较数值": "No comparable values",
+  "个百分点": "percentage points",
+  "较上期上升": "Increased from previous period",
+  "较上期下降": "Decreased from previous period",
+  "较上期持平": "Unchanged from previous period",
+  "持平": "Unchanged"
 }

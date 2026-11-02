@@ -10,6 +10,7 @@ assert.equal(A.numeric(2,8,{zero:true}).min,0);assert.equal(A.numeric(-8,-2,{zer
 assert.deepEqual(A.ticks(0,10,5).map(t=>t.label),['0','2.5','5','7.5','10']);
 assert.deepEqual(A.ticks(0,1,5).map(t=>t.label),['0','0.25','0.5','0.75','1']);
 const at=s=>Date.parse(s+'+08:00');
+assert(A.timeTicks(at('2026-10-01T00:00'),at('2026-10-01T00:01'),230,4).length<=3,'Minute-scale tick labels need room at both plot edges');
 for(const [from,to,width] of [['2026-10-01T00:00','2026-10-31T00:00',280],['2026-10-29T00:00','2026-10-29T23:59',700],['2026-01-01T00:00','2026-12-31T23:59',700],['2026-10-29T23:59:59.000','2026-10-29T23:59:59.010',400]]){
  const ticks=A.timeTicks(at(from),at(to),width);assert(ticks.length);assert(ticks.every(t=>t.value>=at(from)&&t.value<=at(to)));assert.equal(new Set(ticks.map(t=>t.label)).size,ticks.length);assert(ticks.every((t,i)=>!i||t.value>ticks[i-1].value));
  if(to.startsWith('2026-10-31'))assert(ticks.every(t=>(t.value+28800000)%86400000===0),'Monthly chart ticks are Beijing midnights');
