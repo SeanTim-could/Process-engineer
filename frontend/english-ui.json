@@ -1023,5 +1023,21 @@
   "较上期上升": "Increased from previous period",
   "较上期下降": "Decreased from previous period",
   "较上期持平": "Unchanged from previous period",
-  "持平": "Unchanged"
+  "持平": "Unchanged",
+  "总览显示与布局": "Overview display and layout",
+  "仅影响本设备的运行总览，原始数据保留。": "Applies only to this device’s Overview; source data is retained.",
+  "显示的数据分组": "Visible data groups",
+  "暂无可显示分组": "No available groups",
+  "趋势卡片每行数量": "Trend cards per row",
+  "长按卡片后拖动；键盘聚焦卡片后按 Alt + 方向键调整位置。": "Hold a card to drag. Focus a card and use Alt + arrow keys to move it.",
+  "已隐藏卡片": "Hidden cards",
+  "没有隐藏的卡片": "No hidden cards",
+  "显示全部分组和卡片": "Show all groups and cards",
+  "恢复默认排列": "Reset layout",
+  "从总览隐藏此卡片，保留数据": "Hide this card from Overview and retain data",
+  "隐藏卡片": "Hide card",
+  "长按拖动，Alt + 方向键移动": "Hold to drag; Alt + arrow keys to move",
+  "卡片位置已保存": "Card position saved",
+  "卡片已隐藏，可在总览显示与布局中恢复": "Card hidden. Restore it in Overview display and layout.",
+  "无法保存总览设置，请检查浏览器存储空间。": "Cannot save overview preferences. Check browser storage."
 }

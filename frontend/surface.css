@@ -94,3 +94,25 @@ html:has(.main-shell){scrollbar-gutter:stable}
 .mean-period-row,.period-mean-stat{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;min-width:0}.mean-period-row{flex:1 1 auto}.auto-chart-stat{gap:12px;flex-wrap:wrap}.auto-chart-stat>.mean-period-row>b{flex:0 0 auto}.period-comparison{display:inline-flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0;border:0;border-radius:0;background:transparent;font-size:12px!important;font-weight:400!important;letter-spacing:normal!important;line-height:1.6!important;color:var(--surface-ink)!important;max-width:100%;white-space:normal;font-variant-numeric:tabular-nums}.period-previous,.period-change{display:inline-flex;align-items:baseline;gap:5px;white-space:normal}.period-comparison small{font-size:11px!important;font-weight:450!important;margin:0!important;color:inherit!important;letter-spacing:normal!important}.period-change{font-weight:500;color:var(--surface-accent)}.period-arrow{font-size:13px;line-height:1}.period-comparison-empty{background:transparent;border:0;font-size:11px!important}.period-mean-stat{margin:8px 0 12px}.period-current{display:inline-flex;align-items:baseline;gap:6px;flex-wrap:wrap}.period-current>small:first-child{align-self:center}.period-current b{font-size:23px;font-weight:550}.kpi-period-value{display:flex;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:8px 12px;white-space:normal!important}.kpi-period-value>span:first-child{max-width:100%;overflow-wrap:anywhere}.kpi-period-value .period-comparison{padding:0;gap:5px 10px}.period-comparison:focus-visible{outline:2px solid var(--surface-accent);outline-offset:3px}@media(max-width:600px){.mean-period-row,.period-mean-stat{gap:9px}.period-comparison{gap:6px 10px;font-size:11px!important}.auto-chart-stat>.mean-period-row{flex-basis:100%}}
 .auto-chart-stat>.mean-period-row>b{font-size:27px;font-weight:500;color:var(--surface-ink);letter-spacing:-.5px}.auto-chart-stat>.mean-period-row>b>small:not(.stat-value-label){font-size:9px;font-weight:400;margin-left:8px;letter-spacing:0}@media(max-width:600px){.auto-chart-stat>.mean-period-row>b{font-size:25px}}
 .mean-period-row>.period-comparison{margin-bottom:4px}.period-mean-stat>.period-comparison{margin-bottom:2px}
+/* Overview layout has no drag handle. Lift after a deliberate long press. */
+.overview-card-item{position:relative;min-width:0;outline:none;transition:transform .18s,opacity .18s,box-shadow .18s;border-radius:var(--radius,18px)}
+.overview-kpi-grid>.overview-card-item>.kpi-card{height:100%;box-sizing:border-box}
+.overview-card-item:focus-visible{outline:2px solid var(--accent,#008d83);outline-offset:3px}
+.overview-card-item.is-lifted{transform:scale(1.015);opacity:.65;box-shadow:0 12px 28px #0002;z-index:2}
+.overview-card-item.is-drop-target{outline:2px solid var(--accent,#008d83);outline-offset:3px}
+body.overview-dragging,body.overview-dragging *{cursor:grabbing!important;user-select:none!important;-webkit-user-select:none!important}
+.overview-card-item{-webkit-touch-callout:none}
+.overview-drag-preview{position:fixed;left:0;top:0;z-index:10000;pointer-events:none;box-sizing:border-box;width:max-content;max-width:min(240px,calc(100vw - 24px));padding:10px 14px;border:1px solid #c6ddd8;border-radius:12px;background:#fffffff0;box-shadow:0 8px 24px #0002;color:#234b43;font-size:13px;overflow-wrap:anywhere}
+.overview-chart-grid{display:grid;grid-template-columns:repeat(var(--overview-columns,1),minmax(0,1fr));gap:16px;min-width:0}
+.overview-chart-grid .auto-chart-card{height:100%;box-sizing:border-box;margin:0}
+.overview-hide-button{display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--muted,#657978);padding:4px;cursor:pointer;flex-shrink:0;border-radius:6px}
+.overview-hide-button:hover,.overview-hide-button:focus-visible{color:var(--accent,#008d83);background:#008d8310}
+.overview-layout-status:empty{display:none}
+.overview-layout-status{font-size:12px;color:var(--muted,#657978);margin:8px 0}
+.overview-layout-settings{display:flex;flex-direction:column;gap:12px}
+.overview-layout-settings h4{margin:4px 0}
+.overview-group-option{display:flex;align-items:center;gap:9px;overflow-wrap:anywhere}
+.overview-group-option input{width:auto}
+.overview-hidden-card{display:flex;align-items:center;justify-content:space-between;gap:12px;overflow-wrap:anywhere}
+@media(max-width:760px){.overview-chart-grid{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.overview-card-item{transition:none}}

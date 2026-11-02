@@ -3,6 +3,14 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TITLE=(ROOT/'scripts/surface-root-title-original.txt').read_text()
 PAIRS=[
+ ('function QG({workspace:e,trends:t=!1}){', 'function QG(props){return (0,Z.jsx)(OverviewCards.Workspace,{...props,render:workspace=>(0,Z.jsx)(QGContent,{...props,workspace})})}function QGContent({workspace:e,trends:t=!1}){'),
+ ('className:"shared-range-heading",children:[', 'className:"shared-range-heading",children:[(0,Z.jsx)(OverviewCards.Controls,{}),'),
+ ('(0,Z.jsx)("div",{className:"kpi-grid",children:p.filter', '(0,Z.jsx)(OverviewCards.Grid,{kind:"kpi",className:"kpi-grid",children:p.filter'),
+ ('className:"kpi-card kpi-0",children:[', 'className:"kpi-card kpi-0","data-overview-key":JSON.stringify([b.key,x.group]),"data-overview-label":[b.label,x.group].filter(Boolean).join(" · "),children:['),
+ ('(0,Z.jsx)(jo,{size:17})', '(0,Z.jsx)(OverviewCards.Tools,{fallback:(0,Z.jsx)(jo,{size:17})})'),
+ ('(0,Z.jsx)("div",{children:m?p.filter(x=>x.column.key===m.key).map(y):', '(0,Z.jsx)(OverviewCards.Grid,{kind:"chart",children:m?p.filter(x=>x.column.key===m.key).map(y):'),
+ ('o&&(0,Z.jsx)(Ax,{dataset:l,onClose:()=>s(!1)', 'o&&(0,Z.jsx)(Ax,{dataset:OverviewCards.fullDataset(l),onClose:()=>s(!1)'),
+
  ('let b=x.column,S=pg(x.points,b,l.columns,u);', 'let b=x.column,S=pg(PointExclusions.apply(l.id,x.points),b,l.columns,u);'),
  ('(0,ue.jsxs)("b",{children:[(0,ue.jsx)("small",{className:"stat-value-label",children:"\\u5747\\u503C"}),nt(c.mean,3),(0,ue.jsx)("small",{children:c.meanUnit})]})', '(0,ue.jsxs)("div",{className:"mean-period-row",children:[(0,ue.jsxs)("b",{children:[(0,ue.jsx)("small",{className:"stat-value-label",children:"\\u5747\\u503C"}),nt(c.mean,3),(0,ue.jsx)("small",{children:c.meanUnit})]}),(0,ue.jsx)(PeriodComparison.Legacy,{rows:l,column:e,range:n,current:c})]})'),
  ('className:"kpi-value",children:[nt(S.mean,3),(0,Z.jsx)("small",{children:S.meanUnit})]', 'className:"kpi-value kpi-period-value",children:[(0,Z.jsxs)("span",{children:[nt(S.mean,3),(0,Z.jsx)("small",{children:S.meanUnit})]}),(0,Z.jsx)(PeriodComparison.Legacy,{rows:x.points,column:b,range:u,current:S,sourceId:l.id})]'),
@@ -39,11 +47,12 @@ PAIRS=[
  ('[Q,Xe,ze,$e,He,Ke,z,G]),rt=', '[Q,Xe,ze,$e,He,Ke,z,G,Surface.language()]),rt='),
  ('children:[Number(b.slice(5)),"\\u6708"]', 'children:Surface.monthLabel(Number(b.slice(5)))'),
  ('children:["\\u4E00","\\u4E8C","\\u4E09","\\u56DB","\\u4E94","\\u516D","\\u65E5"].map(b=>(0,et.jsx)("span",{children:b},b))', 'children:["\\u4E00","\\u4E8C","\\u4E09","\\u56DB","\\u4E94","\\u516D","\\u65E5"].map(b=>(0,et.jsx)("span",{children:Surface.weekday(b)},b))'),
+ ('className:"button-row chart-actions",children:[(0,ue.jsx)(Dashboard.LegacyPin', 'className:"button-row chart-actions",children:[(0,ue.jsx)(OverviewCards.Tools,{}),(0,ue.jsx)(Dashboard.LegacyPin'),
 ]
 def prepare(js):
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')
  js=js.replace("Surface.use(c);ExcelSync.useImports","ExcelSync.useImports")
- for old,new in PAIRS:
+ for old,new in reversed(PAIRS):
   if new in js:js=js.replace(new,old)
  return js
 
