@@ -134,7 +134,7 @@ def build(config_override=None):
     page='''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src CONNECT; form-action 'none'; base-uri 'none'">
 <title>登录 · 工艺工程师工作台</title>PRECONNECT<style>STYLE</style></head><body><main class="account-login"><section><form id="web-login-form" class="account-form">
-<img class="company-logo" src="LOGO_URL" alt="ADISSEO · A Sinochem Company" width="210" height="74"><span class="account-brand">工程师工作台</span><h1>登录你的工作台</h1><p class="muted">请使用管理员发放的工号和密码。</p>
+<span class="account-brand">工程师工作台</span><h1>登录你的工作台</h1><p class="muted">请使用管理员发放的工号和密码。</p>
 <label class="form-label">登录工号<input aria-label="登录工号" name="employee" autocomplete="username" maxlength="40" required></label>
 <label class="form-label">登录密码<input aria-label="登录密码" name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
 <p id="web-login-error" class="error-banner" role="alert" hidden></p><button id="web-login-submit" class="login-submit" type="submit" disabled>登录</button>
@@ -143,12 +143,11 @@ def build(config_override=None):
 SCRIPT</script></body></html>'''
     page=page.replace('PRECONNECT',f'<link rel="preconnect" href="{markup.escape(origin)}" crossorigin>' if origin else '').replace('CONNECT',markup.escape(connect,quote=True))
     page=page.replace('STYLE',css).replace('CONFIG',json.dumps(public,ensure_ascii=True)).replace('SCRIPT',script)
-    page=page.replace('LOGO_URL',logo_url)
     page=page.replace('>登录工号<input','><span data-en="Employee ID">登录工号</span><input').replace('>登录密码<input','><span data-en="Password">登录密码</span><input')
     terms={'登录你的工作台':'Sign in to your workbench','登录':'Sign in','工程师工作台':'Engineer Workbench','请使用管理员发放的工号和密码。':'Use the employee ID and password issued by your administrator.','没有账号或忘记密码，请联系管理员。':'Contact your administrator for an account or password reset.'}
     for zh,en in terms.items():
         page=page.replace('>'+zh+'<',' aria-label="'+zh+'" data-en="'+en+'">'+zh+'<')
-    page=page.replace('</style>','[data-en]::after{display:none}.company-logo{object-fit:contain;margin-bottom:18px}\n</style>',1)
+    page=page.replace('</style>','[data-en]::after{display:none}\n</style>',1)
     (ROOT/'index.html').write_text(page)
     # Keep previously published fingerprints: a cached page may still reference
     # them during deployment. Only the current pair is prefetched/downloaded.
