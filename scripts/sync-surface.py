@@ -3,6 +3,10 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TITLE=(ROOT/'scripts/surface-root-title-original.txt').read_text()
 PAIRS=[
+ ('function AN({columns:e,onChange:t,importing:r=!1,onDelete:a}){', 'function AN({columns:e,onChange:t,importing:r=!1,onDelete:a,removalSelection:removal}){'),
+ ('className:"table-wrap recognition-table",children:[(0,se.jsxs)("table",{children:[(0,se.jsx)("thead",{children:(0,se.jsxs)("tr",{children:[', 'className:"table-wrap recognition-table",children:[(0,se.jsxs)("table",{children:[(0,se.jsx)("thead",{children:(0,se.jsxs)("tr",{children:[removal&&(0,se.jsx)(MetricRemoval.Header,{selection:removal}),'),
+ ('children:e.map(o=>(0,se.jsxs)("tr",{className:o.enabled?"":"column-disabled",children:[', 'children:e.map(o=>(0,se.jsxs)("tr",{className:o.enabled?"":"column-disabled",children:[removal&&(0,se.jsx)(MetricRemoval.Check,{selection:removal,column:o}),'),
+ ('(0,ue.jsx)(AN,{columns:s,onChange:l,onDelete:g=>h(E1(s,[g]).map(v=>v.key))})', '(0,ue.jsx)(MetricRemoval.Editor,{columns:s,onChange:l,onSelectionChange:()=>h(null),onDelete:g=>h(E1(s,g).map(v=>v.key))})'),
  ('className:"panel chart-panel",children:[(0,B.jsx)(PointExclusions.Tools,{sourceId:"raw:"+t.id,keys:[d.id],allGroups:true,from:c??"",to:f??"",title:d.label}),', 'className:"panel chart-panel compact-chart-panel",children:['),
  ('(0,B.jsxs)("div",{className:"segmented",children:[', '(0,B.jsx)(PointExclusions.Tools,{sourceId:"raw:"+t.id,keys:[d.id],allGroups:true,from:c??"",to:f??"",title:d.label}),(0,B.jsxs)("div",{className:"segmented",children:['),
  ('className:"panel auto-chart-card","data-column-key":e.key,children:[(0,ue.jsx)(Dashboard.LegacyPin,{url:o,title:e.label}),(0,ue.jsx)(PointExclusions.LegacyTools,{url:o,title:e.label}),', 'className:"panel auto-chart-card compact-chart-card","data-column-key":e.key,children:['),

@@ -1003,5 +1003,12 @@
   "无法计算可靠的PCA控制限，请调整基准数据。": "Reliable control limits could not be calculated. Adjust the baseline data.",
   "标准化监控趋势（6点平滑）": "Normalized trend · 6-sample smoothing",
   "未超限": "Within limits",
-  "超限": "Above limit"
+  "超限": "Above limit",
+  "移除所选条目": "Remove selected items",
+  "全选移除条目": "Select all items for removal",
+  "选择移除：": "Select for removal: ",
+  "多选": "Select",
+  "已选择": "Selected",
+  "个条目": "items",
+  "清空选择": "Clear selection"
 }
