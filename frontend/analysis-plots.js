@@ -28,14 +28,18 @@ var AnalysisPlots = (() => {
     const units=new Set(used.map(c=>c.unit??""));
     if(!single&&units.size>1&&!config.normalized)throw new Error("所选指标单位不同，请勾选归一化，或分别作图。");
     if(!rows.some(r=>used.some(c=>M.finite(r.values[c.key])))&&!boxGroups?.length)return h("p",{className:"analysis-empty"},"所选时段、分组和指标没有有效数值。");
-    const W=config.compact?720:1000,H=460,T=50,B=H-125,E=W-32,children=[],legend=[];let L=100;
+    const W=config.width??(config.compact?720:1000),H=460,T=50,B=H-125,E=W-24,children=[],legend=[];let L=100;
     const text=(x,y,value,props={})=>Surface.svgText(x,y,value,{fill:"#536879",fontSize:12,...props});
     let xScale,yScale,xTicks=[],yTicks=[],xLabel="时间（北京时间）",yLabel=config.normalized?"归一化值（0–1）":used.length===1?used[0].label+(used[0].unit?" / "+used[0].unit:""):"数值 / "+(used[0].unit||"无单位");
-    function scales(xs,ys,categorical=false,zeroBaseline=false){const xd=categorical?[0,Math.max(1,xs.length)]:extent(xs),yd=extent(ys);if(zeroBaseline)yd[0]=0;
-      const ticks=ChartAxes.ticks(yd[0],yd[1]);L=ChartAxes.left(ticks);
+    function scales(xs,ys,categorical=false,zeroBaseline=false){
+      const timeAxis=!categorical&&xLabel.startsWith('时间'),valid=ys.filter(M.finite),axis=config.normalized&&!single?ChartAxes.numeric(0,1,{padding:0}):ChartAxes.numeric(valid.length?valid.reduce((a,b)=>Math.min(a,b),Infinity):0,valid.length?valid.reduce((a,b)=>Math.max(a,b),-Infinity):1,{zero:zeroBaseline,integer:type==='histogram'}),yd=[axis.min,axis.max];
+      let xd=categorical?[0,Math.max(1,xs.length)]:extent(xs);
+      if(timeAxis){const values=xs.filter(M.finite),lo=values.reduce((a,b)=>Math.min(a,b),Infinity),hi=values.reduce((a,b)=>Math.max(a,b),-Infinity),from=M.time(config.from??''),to=M.time(config.to??'');xd=from!==null&&to!==null&&to>from?[Math.min(from,lo),Math.max(to,hi)]:lo===hi?[lo-60000,hi+60000]:[lo,hi];}
+      const ticks=axis.ticks;L=ChartAxes.left(ticks,config.compact);
       xScale=v=>L+(v-xd[0])/(xd[1]-xd[0])*(E-L);yScale=v=>B-(v-yd[0])/(yd[1]-yd[0])*(B-T);
       yTicks=ticks.map(t=>({at:yScale(t.value),label:t.label}));
-      xTicks=categorical?xs.map((v,i)=>({at:xScale(i+.5),label:trunc(String(v),15)})):Array.from({length:config.compact?4:6},(_,i)=>{const v=xd[0]+i*(xd[1]-xd[0])/(config.compact?3:5);return {at:xScale(v),label:xLabel.startsWith("时间")?date(v).slice(5):format(v)};});
+      xTicks=categorical?xs.map((v,i)=>({at:xScale(i+.5),label:trunc(String(v),15)})):(timeAxis?ChartAxes.timeTicks(xd[0],xd[1],E-L,config.compact?4:6):ChartAxes.numeric(xd[0],xd[1],{count:config.compact?4:6,padding:0}).ticks.filter(t=>t.value>=xd[0]&&t.value<=xd[1])).map(t=>({at:xScale(t.value),label:t.label}));
+      if(categorical){const limit=Math.max(2,Math.floor((E-L)/105));if(xTicks.length>limit){const all=xTicks;xTicks=Array.from({length:limit},(_,i)=>all[Math.round(i*(all.length-1)/(limit-1))]);}}
     }
     const hasValue=rows.filter(r=>used.some(c=>M.finite(r.values[c.key]))),ref=references.filter(r=>M.finite(r.value));
     if(type==="histogram"){
@@ -67,14 +71,14 @@ var AnalysisPlots = (() => {
       const data=M.aggregate(rows,keys,config.period??"day",config.aggregation??"mean");if(data.length>120)throw new Error("柱状图超过120组，请缩小时间范围或改为按周、按月汇总。");
       xLabel=`${{day:"按日",week:"按周",month:"按月",all:"按采样分组"}[config.period??"day"]} · ${config.aggregation==="sum"?"有效值求和":"有效值均值"}`;
       if(config.normalized)for(const c of used){const s=M.summarize(data.map(r=>r.values[c.key]));for(const r of data)if(M.finite(r.values[c.key]))r.values[c.key]=(r.values[c.key]-s.min)/(s.max-s.min||1);}
-      scales(data.map(g=>g.label+(g.group?" · "+g.group:"")),[0,...data.flatMap(r=>used.map(c=>r.values[c.key]))],true);
+      scales(data.map(g=>g.label+(g.group?" · "+g.group:"")),[0,...data.flatMap(r=>used.map(c=>r.values[c.key]))],true,true);
       used.forEach((c,j)=>{legend.push({label:c.label,color:palette[j]});const width=(E-L)/Math.max(data.length,1)*.72/used.length;
         data.forEach((r,i)=>{const v=r.values[c.key];if(!M.finite(v))return;children.push(h("rect",{key:`b${i}-${j}`,x:xScale(i+.5)-used.length*width/2+j*width,y:Math.min(yScale(0),yScale(v)),width:Math.max(1,width-1),height:Math.max(1,Math.abs(yScale(v)-yScale(0))),fill:palette[j],fillOpacity:.85},h("title",null,`${r.label} ${r.group} · ${c.label}：${format(v)}`)));});});
       if(xTicks.length>12)xTicks=xTicks.filter((_,i)=>i%Math.ceil(xTicks.length/12)===0);
     }else{
       const spans=new Map(used.map(c=>{const s=M.summarize(rows.map(r=>r.values[c.key]));return [c.key,s];}));
       const value=(row,c)=>{const v=row.values[c.key],s=spans.get(c.key);return !M.finite(v)?null:config.normalized?(v-s.min)/(s.max-s.min||1):v;};
-      scales(rows.map(r=>r.time),[...hasValue.flatMap(r=>used.map(c=>value(r,c))),...!config.normalized?ref.map(r=>r.value):[],...type==="area"?[0]:[]],false,used.length===1&&used[0].key==="range");
+      scales(rows.map(r=>r.time),[...hasValue.flatMap(r=>used.map(c=>value(r,c))),...!config.normalized?ref.map(r=>r.value):[],...type==="area"?[0]:[]],false,type==='area'||used.length===1&&used[0].key==="range");
       if(pointSelection)selectInBox=box=>{
         const groups=new Set([...new Set(rows.map(row=>row.group))].slice(0,20)),chosen=[];
         for(const row of rows)if(groups.has(row.group)&&xScale(row.time)>=box.x0&&xScale(row.time)<=box.x1)for(const c of used){const v=value(row,c),y=yScale(v);if(M.finite(v)&&y>=box.top&&y<=box.bottom)chosen.push({row,key:c.key});}
@@ -109,7 +113,7 @@ var AnalysisPlots = (() => {
     return h("svg",{xmlns:"http://www.w3.org/2000/svg",...selectionEvents,viewBox:`0 0 ${W} ${H}`,width:W,height:H,role:"img","aria-label":config.title||types[type],style:{fontFamily:'"Microsoft YaHei",Arial,sans-serif',maxWidth:"100%",height:"auto",...pointSelection?{cursor:'crosshair',touchAction:'none',userSelect:'none'}:{}}},
       h("rect",{width:W,height:H,fill:"#fff"}),
       ...yTicks.map((t,i)=>h("g",{key:"y"+i},h("line",{x1:L,x2:E,y1:t.at,y2:t.at,stroke:"#e6edf2",strokeDasharray:"3 5"}),text(L-12,t.at+4,t.label,{textAnchor:"end","data-axis-tick":"y"}))),
-      ...xTicks.map((t,i)=>h("g",{key:"x"+i},text(t.at,B+24,t.label,{textAnchor:"middle",fontSize:11}))),
+      ...xTicks.map((t,i)=>h("g",{key:"x"+i},text(t.at,B+24,t.label,{textAnchor:t.at>E-25?'end':t.at<L+25?'start':'middle',fontSize:11,"data-axis-tick":"x"}))),
       h("line",{x1:L,x2:E,y1:B,y2:B,stroke:"#aebec9"}),...children,selectionBox&&h("rect",{"data-point-selection-box":"",x:Math.min(selectionBox.startX,selectionBox.x),y:Math.min(selectionBox.startY,selectionBox.y),width:Math.abs(selectionBox.x-selectionBox.startX),height:Math.abs(selectionBox.y-selectionBox.startY),fill:"#d93659",fillOpacity:.12,stroke:"#c92f51",strokeDasharray:"5 3",pointerEvents:"none"}),
       text((L+E)/2,H-18,xLabel,{textAnchor:"middle",fontSize:13}),text(18,(T+B)/2,ChartAxes.label(yLabel,B-T),{"data-axis-title":"y",textAnchor:"middle",fontSize:13,transform:`rotate(-90 18 ${(T+B)/2})`}),
       ...legend.slice(0,config.compact?6:12).map((g,i)=>h("g",{key:"leg"+i},h("rect",{x:L+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),y:H-85+Math.floor(i/(config.compact?2:4))*23,width:10,height:3,fill:g.color}),text(L+15+(i%(config.compact?2:4))*(config.compact?(E-L)/2:215),H-80+Math.floor(i/(config.compact?2:4))*23,trunc(g.label,15),{fontSize:11}))));
@@ -125,10 +129,10 @@ var AnalysisPlots = (() => {
     try{await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{try{const canvas=document.createElement("canvas");const box=svg.viewBox.baseVal;canvas.width=(box.width||1000)*2;canvas.height=(box.height||460)*2;canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);canvas.toBlob(blob=>{if(!blob){reject(new Error("图片导出失败。"));return;}download(blob,title+".png","image/png");resolve();},"image/png");}catch(e){reject(e);}};img.onerror=()=>reject(new Error("图表图片生成失败，请尝试导出 SVG。"));img.src=url;});}finally{URL.revokeObjectURL(url);}
   }
   class Boundary extends R.Component{constructor(props){super(props);this.state={error:null};}static getDerivedStateFromError(error){return {error};}componentDidUpdate(old){if(old.signature!==this.props.signature&&this.state.error)this.setState({error:null});}render(){return this.state.error?h("p",{role:"alert",className:"error-banner"},this.state.error.message):this.props.children;}}
-  function Figure(props){const ref=R.useRef(null),[error,setError]=R.useState("");const title=Surface.chartTitle(props.config,props.columns,props.config.title||types[props.config.type]);
+  function Figure(props){const ref=R.useRef(null),[error,setError]=R.useState(""),width=ChartAxes.useWidth(ref,props.config.compact?720:1000,!!props.config.compact);const title=Surface.chartTitle(props.config,props.columns,props.config.title||types[props.config.type]);
     const groupCount=new Set(props.rows.map(r=>r.group)).size;
     return h("section",{className:"analysis-figure panel",ref},h("div",{className:"analysis-figure-head"},h("div",null,h("h3",null,title),null),h("div",{className:"button-row"},props.config.sourceId&&!props.pointQuery&&props.pin!==false&&h(Dashboard.Pin,{kind:"chart",config:props.config,control:props.references?.some(r=>r.label==="I图上控制限")}),props.config.sourceId&&h(PointExclusions.Tools,{...(props.pointQuery??props.config),title}),...[false,true].map(png=>h("button",{key:String(png),className:"button small-button",onClick:()=>saveSvg(ref.current?.querySelector('svg[role="img"]'),title,png).catch(e=>setError(e.message))},png?"导出 PNG":"导出 SVG")))),
-      error&&h("p",{role:"alert",className:"error-banner"},error),h("div",{className:"analysis-svg-scroll"},h(Boundary,{signature:JSON.stringify(props.config)+JSON.stringify(props.columns)+props.rows.length},h(Svg,props))),h("p",{className:"analysis-mobile-hint small muted"},"可横向滑动查看完整图表。"),
+      error&&h("p",{role:"alert",className:"error-banner"},error),h("div",{className:"analysis-svg-scroll"},h(Boundary,{signature:JSON.stringify(props.config)+JSON.stringify(props.columns)+props.rows.length},h(Svg,{...props,config:{...props.config,width}}))),!props.config.compact&&h("p",{className:"analysis-mobile-hint small muted"},"可横向滑动查看完整图表。"),
       groupCount>20&&["line","area","box"].includes(props.config.type)&&h("p",{className:"small analysis-notice"},"当前有"+groupCount+"个采样分组，图形最多展示前20组。请选择具体分组查看其余数据；统计包含全部选中记录。"));
   }
   return {Svg,Figure,Boundary,palettes,paletteNames,types,format,date,escape,download,saveSvg};
