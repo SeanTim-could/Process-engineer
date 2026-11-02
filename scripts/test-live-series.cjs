@@ -1,0 +1,9 @@
+const assert=require('node:assert/strict'),S=require('../frontend/live-series.js');
+const start=Date.parse('2026-11-02T00:00:00+08:00'),rows=(count,step=60000)=>Array.from({length:count},(_,i)=>({time:start+i*step,values:{x:i}}));
+// A monotonic minute series previously lost up to four consecutive minutes.
+for(const count of [60,720,1000,1440,1441]){const source=rows(count),series=S.sample(source,'x');assert.equal(series.points.length,count);assert.deepEqual(series.points.map(p=>p.time),source.map(r=>r.time));assert.deepEqual(series.points.map(p=>p.value),source.map(r=>r.values.x));for(let i=1;i<count;i++)assert.equal(series.points[i].time-series.points[i-1].time,60000);}
+const hourly=rows(24,3600000);assert.deepEqual(S.sample(hourly,'x').points.map(p=>p.time),hourly.map(r=>r.time),'Hourly source readings must not become invented minute readings');
+const gaps=rows(1441);gaps[9].values.x=null;gaps[15].excludedValues={x:15};const series=S.sample(gaps,'x');assert.equal(series.valid,1439);assert.equal(series.missing,1);assert(!series.points.some(p=>p.time===gaps[9].time||p.time===gaps[15].time));assert.notEqual(series.points[8].segment,series.points[9].segment);assert.equal(series.points.at(-1).time,gaps.at(-1).time);
+const dense=rows(20000,1000);dense[8333].values.x=999999;dense[11000].values.x=-999999;const sampled=S.sample(dense,'x');assert(sampled.points.length<=1000);assert(sampled.points.some(p=>p.time===dense[8333].time));assert(sampled.points.some(p=>p.time===dense[11000].time));assert.equal(sampled.latest.time,dense.at(-1).time);
+assert(S.sample(rows(100),'x',80).points.length<=80,'Explicit smaller drawing budgets remain respected');
+console.log('Minute PI: 1,440 readings per day remain exact; original hourly gaps, exclusions and dense-data extrema are preserved.');
