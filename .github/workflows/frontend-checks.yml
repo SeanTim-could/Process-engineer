@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -54,6 +54,9 @@ on:
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
+      - 'scripts/build-offline.py'
+      - 'scripts/test-offline-workbench.cjs'
+      - '离线版使用说明.md'
       - 'scripts/split-web-spreadsheet.py'
       - 'scripts/test-web-downloads.cjs'
       - 'scripts/test-web-entry.cjs'
@@ -115,6 +118,9 @@ on:
       - 'scripts/test-auth-config.py'
       - 'scripts/check-account-service.py'
       - 'scripts/build-web.py'
+      - 'scripts/build-offline.py'
+      - 'scripts/test-offline-workbench.cjs'
+      - '离线版使用说明.md'
       - 'scripts/split-web-spreadsheet.py'
       - 'scripts/test-web-downloads.cjs'
       - 'scripts/test-web-entry.cjs'
@@ -149,6 +155,7 @@ jobs:
           git diff --exit-code -- '*.html' assets
           node --check frontend/cross-unit-calculations.js
           node --check frontend/account-auth.js
+          node --check frontend/offline-auth.js
           node --check frontend/web-auth-bootstrap.js
           node --check frontend/web-startup.js
           node --check frontend/web-compatible.js
@@ -222,6 +229,7 @@ jobs:
         run: |
           node scripts/test-cross-unit-calculations.cjs
           node scripts/test-managed-accounts.cjs
+          node scripts/test-offline-workbench.cjs
           node scripts/test-web-entry.cjs
           node scripts/test-login-surface-and-sidebar.cjs
           node scripts/test-web-downloads.cjs
@@ -237,6 +245,8 @@ jobs:
           node scripts/test-process-capability-and-points.cjs
           node scripts/test-custom-domain-sync.cjs
           node scripts/test-excel-sync.cjs
+          python scripts/build-offline.py --output "$RUNNER_TEMP/workbench-offline"
+          WORKBENCH_TEST_HTML_PATH="$RUNNER_TEMP/workbench-offline/offline-staging/WorkbenchOffline/启动工程师工作台.html" node scripts/test-excel-sync.cjs
           WORKBENCH_TEST_ORIGIN=https://workbench.myprocessworkbench.com node scripts/test-excel-sync.cjs
           node scripts/test-excel-background.cjs
           WORKBENCH_TEST_ORIGIN=https://workbench.myprocessworkbench.com node scripts/test-excel-background.cjs

@@ -11,6 +11,9 @@ on:
       - 'scripts/verify-portable.ps1'
       - 'scripts/run-service-tests.py'
       - 'scripts/build-excel-python.py'
+      - 'scripts/build-offline.py'
+      - 'frontend/offline-auth.js'
+      - '离线版使用说明.md'
       - 'requirements-excel-sync.txt'
       - 'Excel自动同步使用说明.md'
       - 'Dashboard使用说明.md'
@@ -27,6 +30,9 @@ on:
       - 'scripts/verify-portable.ps1'
       - 'scripts/run-service-tests.py'
       - 'scripts/build-excel-python.py'
+      - 'scripts/build-offline.py'
+      - 'frontend/offline-auth.js'
+      - '离线版使用说明.md'
       - 'requirements-excel-sync.txt'
       - 'Excel自动同步使用说明.md'
       - 'Dashboard使用说明.md'
@@ -72,6 +78,10 @@ jobs:
         run: python local_service/build_windows.py
       - name: Verify EXE without Python on PATH
         run: ./scripts/verify-portable.ps1
+      - name: Build login-free offline editions
+        run: python scripts/build-offline.py --portable-dir Windows-Build/dist/ProcessEngineerWorkbench
+      - name: Verify offline EXE without Python on PATH
+        run: ./scripts/verify-portable.ps1 -ArchiveName Workbench-Offline-Windows.zip -Offline
       - name: Upload ready-to-extract portable package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -81,6 +91,12 @@ jobs:
             Windows-Build/Workbench-Windows-Portable.zip.sha256
             Windows-Build/Workbench-Excel-Python.zip
             Windows-Build/Workbench-Excel-Python.zip.sha256
+            Windows-Build/Workbench-Offline.zip
+            Windows-Build/Workbench-Offline.zip.sha256
+            Windows-Build/Workbench-Offline-Python.zip
+            Windows-Build/Workbench-Offline-Python.zip.sha256
+            Windows-Build/Workbench-Offline-Windows.zip
+            Windows-Build/Workbench-Offline-Windows.zip.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -107,6 +123,9 @@ jobs:
           cd release
           sha256sum --check Workbench-Windows-Portable.zip.sha256
           sha256sum --check Workbench-Excel-Python.zip.sha256
+          sha256sum --check Workbench-Offline.zip.sha256
+          sha256sum --check Workbench-Offline-Python.zip.sha256
+          sha256sum --check Workbench-Offline-Windows.zip.sha256
           if [[ "$GITHUB_REF" == refs/tags/portable-* ]]; then
             release_tag="$GITHUB_REF_NAME"
           else
@@ -125,6 +144,8 @@ jobs:
           下载 Workbench-Windows-Portable.zip，完整解压后双击 ProcessEngineerWorkbench.exe。
           请保留 _internal 文件夹及其他配套文件。仍需桌面版 Microsoft Office 和自己的文档读取权限。
 
+          免登录离线版：下载 Workbench-Offline-Windows.zip，完整解压后双击“启动离线工作台.bat”，直接进入本机工作台，无需登录或连接云端账号服务。单文件网页为 Workbench-Offline.zip，公司已授权Python环境可选 Workbench-Offline-Python.zip。离线版保留PCA、图表、公式、Dashboard和JSON保存/打开；Excel与文档本机读取仍需Office及原有读取权限，PI新数据需要公司PI网络。原网站数据请先另存为JSON，再在离线版打开。
+
           个人中心新增简体中文/English独立显示模式；数据区保持白色，菜单与边框跟随主题色。同组按钮统一尺寸，多模块使用八组区分色，改进长标题排版。Dashboard汇总、叠图、实时更新及日期记忆继续保留。
 
           Excel自动同步：支持Python后台多任务排队刷新、临时失败重试、变化数据传输、网页刷新后恢复连接、当天24小时默认实时范围、按装置记住Excel参数/工作簿、轻量PI实时曲线、悬停参考线与框选放大、上次查看装置恢复、PI采样删除、公式运行检查和PI日均汇总。实际DataLink更新需在目标电脑核对。公司已授权python.exe时，可下载Workbench-Excel-Python.zip，安装依赖后运行启动脚本。网页“数据管理 → Excel自动同步”连接本机读取窗口。
@@ -137,7 +158,10 @@ jobs:
           fi
           gh release upload "$release_tag" --repo "$GITHUB_REPOSITORY" \
             Workbench-Windows-Portable.zip Workbench-Windows-Portable.zip.sha256 \
-            Workbench-Excel-Python.zip Workbench-Excel-Python.zip.sha256 --clobber
+            Workbench-Excel-Python.zip Workbench-Excel-Python.zip.sha256 \
+            Workbench-Offline.zip Workbench-Offline.zip.sha256 \
+            Workbench-Offline-Python.zip Workbench-Offline-Python.zip.sha256 \
+            Workbench-Offline-Windows.zip Workbench-Offline-Windows.zip.sha256 --clobber
           gh release edit "$release_tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
           echo '## Public launcher download' >> "$GITHUB_STEP_SUMMARY"
           echo "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/Workbench-Windows-Portable.zip" >> "$GITHUB_STEP_SUMMARY"

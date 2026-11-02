@@ -2,9 +2,9 @@
 const {chromium}=require('playwright'),fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..'),origin='https://seantim-could.github.io',site=origin+'/Process-engineer/workbench.html';
 async function fixture(options={}){
- const {authConfig,entry,siteOrigin=process.env.WORKBENCH_TEST_ORIGIN??origin,basePath=siteOrigin===origin?'/Process-engineer/':'/',...contextOptions}=options;
+ const {authConfig,entry,htmlPath=process.env.WORKBENCH_TEST_HTML_PATH,siteOrigin=process.env.WORKBENCH_TEST_ORIGIN??origin,basePath=siteOrigin===origin?'/Process-engineer/':'/',...contextOptions}=options;
  const appBase=siteOrigin+basePath;
- const html=execFileSync('python',['-c',"import importlib.util,pathlib,sys;p=pathlib.Path(sys.argv[1]);s=importlib.util.spec_from_file_location('auth',p/'scripts/sync-account-auth.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.render((p/'启动工程师工作台.html').read_text(),__import__('json').loads(sys.argv[2])).encode())",root,JSON.stringify(authConfig??{enabled:false,url:'',publicKey:''})],{maxBuffer:14*1024*1024});
+ const html=htmlPath?fs.readFileSync(htmlPath):execFileSync('python',['-c',"import importlib.util,pathlib,sys;p=pathlib.Path(sys.argv[1]);s=importlib.util.spec_from_file_location('auth',p/'scripts/sync-account-auth.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sys.stdout.buffer.write(m.render((p/'启动工程师工作台.html').read_text(),__import__('json').loads(sys.argv[2])).encode())",root,JSON.stringify(authConfig??{enabled:false,url:'',publicKey:''})],{maxBuffer:14*1024*1024});
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH??(fs.existsSync('/usr/bin/chromium')?'/usr/bin/chromium':chromium.executablePath()),headless:true,args:['--no-sandbox']});
  const context=await browser.newContext({viewport:{width:1500,height:1100},acceptDownloads:true,...contextOptions});
  if(entry){

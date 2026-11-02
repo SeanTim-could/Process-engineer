@@ -15,6 +15,13 @@ from excel_reader import ExcelReader, ExcelScheduler
 PORT = 8765
 WORKBENCH_URL = 'https://workbench.myprocessworkbench.com/'
 APP_HTML = '启动工程师工作台.html'
+OFFLINE_MARKER = '<meta name="workbench-edition" content="offline">'
+
+
+def launch_url(origin, *, excel_sync=False, documents=False, frozen=False, offline=False):
+    if excel_sync and not offline:
+        return WORKBENCH_URL
+    return origin + ('/documents' if documents or frozen and not offline else '')
 
 
 def runtime_path():
@@ -259,6 +266,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='工艺工程师工作台本机服务')
     parser.add_argument('--documents', action='store_true', help='启动后直接打开文档检索')
     parser.add_argument('--excel-sync', action='store_true', help='启动后打开网站的Excel自动同步入口')
+    parser.add_argument('--offline', action='store_true', help='打开本机工作台，不跳转到网站')
     parser.add_argument('--no-browser', action='store_true', help='只启动服务，不自动打开浏览器')
     parser.add_argument('--self-test', action='store_true', help='检查运行组件，不打开文档或启动服务')
     args = parser.parse_args(argv)
@@ -282,6 +290,7 @@ def main(argv=None):
     if not html.is_file():
         print('找不到工作台网页。请先完整解压，保留文件夹结构。')
         return 1
+    offline = args.offline or OFFLINE_MARKER in html.read_text('utf-8')
     storage = Path(os.environ.get('LOCALAPPDATA', Path.home() / 'AppData' / 'Local')) / 'ProcessEngineerWorkbench' / 'DocumentSearch'
     index = DocumentIndex(storage / 'index.dat')
     origin = f'http://127.0.0.1:{PORT}'
@@ -296,15 +305,16 @@ def main(argv=None):
     if args.excel_sync:
         print('Excel由Python读取；已打开模式可在每次读取前刷新公式。文件模式仅读取上次保存结果。')
     print('请保留此窗口。关闭窗口会停止文档检索和Excel读取，浏览器内已保存的数据不会删除。')
-    print('仅检索文档无需迁移生产数据。如需在本机使用生产数据，请先在网站“另存为”工作台JSON文件，再在本机“打开”。')
+    if offline:
+        print('免登录离线版：直接使用本机工作台。可通过“打开”载入已有工作台JSON，使用“保存 / 另存为”保留数据。')
+    else:
+        print('仅检索文档无需迁移生产数据。如需在本机使用生产数据，请先在网站“另存为”工作台JSON文件，再在本机“打开”。')
     print('读取停住时，请查看 Office 的授权、密码或文件打开提示。取消将在当前文件结束后生效。')
     if not args.no_browser:
+        webbrowser.open(launch_url(origin, excel_sync=args.excel_sync, documents=args.documents,
+                                  frozen=bool(getattr(sys, 'frozen', False)), offline=offline))
         if args.excel_sync:
-            webbrowser.open(WORKBENCH_URL)
-            print('登录后打开“数据管理 → Excel自动同步”，点击“连接本机Excel”。')
-        else:
-            documents = args.documents or bool(getattr(sys, 'frozen', False))
-            webbrowser.open(origin + ('/documents' if documents else ''))
+            print(('' if offline else '登录后') + '打开“数据管理 → Excel自动同步”，点击“连接本机Excel”。')
     try:
         server.serve_forever(poll_interval=0.5)
     except KeyboardInterrupt:

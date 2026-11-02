@@ -1,12 +1,28 @@
+param(
+    [string]$ArchiveName = 'Workbench-Windows-Portable.zip',
+    [switch]$Offline
+)
 $ErrorActionPreference = 'Stop'
 $testRoot = Join-Path $env:RUNNER_TEMP ('无 Python 验证 ' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $testRoot | Out-Null
-$archive = Join-Path $PSScriptRoot '../Windows-Build/Workbench-Windows-Portable.zip'
+$archive = Join-Path $PSScriptRoot ('../Windows-Build/' + $ArchiveName)
 Expand-Archive -LiteralPath $archive -DestinationPath $testRoot
 $application = Join-Path $testRoot 'ProcessEngineerWorkbench'
 $exe = Join-Path $application 'ProcessEngineerWorkbench.exe'
 if (!(Test-Path -LiteralPath $exe) -or !(Test-Path -LiteralPath (Join-Path $application '_internal/python312.dll'))) {
     throw 'The portable archive is missing the EXE or bundled Python DLL.'
+}
+if ($Offline) {
+    $externalHtml = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $application '启动工程师工作台.html')
+    $internalHtml = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $application '_internal/启动工程师工作台.html')
+    if ($externalHtml -ne $internalHtml -or !$externalHtml.Contains('<meta name="workbench-edition" content="offline">')) {
+        throw 'Both offline HTML resources must contain the same login-free edition.'
+    }
+    $encoded = [regex]::Match($externalHtml, '<script[^>]+src="data:text/javascript;base64,([^"]+)').Groups[1].Value
+    $javascript = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encoded))
+    if ($javascript.Contains('/auth/v1/') -or $javascript.Contains('.supabase.co') -or $javascript.Contains('function Login(){')) {
+        throw 'The offline package still contains an account login integration.'
+    }
 }
 
 $previousPath = $env:PATH
@@ -24,7 +40,9 @@ try {
     if (!$runtime.ok -or !$runtime.frozen -or !$runtime.bundled_modules -or !$runtime.dpapi -or !$runtime.com_runtime -or !$runtime.html -or !$runtime.excel_reader -or !$runtime.excel_bridge) {
         throw 'The EXE did not verify its bundled runtime.'
     }
-    $process = Start-Process -FilePath $exe -ArgumentList '--no-browser', '--documents' -PassThru
+    $launchArguments = @('--no-browser', '--documents')
+    if ($Offline) { $launchArguments += '--offline' }
+    $process = Start-Process -FilePath $exe -ArgumentList $launchArguments -PassThru
     $page = $null
     for ($attempt = 0; $attempt -lt 80; $attempt++) {
         if ($process.HasExited) { throw 'The portable service exited before becoming ready.' }
