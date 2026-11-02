@@ -111,7 +111,7 @@ def build(output,portable_dir=None):
         # Both the preferred external HTML and the bundled fallback must be offline.
         (portable/'_internal'/HTML_NAME).write_text(html,encoding='utf-8')
         info=json.loads((portable/'build-info.json').read_text())
-        info.update(edition='offline',authentication=False,html_sha256=hashlib.sha256(html.encode()).hexdigest())
+        info.update(edition='offline',authentication=False,html_sha256=hashlib.sha256((portable/HTML_NAME).read_bytes()).hexdigest())
         (portable/'build-info.json').write_text(json.dumps(info,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
         result.append(pack(portable,output/'Workbench-Offline-Windows.zip'))
     return result

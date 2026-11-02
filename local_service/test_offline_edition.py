@@ -1,5 +1,6 @@
 """Offline packaging and local launch selection use synthetic files only."""
 import base64
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -61,7 +62,9 @@ class OfflineEditionTests(unittest.TestCase):
                 prefix='ProcessEngineerWorkbench/'
                 self.assertEqual(package.read(prefix+builder.HTML_NAME),package.read(prefix+'_internal/'+builder.HTML_NAME))
                 self.assertEqual(package.read(prefix+'_internal/python312.dll'),b'fixture runtime')
-                self.assertFalse(json.loads(package.read(prefix+'build-info.json'))['authentication'])
+                info=json.loads(package.read(prefix+'build-info.json'))
+                self.assertFalse(info['authentication'])
+                self.assertEqual(info['html_sha256'],hashlib.sha256(package.read(prefix+builder.HTML_NAME)).hexdigest())
 
     def test_offline_launches_never_open_the_website(self):
         origin='http://127.0.0.1:8765'
