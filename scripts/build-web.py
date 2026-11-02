@@ -92,13 +92,6 @@ def build(config_override=None):
     script=b'(window.WorkbenchStartup?.styleReady||Promise.resolve()).then(()=>{\n'+script+'\nwindow.WorkbenchStartup?.ready();}).catch(()=>window.WorkbenchStartup?.fail("工作台未能加载，请重新加载。"));'.encode()
     script_url=asset(('workbench','js'),script)
     css='\n'.join(re.findall(r'<style\b[^>]*>(.*?)</style>',html,re.S))
-    photos=[p for p in ROOT.glob('frontend/login-background.*') if p.suffix.lower() in ('.jpg','.jpeg','.png','.webp')]
-    photo_url=None
-    if photos:
-        photo=photos[0];photo_url='./'+asset(('login-background',photo.suffix[1:].lower()),photo.read_bytes())
-        mime='image/jpeg' if photo.suffix.lower() in ('.jpg','.jpeg') else 'image/'+photo.suffix[1:].lower()
-        photo_data='data:'+mime+';base64,'+base64.b64encode(photo.read_bytes()).decode()
-        css=css.replace(photo_data,photo_url)
     style_url=asset(('workbench','css'),css.encode())
     entry_version=hashlib.sha256(script+b'\0'+css.encode()).hexdigest()[:16]
     startup_assets={'script':compressed_asset(script_url,script),'style':compressed_asset(style_url,css.encode()),'compatible':'./workbench-compatible.html?v='+entry_version}
@@ -117,7 +110,7 @@ def build(config_override=None):
     # A same-origin, self-contained entry still works when a browser cannot
     # download the separate script/CSS assets. Its auth and IndexedDB namespace
     # are identical; it must never redirect back into the failing loader.
-    compatible_css=css.replace(photo_url,photo_data) if photo_url else css
+    compatible_css=css
     compatible=web.replace('</head>',inline_script(loader_source('web-compatible.js'))+'<style>'+compatible_css+'</style></head>',1)
     compatible=compatible.replace('</button></div></main>','</button><a href="./workbench-compatible.html?v='+entry_version+'" style="margin-left:12px;color:#087f5b">重新打开兼容入口</a></div></main>',1)
     embedded=inline_script((ROOT/spreadsheet_url).read_bytes())+inline_script(script.replace(logo_url.encode(),logo_data.encode()))
@@ -137,7 +130,6 @@ def build(config_override=None):
     connect="'self' "+origin if origin else "'self'"
     css=(ROOT/'frontend/account-auth.css').read_text()
     css+='\n*{box-sizing:border-box}body{margin:0;color:#244435;font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}.account-form{width:min(440px,100%)}.account-login>section{width:min(440px,100%)}.account-form button{font:inherit;cursor:pointer;border:0;border-radius:9px;background:#087f5b;color:#fff}.account-form button:disabled{opacity:.6;cursor:wait}.account-form .form-label{display:block}.muted{color:#77897f}.small{font-size:12px}.error-banner{padding:10px;background:#fff1ef;border-radius:8px;color:#a83627}#web-login-status{min-height:1.6em} .account-form input{font:inherit}'
-    if photo_url:css+='\n:root{--login-photo:url("'+photo_url+'")}\n'
     script=loader_source('login-interactions.js')+'\n'+(ROOT/'frontend/web-login.js').read_text()
     page='''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src CONNECT; form-action 'none'; base-uri 'none'">

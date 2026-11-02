@@ -52,11 +52,6 @@ def render(html,config):
         js=js.replace(marker,block+marker)
     html=html[:match.start(2)]+base64.b64encode(js.encode()).decode()+html[match.end(2):]
     account_css=(ROOT/'frontend/account-auth.css').read_text()
-    photos=[p for p in ROOT.glob('frontend/login-background.*') if p.suffix.lower() in ('.jpg','.jpeg','.png','.webp')]
-    if len(photos)>1:raise ValueError('Keep exactly one original login background photograph')
-    if photos:
-        photo=photos[0];mime='image/jpeg' if photo.suffix.lower() in ('.jpg','.jpeg') else 'image/'+photo.suffix[1:].lower()
-        account_css+='\n:root{--login-photo:url("data:'+mime+';base64,'+base64.b64encode(photo.read_bytes()).decode()+'")}\n'
     css='<style id="managed-accounts-style">\n'+account_css+'\n</style>'
     if 'id="managed-accounts-style"' in html:
         html=re.sub(r'<style id="managed-accounts-style">.*?</style>',lambda _:css,html,flags=re.S)
