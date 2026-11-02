@@ -227,6 +227,7 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/workbench-browser-tests/node_modules
           WORKBENCH_TEST_ARTIFACTS: ${{ runner.temp }}/workbench-browser-artifacts
         run: |
+          trap 'echo "::error title=Browser regression command::Failed: $BASH_COMMAND"' ERR
           node scripts/test-cross-unit-calculations.cjs
           node scripts/test-managed-accounts.cjs
           node scripts/test-offline-workbench.cjs
