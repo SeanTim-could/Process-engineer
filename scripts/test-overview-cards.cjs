@@ -11,6 +11,8 @@ const assert=require('node:assert/strict'),{expect}=require('playwright/test'),f
   await api('/api/offline/restore','POST',backup);await p.reload();await nav('运行总览');
   const items=()=>p.locator('[data-overview-grid="kpi"]>[data-overview-card]'),chartItems=()=>p.locator('[data-overview-grid="chart"]>[data-overview-card]');
   await expect(items()).toHaveCount(4);const original=await items().evaluateAll(es=>es.map(e=>e.dataset.overviewCard));assert.equal(await p.locator('[draggable="true"]').count(),0);
+  const accents=()=>items().evaluateAll(es=>es.map(e=>({accent:getComputedStyle(e.firstElementChild).getPropertyValue('--module-accent').trim(),border:getComputedStyle(e.firstElementChild).borderTopColor})));
+  const palette=await accents();assert.equal(new Set(palette.map(x=>x.border)).size,4,'Adjacent slots retain distinct colours regardless of metric/group');
   const raw=(await api('/api/offline/backup')).state.datasets;
   const settings=async()=>{await p.getByRole('button',{name:'总览显示与布局',exact:true}).click();return p.getByRole('dialog',{name:'总览显示与布局',exact:true});};
   // A legacy PI group is a display choice, independent of shared columns and live import metadata.
@@ -27,21 +29,39 @@ const assert=require('node:assert/strict'),{expect}=require('playwright/test'),f
   async function mouseDrag(from,to,hold=520){await from.scrollIntoViewIfNeeded();const a=await from.boundingBox(),b=await to.boundingBox();await p.mouse.move(a.x+40,a.y+a.height/2);await p.mouse.down();await p.waitForTimeout(hold);await p.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:8});await p.mouse.up();}
   // Quick swipes/clicks do not reorder. Deliberate long press reorders without a visible handle.
   await mouseDrag(items().nth(0),items().nth(1),30);assert.deepEqual(await items().evaluateAll(es=>es.map(e=>e.dataset.overviewCard)),original);
-  await mouseDrag(items().nth(0),items().nth(3));await expect.poll(()=>items().last().getAttribute('data-overview-card')).toBe(original[0]);
+  // The actual card shrinks and follows the pointer. Neighbours make room
+  // before pointer-up, while the persisted order remains untouched until drop.
+  const layoutStorage=()=>p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>k.includes(':overview-layout:')))),savedBefore=await layoutStorage();
+  await items().first().scrollIntoViewIfNeeded();let source=await items().first().boundingBox(),destination=await items().last().boundingBox();
+  await p.mouse.move(source.x+40,source.y+60);await p.mouse.down();await p.waitForTimeout(520);
+  const preview=p.locator('.overview-drag-preview');await expect(preview.locator('.kpi-card')).toHaveCount(1);await expect(preview).toHaveAttribute('aria-hidden','true');assert(await preview.evaluate(e=>e.hasAttribute('inert')));
+  assert((await preview.boundingBox()).width<source.width*.8);const previewStart=await preview.boundingBox();
+  await p.mouse.move(destination.x+destination.width/2,destination.y+destination.height/2,{steps:8});await expect.poll(()=>items().last().getAttribute('data-overview-card')).toBe(original[0]);await expect(items().last()).toHaveClass(/is-placeholder/);assert.equal(await items().last().locator('.kpi-card').evaluate(e=>getComputedStyle(e).visibility),'hidden');
+  assert((await preview.boundingBox()).x>previewStart.x+40);assert.deepEqual(await layoutStorage(),savedBefore);assert.deepEqual(await accents(),palette,'Colours belong to slots during the live rearrangement');
+  for(let i=0;i<5;i++)await p.mouse.move(destination.x+destination.width/2+i%2,destination.y+destination.height/2);await expect.poll(()=>items().last().getAttribute('data-overview-card')).toBe(original[0]);
+  await p.screenshot({path:path.join(dir,'drag-preview.png'),fullPage:true});
+  await p.keyboard.press('Escape');await p.mouse.up();await expect(preview).toHaveCount(0);await expect.poll(()=>items().evaluateAll(es=>es.map(e=>e.dataset.overviewCard))).toEqual(original);assert.deepEqual(await layoutStorage(),savedBefore,'Escape restores the order without saving');
+  await items().first().scrollIntoViewIfNeeded();source=await items().first().boundingBox();await p.mouse.move(source.x+40,source.y+60);await p.mouse.down();await p.waitForTimeout(520);await p.mouse.move(8,Math.max(100,source.y),{steps:8});await p.mouse.up();await expect(preview).toHaveCount(0);await expect.poll(()=>items().evaluateAll(es=>es.map(e=>e.dataset.overviewCard))).toEqual(original);assert.deepEqual(await layoutStorage(),savedBefore,'Dropping outside the layout cancels');
+  await mouseDrag(items().nth(0),items().nth(3));await expect.poll(()=>items().last().getAttribute('data-overview-card')).toBe(original[0]);assert.deepEqual(await accents(),palette,'Moving content does not carry its previous slot colour');
   await items().last().focus();await p.keyboard.press('Alt+ArrowUp');await expect.poll(()=>items().nth(2).getAttribute('data-overview-card')).toBe(original[0]);
   const after=await items().evaluateAll(es=>es.map(e=>e.dataset.overviewCard));await p.reload();await expect.poll(()=>items().evaluateAll(es=>es.map(e=>e.dataset.overviewCard))).toEqual(after);
-  const chartBefore=await chartItems().evaluateAll(es=>es.map(e=>e.dataset.overviewCard));await mouseDrag(chartItems().first(),chartItems().last());await expect.poll(()=>chartItems().last().getAttribute('data-overview-card')).toBe(chartBefore[0]);
+  const chartBefore=await chartItems().evaluateAll(es=>es.map(e=>e.dataset.overviewCard));
+  await chartItems().first().scrollIntoViewIfNeeded();source=await chartItems().first().boundingBox();destination=await chartItems().last().boundingBox();
+  await p.mouse.move(source.x+60,source.y+source.height/2);await p.mouse.down();await p.waitForTimeout(520);await expect(preview.locator('svg.recharts-surface')).toHaveCount(1);
+  assert(await preview.evaluate(root=>[...root.querySelectorAll('[id]')].every(n=>n.id.startsWith('overview-preview-'))));
+  assert(await p.evaluate(()=>{const ids=[...document.querySelectorAll('[id]')].map(e=>e.id);return new Set(ids).size===ids.length;}),'SVG snapshot IDs do not collide with the live charts');
+  await p.mouse.move(destination.x+destination.width/2,destination.y+destination.height/2,{steps:8});await expect.poll(()=>chartItems().last().getAttribute('data-overview-card')).toBe(chartBefore[0]);await expect(chartItems().last()).toHaveClass(/is-placeholder/);await p.mouse.up();await expect(preview).toHaveCount(0);
   await p.screenshot({path:path.join(dir,'desktop.png'),fullPage:true});
   // Hide a single card, restore it, and retain the underlying chart/data.
   await items().first().getByRole('button',{name:/隐藏卡片/}).click();await expect(items()).toHaveCount(3);await expect(chartItems()).toHaveCount(2);modal=await settings();await modal.getByRole('button',{name:'恢复显示',exact:true}).click();await modal.getByRole('button',{name:'完成',exact:true}).click();await expect(items()).toHaveCount(4);
   // Touch long press on a narrow viewport, followed by a normal scroll gesture.
   await p.setViewportSize({width:390,height:844});await items().first().scrollIntoViewIfNeeded();const cdp=await f.context.newCDPSession(p),a=await items().first().boundingBox(),b=await items().nth(1).boundingBox(),beforeTouch=await items().first().getAttribute('data-overview-card');
   const touch=(type,x,y)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'?[]:[{x,y,id:1}]});
-  await touch('touchStart',a.x+40,a.y+50);await p.waitForTimeout(550);await touch('touchMove',b.x+45,b.y+50);await touch('touchEnd');await expect.poll(()=>items().nth(1).getAttribute('data-overview-card')).toBe(beforeTouch);
+  await touch('touchStart',a.x+40,a.y+50);await p.waitForTimeout(550);await touch('touchMove',b.x+45,b.y+50);await expect(preview.locator('.kpi-card')).toHaveCount(1);await expect.poll(()=>items().nth(1).getAttribute('data-overview-card')).toBe(beforeTouch);assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await touch('touchEnd');await expect.poll(()=>items().nth(1).getAttribute('data-overview-card')).toBe(beforeTouch);
   const touchOrder=await items().evaluateAll(es=>es.map(e=>e.dataset.overviewCard));await items().first().scrollIntoViewIfNeeded();const initialScroll=await p.evaluate(()=>scrollY),r=await items().first().boundingBox(),startY=Math.min(700,r.y+75);await touch('touchStart',r.x+60,startY);for(let step=1;step<=4;step++){await touch('touchMove',r.x+60,startY-step*30);await p.waitForTimeout(25);}await touch('touchEnd');await expect.poll(()=>p.evaluate(()=>scrollY)).toBeGreaterThan(initialScroll);assert.deepEqual(await items().evaluateAll(es=>es.map(e=>e.dataset.overviewCard)),touchOrder);
   await p.screenshot({path:path.join(dir,'mobile.png'),fullPage:true});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await p.keyboard.press('Escape');modal=await settings();await modal.getByRole('button',{name:'恢复默认排列',exact:true}).click();await modal.getByRole('button',{name:'完成',exact:true}).click();await expect.poll(()=>items().evaluateAll(es=>es.map(e=>e.dataset.overviewCard))).toEqual(original);
   assert.deepEqual((await api('/api/offline/backup')).state.datasets,imported.state.datasets);
-  assert.deepEqual(f.errors,[]);console.log(JSON.stringify({passed:true,artifacts:dir,checks:['Legacy PI hide/restore persists across reload and data restore; raw PI and historical metrics retained','Full schema editor retains PI-only fields','Mouse/touch long press, short gesture cancellation, keyboard movement and independent chart order','Single-card restore, reset and narrow-screen layout']},null,2));
+  assert.deepEqual(f.errors,[]);console.log(JSON.stringify({passed:true,artifacts:dir,checks:['Legacy PI hide/restore persists across reload and data restore; raw PI and historical metrics retained','Full schema editor retains PI-only fields','Mouse/touch card thumbnails follow the pointer, live insertion leaves a stable slot and Escape cancels without saving','Position-based colours stay fixed while content moves; chart preview SVG identifiers are isolated','Single-card restore, reset, keyboard movement and narrow-screen scrolling']},null,2));
  }catch(e){await p.screenshot({path:path.join(dir,'failure.png'),fullPage:true}).catch(()=>{});console.error('Overview artifacts:',dir,f.errors);throw e;}finally{await f.browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
