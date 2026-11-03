@@ -123,6 +123,7 @@ var AnalysisPlots = (() => {
   async function saveSvg(svg,title,png=false){
     if(!svg)throw new Error("请先生成有效图表。");
     const clone=svg.cloneNode(true);clone.querySelectorAll('[data-live-overlay],[data-live-interaction],[data-point-selection-box]').forEach(node=>node.remove());if(!svg.hasAttribute("data-complete-report")&&!svg.hasAttribute("data-complete-chart"))Surface.appendTitle(clone,title);
+    if(png)Surface.transparentPng(clone);
     const source=new XMLSerializer().serializeToString(clone);
     if(!png){download(source,title+".svg","image/svg+xml;charset=utf-8");return;}
     const url=URL.createObjectURL(new Blob([source],{type:"image/svg+xml;charset=utf-8"}));

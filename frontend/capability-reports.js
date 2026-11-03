@@ -26,7 +26,7 @@ var CapabilityReports = (() => {
       const density=(v,sigma)=>sigma>0?sample.stats.n*step*Math.exp(-.5*((v-sample.stats.mean)/sigma)**2)/(sigma*Math.sqrt(2*Math.PI)):0;
       const curve=Array.from({length:200},(_,i)=>{const v=domain[0]+i*(domain[1]-domain[0])/199;return {v,overall:density(v,stats.sd),within:potential?density(v,stats.within):0};});return {counts,curve};});
     const max=Math.max(1,...sides.flatMap(s=>[...s.counts,...s.curve.flatMap(c=>[c.overall,c.within])]))*1.08;
-    sides.forEach((s,j)=>{const top=y+j*rowH+22,bottom=top+rowH-47,ys=v=>bottom-v/max*(bottom-top);elements.push(txt(x+width/2,top-9,j?"之后":"之前",{key:"label"+j,textAnchor:"middle",fontWeight:600,fontSize:14}),h("rect",{key:"frame"+j,x:L,y:top,width:E-L,height:bottom-top,fill:"white",stroke:"#cbd7dd"}));
+    sides.forEach((s,j)=>{const top=y+j*rowH+22,bottom=top+rowH-47,ys=v=>bottom-v/max*(bottom-top);elements.push(txt(x+width/2,top-9,j?"之后":"之前",{key:"label"+j,textAnchor:"middle",fontWeight:600,fontSize:14}),h("rect",{key:"frame"+j,x:L,y:top,width:E-L,height:bottom-top,"data-chart-background":"true",fill:"white",stroke:"#cbd7dd"}));
       for(let i=1;i<=3;i++)elements.push(line(L,ys(max*i/4),E,ys(max*i/4),{key:`grid${j}-${i}`,stroke:"#e4ebef"}));
       s.counts.forEach((count,i)=>{if(count)elements.push(h("rect",{key:`bar${j}-${i}`,x:xScale(bins[i].from)+.5,y:ys(count),width:Math.max(1,xScale(bins[i].to)-xScale(bins[i].from)-1),height:bottom-ys(count),fill:"#7ba5d4",fillOpacity:.8,stroke:"#547eaa",strokeWidth:.6}));});
       for(const [key,color,dash] of [["overall","#c74441",undefined],...potential?[["within","#7c8188","7 5"]]:[]])elements.push(h("path",{key:`curve${j}-${key}`,d:s.curve.map((p,i)=>`${i?"L":"M"}${xScale(p.v)} ${ys(p[key])}`).join(" "),fill:"none",stroke:color,strokeWidth:2,strokeDasharray:dash}));
@@ -43,7 +43,7 @@ var CapabilityReports = (() => {
   }
   function control(points,x,y,width,height,label,zero=false){
     const L=x+52,E=x+width-10,T=y+25,B=y+height-30,domain=scaleDomain(points.flatMap(p=>[p.value,p.lower,p.upper]));if(zero)domain[0]=0;
-    const xs=i=>L+(i-1)/Math.max(1,(points.at(-1)?.index??1)-1)*(E-L),ys=v=>B-(v-domain[0])/(domain[1]-domain[0])*(B-T),elements=[txt(x+width/2,y+5,label,{textAnchor:"middle",fontSize:14}),h("rect",{x:L,y:T,width:E-L,height:B-T,fill:"white",stroke:"#cad6dd"})];
+    const xs=i=>L+(i-1)/Math.max(1,(points.at(-1)?.index??1)-1)*(E-L),ys=v=>B-(v-domain[0])/(domain[1]-domain[0])*(B-T),elements=[txt(x+width/2,y+5,label,{textAnchor:"middle",fontSize:14}),h("rect",{x:L,y:T,width:E-L,height:B-T,"data-chart-background":"true",fill:"white",stroke:"#cad6dd"})];
     for(let i=0;i<3;i++){const v=domain[0]+i*(domain[1]-domain[0])/2;elements.push(line(L,ys(v),E,ys(v),{key:"g"+i,stroke:"#e5edf1"}),txt(L-7,ys(v)+4,f(v,1),{key:"t"+i,textAnchor:"end",fontSize:11}));}
     if(!points.some(p=>M.finite(p.value)))return h("g",null,...elements,txt((L+E)/2,(T+B)/2,"有效子组不足",{textAnchor:"middle",fontSize:14}));
     const selected=[],size=Math.max(1,Math.ceil(points.length/260));let segment=0;const tagged=points.filter(p=>!p.excluded).map(p=>{if(!M.finite(p.value))segment++;return {...p,segment};});
@@ -54,7 +54,7 @@ var CapabilityReports = (() => {
     for(let i=0;i<5;i++){const n=1+Math.round(i*((points.at(-1)?.index??1)-1)/4);elements.push(txt(xs(n),B+18,String(n),{key:"x"+i,textAnchor:"middle",fontSize:11}));}return h("g",null,...elements);
   }
   function probability(prepared,x,y,width,height,label){
-    const values=[...prepared.values].sort((a,b)=>a-b),s=prepared.stats,L=x+48,E=x+width-10,T=y+25,B=y+height-30,domain=scaleDomain(values),zs=values.map((_,i)=>C.inverseNormal((i+.625)/(values.length+.25))),zmax=Math.max(2.6,Math.abs(zs[0]??0),Math.abs(zs.at(-1)??0)),xs=v=>L+(v-domain[0])/(domain[1]-domain[0])*(E-L),ys=v=>B-(v+zmax)/(2*zmax)*(B-T),out=[txt(x+width/2,y+5,label,{textAnchor:"middle",fontSize:14}),h("rect",{x:L,y:T,width:E-L,height:B-T,fill:"white",stroke:"#cad6dd"})];
+    const values=[...prepared.values].sort((a,b)=>a-b),s=prepared.stats,L=x+48,E=x+width-10,T=y+25,B=y+height-30,domain=scaleDomain(values),zs=values.map((_,i)=>C.inverseNormal((i+.625)/(values.length+.25))),zmax=Math.max(2.6,Math.abs(zs[0]??0),Math.abs(zs.at(-1)??0)),xs=v=>L+(v-domain[0])/(domain[1]-domain[0])*(E-L),ys=v=>B-(v+zmax)/(2*zmax)*(B-T),out=[txt(x+width/2,y+5,label,{textAnchor:"middle",fontSize:14}),h("rect",{x:L,y:T,width:E-L,height:B-T,"data-chart-background":"true",fill:"white",stroke:"#cad6dd"})];
     for(const p of [.01,.1,.5,.9,.99]){const z=C.inverseNormal(p);if(Math.abs(z)<=zmax)out.push(line(L,ys(z),E,ys(z),{key:p,stroke:"#e4ebef"}),txt(L-5,ys(z)+3,String(Math.round(p*100))+"%",{key:"t"+p,textAnchor:"end",fontSize:10}));}
     if(s.sd>0){const za=Math.max(-zmax,(domain[0]-s.mean)/s.sd),zb=Math.min(zmax,(domain[1]-s.mean)/s.sd);out.push(line(xs(s.mean+za*s.sd),ys(za),xs(s.mean+zb*s.sd),ys(zb),{stroke:"#c6524c",strokeWidth:1.4}));}
     const step=Math.max(1,Math.ceil(values.length/900));for(let i=0;i<values.length;i++)if(i%step===0||i===values.length-1)out.push(h("circle",{key:"p"+i,cx:xs(values[i]),cy:ys(zs[i]),r:1.8,fill:"#303a40"}));

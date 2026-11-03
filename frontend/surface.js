@@ -50,8 +50,28 @@ var Surface=(()=>{
  function Logo(){return h('img',{className:'company-logo',src:logo,alt:'ADISSEO · A Sinochem Company',width:210,height:74,decoding:'async'});}
  function svgText(x,y,value,props={}){return h('text',{x,y,...props},t(String(value)));}
  function appendTitle(svg,title,x=24,y=23,size=16){const W=Number((svg.getAttribute('viewBox')??'0 0 900 400').split(/[ ,]+/)[2]),ns=svg.namespaceURI,text=svg.ownerDocument.createElementNS(ns,'text'),label=t(title),width=Math.max(200,W-x-24);text.setAttribute('x',x);text.setAttribute('y',y);text.setAttribute('font-size',size);text.setAttribute('text-anchor','start');text.setAttribute('fill','#243b31');let parts=[],part='',used=0;for(const char of label){const step=han.test(char)?size:size*.56;if(used+step>width&&part){parts.push(part);part='';used=0;}part+=char;used+=step;}if(part)parts.push(part);parts=parts.slice(0,2);parts.forEach((line,i)=>{const span=svg.ownerDocument.createElementNS(ns,'tspan');span.setAttribute('x',x);if(i)span.setAttribute('dy',size+3);span.textContent=line;text.appendChild(span);});svg.appendChild(text);return text;}
+ // Only canvas/panel backgrounds become transparent. White text, markers and
+ // data shapes retain their paint; never remove white pixels after rasterizing.
+ function markBackgrounds(svg){
+  for(const root of [svg,...svg.querySelectorAll('svg')]){
+   const box=(root.getAttribute('viewBox')??'').split(/[ ,]+/).map(Number),width=box[2]||Number(root.getAttribute('width')),height=box[3]||Number(root.getAttribute('height'));
+   for(const rect of root.children){
+    if(rect.localName!=='rect')continue;
+    const fill=(rect.style.fill||rect.getAttribute('fill')||'').replace(/\s/g,'').toLowerCase(),white=['white','#fff','#ffffff','rgb(255,255,255)','rgba(255,255,255,1)'].includes(fill),w=rect.getAttribute('width'),h=rect.getAttribute('height');
+    if(white&&Number(rect.getAttribute('x')??0)===(box[0]||0)&&Number(rect.getAttribute('y')??0)===(box[1]||0)&&(w==='100%'||Number(w)>=width)&&(h==='100%'||Number(h)>=height))rect.setAttribute('data-chart-background','true');
+   }
+  }
+  return svg;
+ }
+ function transparentPng(svg){
+  markBackgrounds(svg);
+  for(const root of [svg,...svg.querySelectorAll('svg')])root.style.setProperty('background','transparent','important');
+  for(const background of svg.querySelectorAll('[data-chart-background]'))background.style.setProperty('fill','none','important');
+  return svg;
+ }
  function exportSvg(source,title){
   const doc=new DOMParser().parseFromString(source,'image/svg+xml'),svg=doc.documentElement;if(svg.tagName!=='svg')return source;
+  markBackgrounds(svg);
   const box=(svg.getAttribute('viewBox')??'0 0 '+(svg.getAttribute('width')??900)+' '+(svg.getAttribute('height')??360)).split(/[ ,]+/).map(Number),W=box[2],H=box[3];
   for(const text of svg.querySelectorAll('text')){if(neutralText.has((text.getAttribute('fill')??'').toLowerCase()))text.setAttribute('fill','#000000');const y=Number(text.getAttribute('y')),label=text.textContent;if(han.test(label)&&y<45&&!text.closest('[transform]')||/各曲线保留|空白不补零|缺失值不补|统计使用全部|已跨过缺失|个有效点|均值使用全部有效/.test(label)){text.remove();continue;}if(y>H*.78&&/有效|缺失|覆盖|基于|绘制|抽样|积分/.test(label)){const at=label.search(/有效|缺失|覆盖|基于|绘制|抽样|积分/),prefix=label.slice(0,at).replace(/[·；;，,\s]+$/,'');if(at>0&&/·/.test(prefix))text.textContent=prefix;else text.remove();}}
   if(active==='en')for(const text of svg.querySelectorAll('text,title'))for(const node of text.childNodes)if(node.nodeType===3)node.nodeValue=t(node.nodeValue);
@@ -76,5 +96,5 @@ var Surface=(()=>{
   R.useLayoutEffect(()=>{page=current;document.documentElement.dataset.workbenchPage=current;syncTheme();scan(document.getElementById('root'));},[current,revision]);
   R.useEffect(()=>{let frame=null,roots=new Set();const observer=new MutationObserver(records=>{for(const item of records){const node=item.target.nodeType===1?item.target:item.target.parentElement;if(node&&!node.closest('svg,script,style'))roots.add(node);}if(!frame&&roots.size)frame=requestAnimationFrame(()=>{frame=null;for(const node of roots)scan(node);roots.clear();});});observer.observe(document.getElementById('root'),{childList:true,subtree:true,characterData:true});const theme=new MutationObserver(syncTheme);theme.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});return()=>{observer.disconnect();theme.disconnect();if(frame)cancelAnimationFrame(frame);};},[]);
  }
- return {en,t,localize,weekday,monthLabel,language,validLanguage,previewLanguage,useRefresh,LanguageSettings,Logo,chartTitle,comparisonTitle,pageTitle,use,svgText,exportSvg,appendTitle,localizeDocument};
+ return {en,t,localize,weekday,monthLabel,language,validLanguage,previewLanguage,useRefresh,LanguageSettings,Logo,chartTitle,comparisonTitle,pageTitle,use,svgText,exportSvg,appendTitle,localizeDocument,transparentPng};
 })();

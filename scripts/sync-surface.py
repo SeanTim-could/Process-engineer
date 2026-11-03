@@ -3,6 +3,9 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TITLE=(ROOT/'scripts/surface-root-title-original.txt').read_text()
 PAIRS=[
+ ('let i=(n.getAttribute("viewBox")??"").split(/[ ,]+/).map(Number),o=i[2]', 'Surface.transparentPng(n);let i=(n.getAttribute("viewBox")??"").split(/[ ,]+/).map(Number),o=i[2]'),
+ ('return d.fillStyle="#ffffff",d.fillRect(0,0,f.width,f.height),d.drawImage(c,0,0,f.width,f.height),', 'return d.drawImage(c,0,0,f.width,f.height),'),
+
  ('function QG({workspace:e,trends:t=!1}){', 'function QG(props){return (0,Z.jsx)(OverviewCards.Workspace,{...props,render:workspace=>(0,Z.jsx)(QGContent,{...props,workspace})})}function QGContent({workspace:e,trends:t=!1}){'),
  ('className:"shared-range-heading",children:[', 'className:"shared-range-heading",children:[(0,Z.jsx)(OverviewCards.Controls,{}),'),
  ('(0,Z.jsx)("div",{className:"kpi-grid",children:p.filter', '(0,Z.jsx)(OverviewCards.Grid,{kind:"kpi",className:"kpi-grid",children:p.filter'),
