@@ -9,7 +9,17 @@ var OEEView=(()=>{
   const group=h('select',{'aria-label':'OEE采样分组',value:config.group??'',disabled:!selected,onChange:e=>update({group:e.target.value})},!selected&&h('option',{value:config.group??''},'请先选择出料流量'),selected&&!selected.groups.includes(config.group)&&h('option',{value:config.group??''},'原分组已不可用'),...(selected?.groups??[]).map(group=>h('option',{key:group,value:group},group||'未分组')));
   return h('fieldset',{className:'oee-settings',disabled,'aria-label':'OEE / MDC设置'},h('legend',null,'月度 OEE / MDC'),h('div',{className:'mapping-grid'},h('label',{className:'form-label'},'单日最大产能 MDC（t/d）',h('input',{type:'number',min:0,step:'any','aria-label':'单日最大产能 MDC（t/d）',value:config.mdc??'',placeholder:'吨/天',onChange:e=>update({mdc:e.target.value})})),h('label',{className:'form-label'},'出料流量（生产指标）',metric),h('label',{className:'form-label'},'OEE采样分组',group)),h('div',{className:'note-line'},'随本页保存设置生效。仅选择生产质量流量，例如 kg/h 或 t/h；累计产量统一换算为吨。'),error&&h('div',{role:'alert'},error,h('button',{type:'button',className:'text-button',onClick:()=>setRetry(v=>v+1)},'重试')));
  }
- function Overview({unitId,refreshKey}){
+ function Card({unitId,from='',to=''}){
+  const [data,setData]=R.useState(null),[error,setError]=R.useState(''),[tick,setTick]=R.useState(0),memory=WorkspaceMemory.useStore('oee-card'),pointsVersion=PointExclusions.useVersion(),query=new URLSearchParams({view:'card',unitId,from,to}).toString();
+  R.useEffect(()=>{const timer=setInterval(()=>setTick(v=>v+1),60000);return()=>clearInterval(timer);},[]);
+  R.useEffect(()=>{let live=true;setError('');api('/api/oee?'+query).then(value=>live&&setData({...value,query})).catch(e=>live&&setError(e.message));return()=>{live=false;};},[query,tick,memory.version,pointsVersion]);
+  const active=data?.query===query?data:null,current=active?.current,device=$r().state.settings.units.find(u=>u.id===unitId),number=PeriodComparison.number;
+  return h('section',{className:'kpi-card kpi-0 oee-period-card','aria-label':(device?.name??'')+' · OEE','data-oee-period-card':unitId},
+   h('div',{className:'kpi-top'},h('span',null,(device?.name??'')+' · OEE'),h(OverviewCards.Tools)),
+   h('div',{className:'kpi-value kpi-period-value'},h('span',{'data-oee-period-value':current?.oee??''},current?number(current.oee):'—',h('small',null,'%')),active&&h(PeriodComparison.Values,{result:active.comparison,unit:'%',basis:'OEE按所选时段理论产能与已勾选损失计算，上期使用相同口径。'})),
+   h('div',{className:'kpi-bottom'},h('div',null,h('span',null,'所选时段 OEE'),current?.target!=null&&h('small',null,Surface.t('计入损失')+' '+number(current.countedLoss)+' t / '+Surface.t('理论产能')+' '+number(current.target)+' t'),h('div',{className:'oee-period-status',role:error?'alert':undefined},error||current?.status||(active?'请选择起止时间':'正在读取OEE…')))));
+ }
+ function Page({unitId,refreshKey}){
   const [month,setMonth]=R.useState(()=>br().slice(0,7)),[selected,setSelected]=R.useState(unitId),[data,setData]=R.useState(null),[error,setError]=R.useState(''),[busy,setBusy]=R.useState(false),[tick,setTick]=R.useState(0),[mode,setMode]=R.useState('view'),[draft,setDraft]=R.useState(null),[pendingCount,setPendingCount]=R.useState(null),serial=R.useRef(0),lock=R.useRef(false),memory=WorkspaceMemory.useStore('oee'),pointsVersion=PointExclusions.useVersion();
   R.useEffect(()=>setSelected(unitId),[unitId]);
   R.useEffect(()=>{const timer=setInterval(()=>setTick(v=>v+1),60000);return()=>clearInterval(timer);},[]);
@@ -57,5 +67,5 @@ var OEEView=(()=>{
     h('g',{'data-live-overlay':'true',pointerEvents:'none'},box&&h('rect',{'data-oee-selection':'true',x:Math.min(...box),y:T,width:Math.abs(box[1]-box[0]),height:B-T,fill:'#d75252',fillOpacity:.18,stroke:'#d75252',strokeDasharray:'5 3'}),hover&&!box&&h('g',null,h('line',{x1:x(hover.time),x2:x(hover.time),y1:T,y2:B,stroke:'#7d8e89',strokeDasharray:'4 4'}),h('text',{x:L+8,y:T+18,fontSize:11},stamp(hover.time)+' · '+fmt(hover.value)+' '+frame.column.unit))),
     h('rect',{'data-live-interaction':'true','data-oee-interaction':'true',x:L,y:T,width:E-L,height:B-T,fill:'transparent',tabIndex:0,'aria-label':'拖动选择OEE时段',style:{cursor:busy?'wait':mode==='view'?'crosshair':'ew-resize',touchAction:mode==='view'?'pan-y':'none'},onPointerDown:down,onPointerMove:move,onPointerUp:up,onPointerCancel:cancel,onLostPointerCapture:cancel,onPointerLeave:()=>{if(!drag.current)setHover(null);},onKeyDown:e=>{if(e.key==='Escape'){e.preventDefault();cancel();}}})),!frame.points.length&&h('div',{className:'note-line'},'所选月份暂无出料流量曲线。'));
  }
- return {Settings,Overview};
+ return {Settings,Page,Card};
 })();

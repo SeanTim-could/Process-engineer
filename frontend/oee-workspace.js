@@ -42,8 +42,8 @@ var OEEWorkspace=(()=>{
    }
   }return result;
  }
- function frame(state,device,month,edit,now,plot=false){
-  const config=unit(device.oee),bounds=M.monthRange(month,now),base={unitId:device.id,name:device.name,mdc:config.mdc,config,bounds,edit:edit??{losses:[]}},entry=state.datasets[config.sourceId],column=entry?.dataset.columns.find(c=>c.key===config.key),meta=column?metadata(column):null;
+ function frame(state,device,month,edit,now,plot=false,selectedBounds){
+  const config=unit(device.oee),bounds=selectedBounds??M.monthRange(month,now),base={unitId:device.id,name:device.name,mdc:config.mdc,config,bounds,edit:edit??{losses:[]}},entry=state.datasets[config.sourceId],column=entry?.dataset.columns.find(c=>c.key===config.key),meta=column?metadata(column):null;
   let status=!config.mdc?'未设置MDC':!config.sourceId?'未选择出料流量':!entry||entry.dataset.role!=='ledger'||entry.dataset.status!=='ready'||!entry.dataset.unitIds.includes(device.id)||!meta?'出料流量来源不可用':null;
   if(status)return {...base,status,actual:null,target:null,oee:null,points:[]};
   // Use the exact selected sampling group once, even if it is also hidden in
@@ -64,9 +64,25 @@ var OEEWorkspace=(()=>{
   const results=devices.map(device=>{const config=unit(device.oee),edit=saved.edits.find(e=>signature(e)===signature({...config,unitId:device.id,month}));return frame(state,device,month,edit,now,device===selected);});
   return {month,now,revision:saved.revision,units:results.map(({points,...rest})=>rest),chart:results.find(r=>r.unitId===selected?.id)??null};
  }
+ // Overview periods may cross months. Deduct only the intersecting portion of
+ // checked losses from the current outlet binding; do not average daily OEE.
+ function period(state,unitId,range,now=Date.now()){
+  const device=state.settings.units.find(u=>u.id===unitId&&!u.archived);if(!device)throw new Error('OEE装置不可用。');
+  const previousRange=PeriodMath.previous(range),empty={count:0,mean:null};
+  if(!previousRange)return {unitId,name:device.name,current:null,previous:null,comparison:{range:null,previousRange:null,current:empty,previous:empty,status:'no-range'}};
+  const config=unit(device.oee),saved=normalize(state.analytics?.oee),edits=saved.edits.filter(e=>e.unitId===unitId&&e.sourceId===config.sourceId&&e.key===config.key&&e.group===config.group);
+  const calculate=selected=>{
+   const to=Math.max(selected.from,Math.min(selected.to,now)),bounds={from:selected.from,to,days:(to-selected.from)/M.DAY},losses=edits.flatMap(e=>e.losses.filter(l=>l.from<to&&l.to>bounds.from));
+   return frame(state,device,null,{losses},now,false,bounds);
+  },current=calculate(range),previous=calculate(previousRange),stats=value=>({count:value.coveredHours>0?1:0,mean:value.oee}),comparison={range:current.bounds,previousRange:previous.bounds,current:stats(current),previous:stats(previous),status:current.oee===null?'no-current':previous.oee===null?'no-previous':'ok'};
+  return {unitId,name:device.name,current,previous,comparison};
+ }
  async function request(req){
   const state=$r().state,url=new URL(req.url);
-  if(req.method==='GET')return Response.json(url.searchParams.has('catalog')?{choices:choices(state)}:compute(state,url.searchParams.get('month')??br().slice(0,7),url.searchParams.get('unitId')));
+  if(req.method==='GET'){
+   if(url.searchParams.get('view')==='card')return Response.json(period(state,url.searchParams.get('unitId'),yr(url.searchParams.get('from')??'',url.searchParams.get('to')??'')));
+   return Response.json(url.searchParams.has('catalog')?{choices:choices(state)}:compute(state,url.searchParams.get('month')??br().slice(0,7),url.searchParams.get('unitId')));
+  }
   if(req.method!=='PUT')throw new Error('OEE操作无效。');
   const body=await Ha(req),saved=normalize(state.analytics?.oee);
   if(body.expectedRevision!==saved.revision)throw new Error('OEE筛选已在其他窗口更新，请刷新后重试。');
@@ -80,5 +96,5 @@ var OEEWorkspace=(()=>{
   const next=normalize({...saved,revision:saved.revision+1,edits});qt().analytics={...state.analytics,oee:next};
   return Response.json(compute(state,body.month,device.id));
  }
- return {unit,normalize,metadata,choices,compute,request};
+ return {unit,normalize,metadata,choices,compute,period,request};
 })();

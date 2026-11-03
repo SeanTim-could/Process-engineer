@@ -1,10 +1,10 @@
 // Read-only analysis over account-local data; saved chart recipes live in backups.
 var DataAnalysis = (() => {
   const R=Se(),h=R.createElement,M=AnalysisMath,P=AnalysisPlots;
-  const groups=[{id:"operations",label:"运行概览",items:["dashboard","overview","live-data","trends","lims"]},
+  const groups=[{id:"operations",label:"运行概览",items:["dashboard","overview","oee","live-data","trends","lims"]},
     {id:"analytics",label:"数据分析",items:["pca","timeseries","capability","plotting","charts","comparison","analysis"]},
     {id:"data",label:"数据管理",items:["data","excel-sync","settings"]},{id:"personal",label:"文档与个人",items:["files","documents","profile"]}];
-  const pages=[{id:"pca",label:"PCA监控",en:"PCA",icon:jo},{id:"timeseries",label:"时序分析",en:"TIME SERIES",icon:Pm},{id:"capability",label:"前后能力分析",en:"BEFORE / AFTER",icon:jo},{id:"plotting",label:"自由作图",en:"CHART WORKSPACE",icon:Mn}];
+  const pages=[{id:"oee",label:"OEE统计",en:"OEE",icon:jo},{id:"pca",label:"PCA监控",en:"PCA",icon:jo},{id:"timeseries",label:"时序分析",en:"TIME SERIES",icon:Pm},{id:"capability",label:"前后能力分析",en:"BEFORE / AFTER",icon:jo},{id:"plotting",label:"自由作图",en:"CHART WORKSPACE",icon:Mn}];
   function Nav({items,current,onSelect,reportCount}){
     const active=groups.find(g=>g.items.includes(current))?.id,[open,setOpen]=R.useState(()=>new Set([active]));
     R.useEffect(()=>setOpen(old=>new Set([...old,active])),[active]);

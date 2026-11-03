@@ -60,7 +60,8 @@ const site='https://seantim-could.github.io/Process-engineer/';
   const screenshot=path.join(require('node:os').tmpdir(),'workbench-delayed-style.png');await p.screenshot({path:screenshot});
   await p.getByRole('link',{name:'使用兼容模式打开',exact:true}).waitFor({state:'visible',timeout:15000});
   releaseStyle();
-  await p.waitForFunction(()=>document.getElementById('web-startup-status')?.textContent.includes('12%'));
+  // Completing CSS advances progress; its percentage varies with bundle size.
+  await p.waitForFunction(()=>{const percent=Number(document.getElementById('web-startup-status')?.textContent.match(/（(\d+)%）/)?.[1]);return percent>0&&percent<100;});
   assert.equal(await p.locator('.offline-bar').count(),0,'Download progress remains visible until the script arrives');
   releaseBundle();
   await p.waitForFunction(()=>document.querySelector('.offline-bar')?.textContent.includes('速度测试员'));

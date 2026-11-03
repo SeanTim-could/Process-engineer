@@ -1127,5 +1127,8 @@
   "请填写损失项目名称。": "Enter a loss name.",
   "请选择出料流量": "Select outlet flow",
   "随本页保存设置生效。仅选择生产质量流量，例如 kg/h 或 t/h；累计产量统一换算为吨。": "Use Save settings to apply. Select a production mass flow such as kg/h or t/h; output is converted to tonnes.",
-  "请填写有效的损失起止时间。": "Enter valid loss start and end times."
+  "请填写有效的损失起止时间。": "Enter valid loss start and end times.",
+  "OEE统计": "OEE statistics",
+  "所选时段 OEE": "Selected-period OEE",
+  "OEE按所选时段理论产能与已勾选损失计算，上期使用相同口径。": "OEE uses theoretical capacity and checked losses for each period, with the same definition for the previous period."
 }

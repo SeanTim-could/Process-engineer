@@ -7,7 +7,9 @@ PAIRS=[
  ('D?(0,Ce.jsxs)(Ce.Fragment,{children:[(0,Ce.jsxs)("div",{className:"mapping-grid"', 'D?(0,Ce.jsxs)(Ce.Fragment,{children:[(0,Ce.jsx)(OEEView.Settings,{unit:D,onChange:H,disabled:d}),(0,Ce.jsxs)("div",{className:"mapping-grid"'),
  ('else if(r.pathname==="/api/pca"){a=await PCAWorkspace.request(e)}', 'else if(r.pathname==="/api/oee"){a=await OEEWorkspace.request(e)}else if(r.pathname==="/api/pca"){a=await PCAWorkspace.request(e)}'),
  ('"/api/dashboard","/api/pca"].includes(r.pathname)', '"/api/dashboard","/api/pca","/api/oee"].includes(r.pathname)'),
- ('c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,{settings:d}),', 'c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,{settings:d}),'),
+ ('c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,{settings:d}),', 'c==="oee"&&(0,B.jsx)(OEEView.Page,{unitId:t.view.unitId,refreshKey:Sr}),c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,{settings:d}),'),
+ ('["live-data","excel-sync","dashboard","pca"].includes(c),c)', '["live-data","excel-sync","dashboard","pca","oee"].includes(c),c)'),
+ ('["timeseries","capability","plotting","excel-sync","live-data","dashboard","pca"].includes(c),zs=', '["timeseries","capability","plotting","excel-sync","live-data","dashboard","pca","oee"].includes(c),zs='),
 
  ('let i=(n.getAttribute("viewBox")??"").split(/[ ,]+/).map(Number),o=i[2]', 'Surface.transparentPng(n);let i=(n.getAttribute("viewBox")??"").split(/[ ,]+/).map(Number),o=i[2]'),
  ('return d.fillStyle="#ffffff",d.fillRect(0,0,f.width,f.height),d.drawImage(c,0,0,f.width,f.height),', 'return d.drawImage(c,0,0,f.width,f.height),'),
@@ -59,6 +61,7 @@ PAIRS=[
  ('className:"button-row chart-actions",children:[(0,ue.jsx)(Dashboard.LegacyPin', 'className:"button-row chart-actions",children:[(0,ue.jsx)(OverviewCards.Tools,{}),(0,ue.jsx)(Dashboard.LegacyPin'),
 ]
 def prepare(js):
+ js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')
  js=js.replace("Surface.use(c);ExcelSync.useImports","ExcelSync.useImports")
  for old,new in reversed(PAIRS):

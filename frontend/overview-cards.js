@@ -73,7 +73,7 @@ var OverviewCards=(()=>{
     // Drag frames update layout consumers, not the underlying measurements,
     // statistics or chart component tree. Local chart controls still own state.
     const content=R.useMemo(()=>render({...workspace,points,allPoints}),[render,workspace,points,allPoints]);
-    const value={prefs,save,setOpen,groups,drag,dragRef,active,reorder,announce,startDrag,cancelDrag,commitDrag,projectDrag};
+    const value={prefs,save,setOpen,groups,drag,dragRef,active,reorder,announce,startDrag,cancelDrag,commitDrag,projectDrag,view:workspace.view};
     return h(Context.Provider,{value},content,drag&&h('div',{ref:preview,className:'overview-drag-preview','aria-hidden':true,style:{width:drag.width*drag.scale,height:drag.height*drag.scale,transform:previewTransform(position.current,drag)}},h('div',{ref:previewContent,className:'overview-drag-snapshot',style:{width:drag.width,height:drag.height,transform:`scale(${drag.scale})`}})),h('div',{className:'overview-layout-status',role:'status'},error||message),open&&h(Settings,{onClose:()=>setOpen(false)}));
   }
   function Settings({onClose}){
@@ -97,6 +97,8 @@ var OverviewCards=(()=>{
   function Grid({kind,className,children}){
     const c=R.useContext(Context);
     if(!c)return h('div',{className},children);
+    const device=$r().state.settings.units.find(u=>u.id===c.view.unitId&&!u.archived);
+    if(kind==='kpi'&&device?.oee?.mdc&&device.oee.sourceId&&device.oee.key)children=[children,h(OEEView.Card,{key:'oee','data-overview-key':JSON.stringify(['__oee__','']),'data-overview-label':device.name+' · OEE',unitId:device.id,from:c.view.from,to:c.view.to})];
     return h(SortableGrid,{c,kind,className,children});
   }
   function SortableGrid({c,kind,className,children}){
