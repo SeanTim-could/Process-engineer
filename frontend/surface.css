@@ -122,3 +122,6 @@ body.overview-dragging,body.overview-dragging *{cursor:grabbing!important;user-s
 .overview-hidden-card{display:flex;align-items:center;justify-content:space-between;gap:12px;overflow-wrap:anywhere}
 @media(max-width:760px){.overview-chart-grid{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.overview-card-item{transition:none}}
+.button.chart-action.chart-action-labelled,.button-row>.button.chart-action.chart-action-labelled{width:auto!important;min-width:112px!important;flex:0 0 auto!important;padding:5px 9px!important;white-space:nowrap!important}
+.button.chart-action.chart-action-labelled>svg{width:19px!important;height:19px!important}
+.chart-action-labelled>span{font-size:12px;line-height:1.2}

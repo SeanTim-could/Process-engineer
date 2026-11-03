@@ -20,10 +20,10 @@ var PointExclusions = (() => {
   }
   const recordView=records=>entry().points.some(p=>p.sourceId.startsWith("raw:"))?[...records]:records;
   async function api(url,method="GET",body){const response=await T0(url,{method,headers:body?{"Content-Type":"application/json"}:undefined,body:body?JSON.stringify(body):undefined}),data=await response.json();if(!response.ok)throw new Error(data.error);return data;}
-  function Tools({sourceId,keys,group,allGroups=true,from="",to="",queries,title="",disabled=false}){
+  function Tools({sourceId,keys,group,allGroups=true,from="",to="",queries,title="",disabled=false,labelled=false}){
     const [open,setOpen]=R.useState(false);useVersion();
     const date=(value,end=false)=>/^\d{4}-\d{2}-\d{2}$/.test(value)?value+(end?"T23:59":"T00:00"):value.replace(" ","T");
-    return h(R.Fragment,null,h("button",{type:"button",className:"button small-button",disabled,"aria-label":title?"删除异常点："+title:undefined,onClick:()=>setOpen(true)},"删除异常点"),open&&h(Editor,{query:{sourceId,keys,group,allGroups,from:date(from),to:date(to,true)},queries,onClose:()=>setOpen(false)}));
+    return h(R.Fragment,null,h("button",{type:"button",className:"button small-button",disabled,"data-chart-action-label":labelled?"true":undefined,"aria-label":title?"删除异常点："+title:undefined,onClick:()=>setOpen(true)},"删除异常点"),open&&h(Editor,{query:{sourceId,keys,group,allGroups,from:date(from),to:date(to,true)},queries,onClose:()=>setOpen(false)}));
   }
   function Editor({query,queries,onClose}){
     const namespace=AccountAuth.storageKey(),root=R.useRef(null),[catalog,setCatalog]=R.useState(null),[choice,setChoice]=R.useState(query),[data,setData]=R.useState(null),[selected,setSelected]=R.useState(new Map()),[restoring,setRestoring]=R.useState(false),[search,setSearch]=R.useState(""),[page,setPage]=R.useState(1),[error,setError]=R.useState(""),[busy,setBusy]=R.useState(false);

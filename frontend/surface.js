@@ -28,7 +28,8 @@ var Surface=(()=>{
   const content=v=>typeof v==='string'?v:Array.isArray(v)?v.map(content).join(''):'';
   const text=content(props.children).trim(),kind=text==='加入Dashboard'||text==='正在加入…'?'pin':text==='删除异常点'?'exclude':['导出 PNG','PNG'].includes(text)?'png':text==='导出 SVG'?'svg':/\bdashboard-action\b/.test(props.className??'')?({'↕':'drag','上移':'up','下移':'down','跨列显示':'wide','恢复普通宽度':'narrow','编辑卡片':'edit','拆分图表':'split','移除卡片':'remove'}[text]??null):null;
   if(!kind)return props;
-  return {...props,className:props.className+' chart-action','data-chart-action':kind,'aria-label':props['aria-label']??text,title:props.title??text,...type==='button'?{type:props.type??'button'}:{},children:chartIcon(kind)};
+  const labelled=props['data-chart-action-label']==='true';
+  return {...props,className:props.className+' chart-action'+(labelled?' chart-action-labelled':''),'data-chart-action':kind,'aria-label':props['aria-label']??text,title:props.title??text,...type==='button'?{type:props.type??'button'}:{},children:labelled?h(R.Fragment,null,chartIcon(kind),h('span',null,text)):chartIcon(kind)};
  }
  function localize(type,props){
   props=present(type,props);
