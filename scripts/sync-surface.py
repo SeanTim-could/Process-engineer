@@ -3,6 +3,12 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TITLE=(ROOT/'scripts/surface-root-title-original.txt').read_text()
 PAIRS=[
+ ('archived:!!s.archived}}),n=new Set(cc.map', 'archived:!!s.archived,...(s.oee===void 0?{}:{oee:OEEWorkspace.unit(s.oee)})}}),n=new Set(cc.map'),
+ ('D?(0,Ce.jsxs)(Ce.Fragment,{children:[(0,Ce.jsxs)("div",{className:"mapping-grid"', 'D?(0,Ce.jsxs)(Ce.Fragment,{children:[(0,Ce.jsx)(OEEView.Settings,{unit:D,onChange:H,disabled:d}),(0,Ce.jsxs)("div",{className:"mapping-grid"'),
+ ('else if(r.pathname==="/api/pca"){a=await PCAWorkspace.request(e)}', 'else if(r.pathname==="/api/oee"){a=await OEEWorkspace.request(e)}else if(r.pathname==="/api/pca"){a=await PCAWorkspace.request(e)}'),
+ ('"/api/dashboard","/api/pca"].includes(r.pathname)', '"/api/dashboard","/api/pca","/api/oee"].includes(r.pathname)'),
+ ('c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,{settings:d}),', 'c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),c==="excel-sync"&&(0,B.jsx)(ExcelSync.Page,{settings:d}),'),
+
  ('let i=(n.getAttribute("viewBox")??"").split(/[ ,]+/).map(Number),o=i[2]', 'Surface.transparentPng(n);let i=(n.getAttribute("viewBox")??"").split(/[ ,]+/).map(Number),o=i[2]'),
  ('return d.fillStyle="#ffffff",d.fillRect(0,0,f.width,f.height),d.drawImage(c,0,0,f.width,f.height),', 'return d.drawImage(c,0,0,f.width,f.height),'),
 

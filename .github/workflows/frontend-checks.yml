@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login, codex/previous-period-means, codex/plain-period-comparison, codex/overview-card-layout, codex/overview-drag-preview, codex/imr-point-removal, codex/transparent-png-export]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login, codex/previous-period-means, codex/plain-period-comparison, codex/overview-card-layout, codex/overview-drag-preview, codex/imr-point-removal, codex/transparent-png-export, codex/monthly-oee]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -47,6 +47,8 @@ on:
       - 'scripts/test-process-capability-and-points.cjs'
       - 'scripts/test-imr-point-removal.cjs'
       - 'scripts/test-transparent-png.cjs'
+      - 'scripts/test-oee-workspace.cjs'
+      - 'scripts/test-oee-math.cjs'
       - 'scripts/png-alpha-fixture.cjs'
       - 'scripts/test-bulk-metric-removal.cjs'
       - 'scripts/test-data-analysis.cjs'
@@ -117,6 +119,8 @@ on:
       - 'scripts/test-process-capability-and-points.cjs'
       - 'scripts/test-imr-point-removal.cjs'
       - 'scripts/test-transparent-png.cjs'
+      - 'scripts/test-oee-workspace.cjs'
+      - 'scripts/test-oee-math.cjs'
       - 'scripts/png-alpha-fixture.cjs'
       - 'scripts/test-bulk-metric-removal.cjs'
       - 'scripts/test-data-analysis.cjs'
@@ -184,6 +188,9 @@ jobs:
           node --check frontend/period-comparison.js
           node --check frontend/overview-cards.js
           node --check frontend/surface.js
+          node --check frontend/oee-math.js
+          node --check frontend/oee-workspace.js
+          node --check frontend/oee-view.js
           node --check frontend/metric-removal.js
           node --check frontend/dashboard-totals.js
           node --check frontend/dashboard-overlay.js
@@ -214,6 +221,7 @@ jobs:
           node scripts/test-live-series.cjs
           node scripts/test-chart-axes.cjs
           node scripts/test-period-math.cjs
+          node scripts/test-oee-math.cjs
           node scripts/test-analysis-math.cjs
           node scripts/test-analysis-point-math.cjs
           node scripts/test-capability-math.cjs
@@ -262,6 +270,7 @@ jobs:
           node scripts/test-process-capability-and-points.cjs
           node scripts/test-imr-point-removal.cjs
           node scripts/test-transparent-png.cjs
+          node scripts/test-oee-workspace.cjs
           node scripts/test-custom-domain-sync.cjs
           node scripts/test-excel-sync.cjs
           python scripts/build-offline.py --output "$RUNNER_TEMP/workbench-offline"

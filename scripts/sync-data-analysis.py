@@ -13,6 +13,9 @@ def render(html):
     match=re.search(r'(<script[^>]+src="data:text/javascript;base64,)([^"]+)',html)
     if not match:raise ValueError('Standalone script not found')
     js=base64.b64decode(match[2]).decode()
+    surface_spec=importlib.util.spec_from_file_location('surface_sync',ROOT/'scripts/sync-surface.py')
+    surface=importlib.util.module_from_spec(surface_spec);surface_spec.loader.exec_module(surface)
+    js=surface.prepare(js)
     pca_hooks=[
       ('else if(r.pathname==="/api/analytics")', 'else if(r.pathname==="/api/pca"){a=await PCAWorkspace.request(e)}else if(r.pathname==="/api/analytics")'),
       ('c==="dashboard"&&(0,B.jsx)(Dashboard.Page,', 'c==="pca"&&(0,B.jsx)(PCAPage.Page,{refreshKey:Sr}),c==="dashboard"&&(0,B.jsx)(Dashboard.Page,'),
@@ -22,9 +25,6 @@ def render(html):
     ]
     for old,new in pca_hooks:
         if new in js:js=js.replace(new,old)
-    surface_spec=importlib.util.spec_from_file_location('surface_sync',ROOT/'scripts/sync-surface.py')
-    surface=importlib.util.module_from_spec(surface_spec);surface_spec.loader.exec_module(surface)
-    js=surface.prepare(js)
     navigation_hooks=[
       ('function B1(e="production",suspendSeries=false)', 'function B1(e="production",suspendSeries=false,viewPage=e==="lims"?"lims":"overview")'),
       ('t=B1("production",["live-data","excel-sync","dashboard"].includes(c))', 't=B1("production",["live-data","excel-sync","dashboard"].includes(c),c)'),
@@ -68,7 +68,7 @@ def render(html):
     ]
     for old,new in dashboard_hooks:
         if new in js:js=js.replace(new,old)
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['vendor/tiny-pinyin.js','surface.js','metric-removal.js','workspace-memory.js','overview-cards.js','view-defaults.js','analysis-math.js','period-math.js','analysis-point-math.js','formula-syntax.js','chart-axes.js','analysis-plots.js','period-comparison.js','point-exclusions.js','analysis-drafts.js','capability-math.js','pca-math.js','pca-workspace.js','pca-charts.js','pca-page.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js','dashboard-totals.js','dashboard-overlay.js','dashboard.js','dashboard-page.js'])
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['vendor/tiny-pinyin.js','surface.js','metric-removal.js','workspace-memory.js','overview-cards.js','view-defaults.js','analysis-math.js','period-math.js','analysis-point-math.js','formula-syntax.js','chart-axes.js','analysis-plots.js','period-comparison.js','point-exclusions.js','analysis-drafts.js','capability-math.js','pca-math.js','pca-workspace.js','pca-charts.js','pca-page.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','oee-math.js','oee-workspace.js','oee-view.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js','dashboard-totals.js','dashboard-overlay.js','dashboard.js','dashboard-page.js'])
     code=code.replace('/*COMPANY_LOGO*/\'\'',json.dumps('data:image/webp;base64,'+base64.b64encode((ROOT/'frontend/company-logo.webp').read_bytes()).decode())).replace('/*ENGLISH_UI*/{}',(ROOT/'frontend/english-ui.json').read_text())
     block=START+'\n'+code+'\n'+END
     if START in js:

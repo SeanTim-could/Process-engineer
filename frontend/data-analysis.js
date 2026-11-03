@@ -29,7 +29,7 @@ var DataAnalysis = (() => {
     if(value===undefined)return {version:1,revision:0,charts:[],drafts:{},exclusionRevision:0,excludedPoints:[],dashboard:Dashboard.normalize(),pca:PCAWorkspace.normalize()};
     if(!value||value.version!==1||!Number.isSafeInteger(value.revision)||value.revision<0||!Array.isArray(value.charts)||value.charts.length>24)throw new Error("作图区备份格式无效，最多保存24张图表。");
     if(value.exclusionRevision!==undefined&&(!Number.isSafeInteger(value.exclusionRevision)||value.exclusionRevision<0))throw new Error("异常点版本无效。");
-    const ids=new Set();return {version:1,pca:PCAWorkspace.normalize(value.pca),dashboard:Dashboard.normalize(value.dashboard),revision:value.revision,exclusionRevision:value.exclusionRevision??0,excludedPoints:AnalysisPointMath.normalize(value.excludedPoints),drafts:AnalysisDrafts.normalize(value.drafts),charts:value.charts.map(chart=>{
+    const ids=new Set();return {version:1,...(value.oee===undefined?{}:{oee:OEEWorkspace.normalize(value.oee)}),pca:PCAWorkspace.normalize(value.pca),dashboard:Dashboard.normalize(value.dashboard),revision:value.revision,exclusionRevision:value.exclusionRevision??0,excludedPoints:AnalysisPointMath.normalize(value.excludedPoints),drafts:AnalysisDrafts.normalize(value.drafts),charts:value.charts.map(chart=>{
       if(!chart||!/^chart_[\w-]{1,80}$/.test(chart.id)||ids.has(chart.id))throw new Error("图表编号无效或重复。");ids.add(chart.id);
       for(const key of ["createdAt","updatedAt"])if(typeof chart[key]!=="string"||!Number.isFinite(Date.parse(chart[key])))throw new Error("图表保存时间无效。");
       return {...chartConfig(chart),id:chart.id,createdAt:chart.createdAt,updatedAt:chart.updatedAt};

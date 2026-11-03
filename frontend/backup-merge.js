@@ -120,6 +120,10 @@ var BackupMerge = (() => {
     }
     const logIds=new Set(next.importLog.map(l=>l.id));
     for(const log of incoming.importLog??[]){const mapped=remap(log);if(!logIds.has(mapped.id)){next.importLog.push(mapped);logIds.add(mapped.id);}}
+    // Initial copies of a new device carry its OEE loss selections. Existing
+    // administrator device settings and selections remain the owner's choices.
+    const newOeeEdits=(incoming.analytics?.oee?.edits??[]).map(edit=>remap(edit)).filter(edit=>!current.settings.units.some(unit=>unit.id===edit.unitId));
+    if(newOeeEdits.length){const own=OEEWorkspace.normalize(next.analytics?.oee);next.analytics={...next.analytics,oee:OEEWorkspace.normalize({...own,revision:own.revision+1,edits:[...own.edits,...newOeeEdits]})};}
     // Validate all limits, references, formulas and snapshots before any write.
     // Personal details, preferences, local links and current filters come from
     // the administrator's workspace, never from the submitted backup.
