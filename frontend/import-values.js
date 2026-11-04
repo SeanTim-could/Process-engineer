@@ -1,7 +1,7 @@
 // Normalize newly imported measurements; never change timestamps, missing data,
 // signed changes, or application-generated formula results.
 var ImportValues=(()=>{
- function quantity(column){const meta=xr(column.unit??'');return !column.formula&&column.kind!=='limit'&&(!!meta?.totalUnit||['mass','volume','normal-volume','energy'].includes(meta?.dimension)||['quantity','counter'].includes(column.kind));}
+ function quantity(column){const meta=xr(column.unit??''),amount=meta?.totalUnit?xr(meta.totalUnit):meta;return !column.formula&&column.kind!=='limit'&&(['mass','volume','normal-volume','energy'].includes(amount?.dimension)||['quantity','counter'].includes(column.kind));}
  function value(value,column){return typeof value==='number'&&value<0&&quantity(column)?0:value;}
  function record(row,settings){
   if(!row||typeof row!=='object'||Array.isArray(row))return row;
