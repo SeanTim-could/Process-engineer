@@ -4,27 +4,36 @@ var DashboardTotals=(()=>{
  function normalize(v={}){if(!['month','today','fixed'].includes(v.rangeMode??'month')||!Array.isArray(v.hidden??[])||(v.hidden??[]).length>2000)throw new Error('汇总设置无效。');const from=v.from??'',to=v.to??'';if(typeof from!=='string'||typeof to!=='string'||from.length>23||to.length>23||M.time(from)!==null&&M.time(to)!==null&&M.time(from)>M.time(to))throw new Error('汇总时间无效。');return {rangeMode:v.rangeMode??'month',from,to,hidden:[...new Set(v.hidden??[])].filter(s=>typeof s==='string'&&s.length<250)};}
  const clean=s=>s.normalize('NFKC').toLowerCase().replace(/\s+/g,'');
  function compute(state,board){
-  const settings=normalize(board.statistics),mode=board.rangeMode==='cards'?settings.rangeMode:board.rangeMode,range=mode==='today'?ViewDefaults.today():mode==='month'?ViewDefaults.analysis():{from:board.rangeMode==='fixed'?board.from:settings.from,to:board.rangeMode==='fixed'?board.to:settings.to},from=M.time(range.from),end=M.time(range.to),bounds={from:from??-Infinity,to:end===null?Infinity:end+(range.exclusive?0:60000)},units=state.settings.units.filter(u=>!u.archived),provenance=LiveData.provenance(state),rows=[],seen=new Set();
+  const settings=normalize(board.statistics),mode=board.rangeMode==='cards'?settings.rangeMode:board.rangeMode,range=mode==='today'?ViewDefaults.today():mode==='month'?ViewDefaults.analysis():{from:board.rangeMode==='fixed'?board.from:settings.from,to:board.rangeMode==='fixed'?board.to:settings.to},from=M.time(range.from),end=M.time(range.to),bounds={from:from??-Infinity,to:end===null?Infinity:end+(range.exclusive?0:60000)},units=state.settings.units.filter(u=>!u.archived),provenance=LiveData.provenance(state),chosen=new Map();
   const sources=DataAnalysis.sources(state).sort((a,b)=>Number(a.id.startsWith('raw:'))-Number(b.id.startsWith('raw:')));
   for(const source of sources){
-   const raw=source.id.startsWith('raw:'),entry=raw?DataAnalysis.series(state,source.id):state.datasets[source.id],unitId=raw?source.id.slice(4):entry.dataset.unitIds[0],unit=units.find(u=>u.id===unitId);if(!unit)continue;
-   const columns=raw?source.columns.filter(c=>{const u=xr(c.unit),metric=yf(state.settings,unit).find(m=>m.id===c.key);return u?.totalUnit||['mass','volume','normal-volume','energy'].includes(u?.dimension)||!u&&metric?.mode==='sum';}).map(c=>({...c,kind:xr(c.unit)?.totalUnit?'rate':'quantity',aggregation:xr(c.unit)?.totalUnit?'auto':'sum',showTotal:true})):entry.dataset.columns.filter(c=>c.enabled&&c.kind!=='limit'),points=PointExclusions.apply(source.id,entry.points),pi=new Set(provenance.filter(p=>p.unitId===unitId).map(p=>p.group));
-   for(const column of columns){
-    if(column.source==='lims'||!raw&&!['sum','integral','difference'].includes(column.aggregation==='auto'?lc(column).method:column.aggregation))continue;
-    // Prefer one history/daily group per Beijing day; PI fills uncovered days.
-    // Keep every reading within that chosen group: no artificial resampling.
-    const candidates=points.filter(p=>p.unit===unitId&&Object.hasOwn(p.values,column.key)),daily=new Map(),score=p=>/日均|日报|daily/i.test(p.group)?0:pi.has(p.group)?2:1;
-    for(const p of candidates){const day=new Date(p.time+28800000).toISOString().slice(0,10),old=daily.get(day);if(!old||score(p)<old.score)daily.set(day,{group:p.group,score:score(p)});}
-    const selected=candidates.filter(p=>daily.get(new Date(p.time+28800000).toISOString().slice(0,10)).group===p.group).map(p=>({...p,group:'total'})).sort((a,b)=>a.time-b.time),stats=Qs(selected,column,bounds);
-    if(!stats.canTotal)continue;
-    const meta=xr(stats.sourceUnit),dimension=meta?.dimension??clean(stats.sourceUnit),id=source.id+':'+column.key,key=clean(column.label)+':'+dimension,dedup=unitId+':'+key;
-    if(seen.has(dedup))continue;if(stats.totalValue!==null)seen.add(dedup);
-    const base=stats.totalValue===null?null:stats.sourceValue*(meta?.factor??1);rows.push({id,key,unitId,unitName:unit.name,label:column.label,sourceId:source.id,dimension,base,unit:stats.sourceUnit,groups:[...new Set(candidates.filter(p=>p.time>=bounds.from&&p.time<bounds.to&&daily.get(new Date(p.time+28800000).toISOString().slice(0,10)).group===p.group).map(p=>p.group))],hidden:settings.hidden.includes(id)});
+   const raw=source.id.startsWith('raw:'),entry=raw?DataAnalysis.series(state,source.id):state.datasets[source.id],points=PointExclusions.apply(source.id,entry.points);
+   for(const unitId of raw?[source.id.slice(4)]:entry.dataset.unitIds){
+    const unit=units.find(u=>u.id===unitId);if(!unit)continue;
+    const columns=raw?source.columns.filter(c=>{const u=xr(c.unit),metric=yf(state.settings,unit).find(m=>m.id===c.key);return u?.totalUnit||['mass','volume','normal-volume','energy'].includes(u?.dimension)||!u&&metric?.mode==='sum';}).map(c=>({...c,kind:xr(c.unit)?.totalUnit?'rate':'quantity',aggregation:xr(c.unit)?.totalUnit?'auto':'sum',showTotal:true})):entry.dataset.columns.filter(c=>c.enabled&&c.kind!=='limit'),pi=new Set(provenance.filter(p=>p.unitId===unitId).map(p=>p.group));
+    for(const column of columns){
+     const input=xr(column.unit),method=input?.totalUnit&&column.kind!=='counter'?'integral':column.aggregation==='auto'?lc(column).method:column.aggregation,totalUnit=method==='integral'?input?.totalUnit:column.unit;
+     if(column.source==='lims'||!['sum','integral','difference'].includes(method)||!totalUnit||xr(totalUnit)?.totalUnit)continue;
+     // Prefer one history/daily group per Beijing day; PI fills uncovered days.
+     // Keep every reading within that chosen group: no artificial resampling.
+     const candidates=points.filter(p=>p.unit===unitId&&Object.hasOwn(p.values,column.key)),daily=new Map(),score=p=>/日均|日报|daily/i.test(p.group)?0:pi.has(p.group)?2:1;
+     for(const p of candidates){const day=new Date(p.time+28800000).toISOString().slice(0,10),old=daily.get(day);if(!old||score(p)<old.score)daily.set(day,{group:p.group,score:score(p)});}
+     const selected=candidates.filter(p=>daily.get(new Date(p.time+28800000).toISOString().slice(0,10)).group===p.group).map(p=>({...p,group:'total'})).sort((a,b)=>a.time-b.time),stats=Qs(selected,{...column,aggregation:method},bounds);
+     if(!stats.canTotal)continue;
+     // Qs may show a mean in the original rate unit when no integral exists.
+     // Summary cards must retain the cumulative dimension, even without data.
+     const meta=xr(totalUnit),dimension=meta?.dimension??clean(totalUnit),id=source.id+':'+column.key+(!raw&&unitId!==entry.dataset.unitIds[0]?':'+unitId:''),key=clean(column.label)+':'+dimension,dedup=unitId+':'+key,value=method==='integral'?stats.coverage?.value:stats.sourceValue,base=Number.isFinite(value)?value*(meta?.factor??1):null,rank=(base===null?2:0)+(method==='integral'?1:0),old=chosen.get(dedup);
+     // A recorded interval quantity / counter takes precedence over a derived
+     // flow integral. An unavailable quantity may fall back to a valid integral.
+     if(old&&old.rank<=rank)continue;
+     chosen.set(dedup,{id,key,unitId,unitName:unit.name,label:column.label,sourceId:source.id,dimension,base,unit:totalUnit,rank,groups:[...new Set(candidates.filter(p=>p.time>=bounds.from&&p.time<bounds.to&&daily.get(new Date(p.time+28800000).toISOString().slice(0,10)).group===p.group).map(p=>p.group))],hidden:settings.hidden.includes(id)});
+    }
    }
   }
+  const rows=[...chosen.values()];
   const grouped=new Map();for(const row of rows.filter(r=>!r.hidden)){if(!grouped.has(row.key))grouped.set(row.key,{key:row.key,label:row.label,dimension:row.dimension,rows:[]});grouped.get(row.key).rows.push(row);}
   const groups=[...grouped.values()].map(g=>{const available=g.rows.filter(r=>Number.isFinite(r.base)),total=available.length?available.reduce((n,r)=>n+r.base,0):null,display=g.dimension==='mass'?(Math.abs(total??0)>=1000?{unit:'t',factor:1000}:{unit:'kg',factor:1}):g.dimension==='energy'?{unit:'kWh',factor:1}:g.dimension==='volume'?{unit:'m³',factor:1}:g.dimension==='normal-volume'?{unit:'Nm³',factor:1}:{unit:g.rows[0].unit,factor:1};return {...g,total:total===null?null:total/display.factor,unit:display.unit,rows:units.map(u=>{const own=g.rows.filter(r=>r.unitId===u.id),valid=own.filter(r=>Number.isFinite(r.base));return {unitId:u.id,unitName:u.name,value:valid.length?valid.reduce((s,r)=>s+r.base,0)/display.factor:null,groups:[...new Set(own.flatMap(r=>r.groups))]};})};});
-  return {settings,range,groups,choices:rows.map(({base,...r})=>r),units:units.map(u=>({id:u.id,name:u.name}))};
+  return {settings,range,groups,choices:rows.map(({base,rank,...r})=>r),units:units.map(u=>({id:u.id,name:u.name}))};
  }
  function View({data,busy,onSave}){
   const [open,setOpen]=ViewDefaults.useState('dashboard-total-settings',false),[draft,setDraft]=R.useState(null);R.useEffect(()=>setDraft(data?.settings),[JSON.stringify(data?.settings)]);if(!data)return null;const config=draft??data.settings,update=p=>setDraft(c=>({...c,...p}));
