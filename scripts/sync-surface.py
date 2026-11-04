@@ -3,6 +3,12 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TITLE=(ROOT/'scripts/surface-root-title-original.txt').read_text()
 PAIRS=[
+ ('(s[l.key]=u??null)', '(s[l.key]=ImportValues.value(u??null,l))'),
+ ('a=await i(e)}let n=$r();', 'a=await i(await ImportValues.request(e))}let n=$r();'),
+ ('function HK(e,t,r){', 'function HK(e,t,r){return typeof DailyFlow!=="undefined"&&DailyFlow?DailyFlow.integral(e,t,r,HKInstant)??HKInstant(e,t,r):HKInstant(e,t,r)}function HKInstant(e,t,r){'),
+ ('function Qs(e,t,r){', 'function Qs(e,t,r){let result=QsInstant(e,t,r);return typeof DailyFlow!=="undefined"&&DailyFlow?DailyFlow.summarize(result,e,t,r,HKInstant):result}function QsInstant(e,t,r){'),
+ ('maxGapHours:o.maxGapHours??null,showTotal:', 'maxGapHours:o.maxGapHours??null,...o.flowBasis===undefined?{}:{flowBasis:DailyFlow.basis(o.flowBasis)},showTotal:'),
+ ('(0,se.jsx)(RG,{column:o}),xr(o.unit)?.totalUnit&&', '(0,se.jsx)(RG,{column:o}),(0,se.jsx)(DailyFlow.Settings,{column:o,onChange:patch=>i(o.key,patch)}),xr(o.unit)?.totalUnit&&'),
  ('children:"\\u8D44\\u6599\\u3001\\u4E3B\\u9898\\u8272\\u548C\\u6587\\u4EF6\\u7D22\\u5F15\\u5747\\u5305\\u542B\\u5728\\u201C另存为\\u201D\\u4E2D\\u3002"', 'children:"另存为包含主题、语言和文件索引，不包含姓名、工号或登录信息。"'),
  ('state:{...t.state,profile:AccountAuth.decorate(t.state.profile)}});else if', 'state:WorkspaceFiles.exportState(t.state)});else if'),
  ('let i=DC(await e.json());Object.assign(qt(),i)', 'let i=WorkspaceFiles.restoreState(DC(await e.json()),t.state);Object.assign(qt(),i)'),

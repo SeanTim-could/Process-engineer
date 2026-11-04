@@ -18,7 +18,7 @@ var DashboardTotals=(()=>{
      // Keep every reading within that chosen group: no artificial resampling.
      const candidates=points.filter(p=>p.unit===unitId&&Object.hasOwn(p.values,column.key)),daily=new Map(),score=p=>/日均|日报|daily/i.test(p.group)?0:pi.has(p.group)?2:1;
      for(const p of candidates){const day=new Date(p.time+28800000).toISOString().slice(0,10),old=daily.get(day);if(!old||score(p)<old.score)daily.set(day,{group:p.group,score:score(p)});}
-     const selected=candidates.filter(p=>daily.get(new Date(p.time+28800000).toISOString().slice(0,10)).group===p.group).map(p=>({...p,group:'total'})).sort((a,b)=>a.time-b.time),stats=Qs(selected,{...column,aggregation:method},bounds);
+     const selected=candidates.filter(p=>daily.get(new Date(p.time+28800000).toISOString().slice(0,10)).group===p.group).sort((a,b)=>a.time-b.time),stats=Qs(selected,{...column,aggregation:method},bounds);
      if(!stats.canTotal)continue;
      // Qs may show a mean in the original rate unit when no integral exists.
      // Summary cards must retain the cumulative dimension, even without data.
