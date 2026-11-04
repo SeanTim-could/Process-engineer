@@ -16,8 +16,9 @@ var DashboardTotals=(()=>{
      const input=xr(column.unit),method=input?.totalUnit&&column.kind!=='counter'?'integral':column.aggregation==='auto'?lc(column).method:column.aggregation,totalUnit=method==='integral'?input?.totalUnit:column.unit;
      if(column.source==='lims'||!['sum','integral','difference'].includes(method)||!totalUnit||xr(totalUnit)?.totalUnit)continue;
      // Prefer one history/daily group per Beijing day; PI fills uncovered days.
+     // A blank-only group cannot suppress another group with valid values.
      // Keep every reading within that chosen group: no artificial resampling.
-     const candidates=points.filter(p=>p.unit===unitId&&Object.hasOwn(p.values,column.key)),daily=new Map(),score=p=>/日均|日报|daily/i.test(p.group)?0:pi.has(p.group)?2:1;
+     const candidates=points.filter(p=>p.unit===unitId&&Object.hasOwn(p.values,column.key)),daily=new Map(),score=p=>(Number.isFinite(p.values[column.key])?0:3)+(/日均|日报|daily/i.test(p.group)?0:pi.has(p.group)?2:1);
      for(const p of candidates){const day=new Date(p.time+28800000).toISOString().slice(0,10),old=daily.get(day);if(!old||score(p)<old.score)daily.set(day,{group:p.group,score:score(p)});}
      const selected=candidates.filter(p=>daily.get(new Date(p.time+28800000).toISOString().slice(0,10)).group===p.group).sort((a,b)=>a.time-b.time),stats=Qs(selected,{...column,aggregation:method},bounds);
      if(!stats.canTotal)continue;
