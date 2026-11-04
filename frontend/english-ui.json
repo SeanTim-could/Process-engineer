@@ -1163,5 +1163,19 @@
   "恢复所选时段": "Restore selected period",
   "所选时段逐点计算结果的算术均值": "Arithmetic mean of per-sample formula results over the selected period",
   "折线为每日逐点计算结果的均值；区间汇总值由整个所选时段的累计量代入公式计算。": "The curve shows daily means of per-sample formula results; the period summary evaluates the formula using cumulative input quantities.",
-  "折线显示每日逐点计算结果的均值；区间汇总值先累计所选时段内各输入指标，再代入公式，例如累计出料 ÷ 累计进料。": "The curve shows daily means of per-sample formula results. For the period summary, first total each input, then evaluate the formula, e.g. cumulative output / cumulative feed."
+  "折线显示每日逐点计算结果的均值；区间汇总值先累计所选时段内各输入指标，再代入公式，例如累计出料 ÷ 累计进料。": "The curve shows daily means of per-sample formula results. For the period summary, first total each input, then evaluate the formula, e.g. cumulative output / cumulative feed.",
+  "代入值（累计量 / 均值）": "Formula input (period total / mean)",
+  "区间均值": "Period mean",
+  "区间累计量": "Period total",
+  "累计量优先，其余指标使用区间均值": "Use period totals where available and period means for other inputs",
+  "每日结果均值：": "Daily-result mean:",
+  "公式指标使用每日计算结果。": "Calculated metrics use daily formula results.",
+  "所选时段每日计算结果的算术均值": "Arithmetic mean of daily formula results over the selected period",
+  "公式指标按每日结果用于分析，原始指标保留原始采样点。": "Analysis uses daily formula results; raw metrics retain their original samples.",
+  "所选时段没有有效均值。": "No valid mean is available for the selected period.",
+  "所选指标没有数据。": "No observations are available for this metric.",
+  "区间公式累计量": "Period total from a calculated metric",
+  "已按所选损失计算，缺失时段按0产量计": "Calculated from selected losses; missing periods use zero production",
+  "所选时段没有数据的部分按0产量计；仅勾选的损失项目扣减OEE，数据覆盖率仍按实际覆盖计算。": "Uncovered periods use zero production. Only checked losses reduce OEE, and coverage still reflects actual observations.",
+  "折线显示每日逐点计算结果的均值；区间汇总值优先使用各输入的区间累计量；百分数等无累计量的输入使用区间均值，再代入公式。": "The curve shows daily means of per-sample formula results. The overview formula uses period totals where available and period means for inputs such as percentages."
 }

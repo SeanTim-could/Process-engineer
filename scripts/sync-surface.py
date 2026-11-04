@@ -95,6 +95,12 @@ PAIRS += [('(0,Z.jsx)("span",{children:IntervalFormulas.is(b)?"区间计算值":
 
 PAIRS += [('children:[b.showTotal!==!1&&S.canTotal?(0,Z.jsxs)("b",{children:[nt(S.totalValue,3)," ",S.unit]})', 'children:[S.interval?(0,Z.jsx)(IntervalFormulas.TableValue,{value:S.interval}):b.showTotal!==!1&&S.canTotal?(0,Z.jsxs)("b",{children:[nt(S.totalValue,3)," ",S.unit]})'), ('className:"summary-detail",children:b.showTotal!==!1&&S.canTotal?S.detail:', 'className:"summary-detail",children:S.interval?(S.interval.reason??"按区间累计值代入公式"):b.showTotal!==!1&&S.canTotal?S.detail:')]
 
+PAIRS += [('className:"kpi-value kpi-period-value",children:[', 'className:"kpi-value kpi-period-value",children:IntervalFormulas.is(b)?(0,Z.jsx)(IntervalFormulas.KPIValue,{column:b,stats:S,range:u}):[')]
+
+PAIRS += [('let D=f===S?.id?s:cachedSeries?.points??[],z=S?to({dataset:f===S.id?u??S:cachedSeries?.dataset??S,points:D},e).points:[];return', 'let D=f===S?.id?s:cachedSeries?.points??[],z=S?to({dataset:f===S.id?u??S:cachedSeries?.dataset??S,points:D},e).points:[];if(S&&["overview","trends","charts","lims","analysis","comparison"].includes(viewPage))z=FormulaDailyData.view($r().state,S.id,z,{columns:S.columns});return'), ('async function va(e,t,r,a){', 'async function va(e,t,r,a){let result=await vaOriginal(e,t,r,a);return e==="GET"&&r&&result.dataset?{...result,points:FormulaDailyData.view($r().state,r,result.points,{columns:result.dataset.columns})}:result}async function vaOriginal(e,t,r,a){'), ('children:[S.interval?(0,Z.jsx)(IntervalFormulas.TableValue,{value:S.interval}):b.showTotal', 'children:[b.showTotal'), ('className:"summary-detail",children:S.interval?(S.interval.reason??"按区间累计值代入公式"):b.showTotal', 'className:"summary-detail",children:b.showTotal')]
+
+PAIRS += [('FormulaDailyData.view($r().state,S.id,z,{columns:S.columns})', 'FormulaDailyData.view($r().state,S.id,z,{columns:S.columns.filter(column=>Ql(column)===e)})')]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')

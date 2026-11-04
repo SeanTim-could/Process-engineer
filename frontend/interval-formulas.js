@@ -42,6 +42,11 @@ var IntervalFormulas=(()=>{
   return rows;
  }
  const cumulativeUnit=unit=>xr(unit)?.totalUnit??unit;
+ function inputMethod(column){
+  const meta=xr(column.unit);
+  if(meta?.dimension==='percentage')return 'mean';
+  return column.kind==='counter'?'difference':meta?.totalUnit?'integral':['sum','difference'].includes(column.aggregation)?column.aggregation:lc(column).method;
+ }
  const failure=(message,unit='',operands=[])=>({value:null,unit,operands,reason:message});
  function evaluate(column,range,state=$r().state,visiting=new Set()){
   const formula=column.formula,home=formula?.interval,operands=[],unit=cumulativeUnit(column.unit);
@@ -53,29 +58,36 @@ var IntervalFormulas=(()=>{
    const ast=TE(formula.expression,name=>formula.bindings[name]),memo=new Map();
    const result=Jh(ast,{}, {},new Map(),(name,binding)=>{
     if(memo.has(name))return memo.get(name);
-    let operand;
+    let operand,basis;
     try{
      const sourceId=binding.datasetId??home.datasetId,unitId=binding.unitId??home.unitId,entry=state.datasets[sourceId],input=entry?.dataset.columns.find(c=>c.key===binding.key);
      if(!input||entry.dataset.role!=='ledger'||entry.dataset.status!=='ready'||!entry.dataset.unitIds.includes(unitId)||!state.settings.units.some(u=>u.id===unitId&&!u.archived))throw new Error('引用装置、数据集或指标已不可用。');
+     const method=inputMethod(input),cumulative=['sum','difference','integral'].includes(method);
+     basis=cumulative?'cumulative':'mean';
      let amount,inputUnit,detail,group=binding.group;
      if(is(input)){
-      const nested=evaluate(input,range,state,next);if(!finite(nested.value))throw new Error(nested.reason);
-      amount=nested.value;inputUnit=nested.unit;detail='区间公式结果';group=input.formula.interval.group;
+      if(cumulative){
+       const nested=evaluate(input,range,state,next);if(!finite(nested.value))throw new Error(nested.reason);
+       amount=nested.value;inputUnit=nested.unit;detail='区间公式累计量';
+      }else{
+       const trend=daily(input,range,state);if(!finite(trend.mean))throw new Error(trend.reason??'所选时段没有有效均值。');
+       amount=trend.mean;inputUnit=input.unit;detail='区间均值';
+      }
+      group=input.formula.interval.group;
      }else{
-      const candidates=entry.points.filter(p=>p.unit===unitId&&Object.hasOwn(p.values,binding.key)),groups=[...new Set(candidates.map(p=>p.group))];
+      const sourceRows=input.formula?FormulaDailyData.view(state,sourceId,entry.points,{columns:[input]}):entry.points,candidates=sourceRows.filter(p=>p.unit===unitId&&Object.hasOwn(p.values,binding.key)),groups=[...new Set(candidates.map(p=>p.group))];
       if(group===undefined)group=!binding.datasetId&&groups.includes(home.group)?home.group:groups.length===1?groups[0]:undefined;
-      if(group===undefined)throw new Error(groups.length?'存在多个分组，请选择具体采样点。':'没有可累计的数据。');
-      const rows=PointExclusions.apply(sourceId,candidates.filter(p=>p.group===group).sort((a,b)=>a.time-b.time)),meta=xr(input.unit),method=input.kind==='counter'?'difference':meta?.totalUnit?'integral':['sum','difference'].includes(input.aggregation)?input.aggregation:lc(input).method;
-      if(!['sum','difference','integral'].includes(method))throw new Error('此指标没有区间累计量；请使用流量、区间量或累计表读数，或选择逐点计算。');
-      const stats=Qs(rows,{...input,aggregation:method},range);
-      amount=method==='integral'?stats.coverage?.value:stats.sourceValue;inputUnit=method==='integral'?meta.totalUnit:input.unit;detail=stats.label;
-      if(!finite(amount))throw new Error('所选时段没有有效累计量（缺测、时长不足或累计表重置）。');
+      if(group===undefined)throw new Error(groups.length?'存在多个分组，请选择具体采样点。':'所选指标没有数据。');
+      const rows=PointExclusions.apply(sourceId,candidates.filter(p=>p.group===group).sort((a,b)=>a.time-b.time)),stats=Qs(rows,{...input,...input.formula&&method==='integral'?{flowBasis:'daily'}:{},aggregation:cumulative?method:'mean'},range);
+      amount=cumulative?(method==='integral'?stats.coverage?.value:stats.sourceValue):stats.sourceMean;
+      inputUnit=method==='integral'?cumulativeUnit(input.unit):input.unit;detail=cumulative?stats.label:'区间均值';
+      if(!finite(amount))throw new Error(cumulative?'所选时段没有有效累计量（缺测、时长不足或累计表重置）。':'所选时段没有有效均值。');
      }
-     const target=cumulativeUnit(binding.unit),value=o3(amount,inputUnit,target,formula.percentageMode);
-     operand={name,sourceId,unitId,group,value:ro(amount,inputUnit,target),unit:target,detail};operands.push(operand);
+     const target=cumulative?cumulativeUnit(binding.unit):binding.unit,value=o3(amount,inputUnit,target,formula.percentageMode);
+     operand={name,sourceId,unitId,group,value:ro(amount,inputUnit,target),unit:target,detail,basis};operands.push(operand);
      const answer=Fr(value);memo.set(name,answer);return answer;
     }catch(error){
-     operand={name,value:null,unit:xr(binding.unit)?.totalUnit??binding.unit,reason:error.message};operands.push(operand);
+     operand={name,value:null,unit:basis==='mean'?binding.unit:cumulativeUnit(binding.unit),basis,reason:error.message};operands.push(operand);
      const answer={value:null,issue:{kind:'missing',message:'“'+name+'”：'+error.message}};memo.set(name,answer);return answer;
     }
    });
@@ -90,7 +102,7 @@ var IntervalFormulas=(()=>{
  }
  // Build a read-only point calculation of just this recipe's dependency graph.
  // Daily means and cumulative accounting share a recipe, but never a result.
- function pointView(column,state){
+ function pointView(column,state,masked=true){
   const home=column.formula.interval,entries=new Map(),required=new Map(),visiting=new Set();
   function visit(id,key){
    const token=id+':'+key;if(required.has(token))return;if(visiting.has(token))throw new Error('公式存在循环引用。');
@@ -102,36 +114,24 @@ var IntervalFormulas=(()=>{
   }
   visit(home.datasetId,column.key);
   const signature=[...entries].map(([id,e])=>({id,entry:e,dataset:e.dataset,points:e.points,updatedAt:e.dataset.updatedAt})),revision=state.analytics?.exclusionRevision??0,scope=AccountAuth.storageKey(),cached=trendCache.get(column);
-  if(cached&&cached.revision===revision&&cached.scope===scope&&cached.settings===state.settings&&signature.length===cached.signature.length&&signature.every((v,i)=>Object.keys(v).every(k=>v[k]===cached.signature[i][k])))return cached.view;
+  if(cached&&cached.revision===revision&&cached.scope===scope&&cached.settings===state.settings&&cached.masked===masked&&signature.length===cached.signature.length&&signature.every((v,i)=>Object.keys(v).every(k=>v[k]===cached.signature[i][k])))return cached.view;
   const projected={...state,datasets:{}};
   for(const [id,entry]of entries){
    const columns=entry.dataset.columns.filter(c=>!c.formula||required.has(id+':'+c.key)).map(c=>required.get(id+':'+c.key)??c);
    if(id===home.datasetId&&!columns.some(c=>c.key===column.key))columns.push(column);
    const perPoint=columns.map(c=>is(c)?{...c,formula:{...c.formula,calculationMode:'point',matching:{...eg(c.formula),targetGroup:c.formula.interval.group}}}:c);
-   const points=structuredClone(PointExclusions.apply(id,entry.points));
+   const points=structuredClone(masked?PointExclusions.apply(id,entry.points):entry.points);
    projected.datasets[id]={dataset:{...entry.dataset,columns:perPoint},points:Ho(perPoint,points)};
   }
   CrossUnit.recalculate(projected);
-  const view=PointExclusions.apply(home.datasetId,projected.datasets[home.datasetId]?.points??[]).filter(p=>p.unit===home.unitId&&p.group===home.group&&Object.hasOwn(p.values,column.key)).sort((a,b)=>a.time-b.time);
-  trendCache.set(column,{signature,revision,scope,settings:state.settings,view});return view;
+  const computed=projected.datasets[home.datasetId]?.points??[],view=(masked?PointExclusions.apply(home.datasetId,computed):computed).filter(p=>p.unit===home.unitId&&p.group===home.group&&Object.hasOwn(p.values,column.key)).sort((a,b)=>a.time-b.time);
+  trendCache.set(column,{signature,revision,scope,settings:state.settings,masked,view});return view;
  }
  function daily(column,range,state=$r().state){
   try{
-   const rows=pointView(column,state),bins=new Map();let mean=null,count=0,missing=0,min=null,max=null;
-   for(const row of rows){
-    if(range&&(row.time<range.from||row.time>=range.to))continue;
-    const time=Math.floor((row.time+OFFSET)/DAY)*DAY-OFFSET,value=row.values[column.key];
-    if(!bins.has(time))bins.set(time,{time,value:null,count:0,missing:0});const bin=bins.get(time);
-    if(!finite(value)){bin.missing++;missing++;continue;}
-    count++;mean=count===1?value:mean+(value-mean)/count;min=min===null?value:Math.min(min,value);max=max===null?value:Math.max(max,value);
-    bin.count++;bin.value=bin.count===1?value:bin.value+(value-bin.value)/bin.count;
-   }
-   const points=[];let previous=null;
-   for(const bin of bins.values()){
-    if(previous!==null&&bin.time-previous>DAY)points.push({time:previous+DAY,value:null,count:0,missing:0,gap:true});
-    points.push(bin);previous=bin.time;
-   }
-   return {points,mean,count,missing,min,max,reason:count?null:'当前时段暂无有效日均值。'};
+   const home=column.formula.interval,rows=FormulaDailyData.daily(state,home.datasetId,column).filter(p=>p.unit===home.unitId&&p.group===home.group&&(!range||p.time>=range.from&&p.time<range.to)),points=rows.map(p=>({time:p.time,value:p.values[column.key],count:p.dailySampleCounts?.[column.key]??0,missing:finite(p.values[column.key])?0:1,...p.excludedValues?{excludedValues:p.excludedValues}:{}})),valid=points.filter(p=>finite(p.value));
+   const mean=valid.length?valid.reduce((mean,p,i)=>mean+(p.value-mean)/(i+1),0):null;
+   return {points,mean,count:valid.length,missing:points.length-valid.length,sampleCount:valid.reduce((n,p)=>n+p.count,0),min:valid.length?Math.min(...valid.map(p=>p.value)):null,max:valid.length?Math.max(...valid.map(p=>p.value)):null,reason:valid.length?null:'当前时段暂无有效日均值。'};
   }catch(error){return {points:[],mean:null,count:0,missing:0,min:null,max:null,reason:error.message};}
  }
  function meanComparison(column,range,state=$r().state){
@@ -139,41 +139,42 @@ var IntervalFormulas=(()=>{
   return {range:previousRange?range:null,previousRange,current:{mean:current.mean,count:current.count},previous:{mean:previous.mean,count:previous.count},status:!previousRange?'no-range':!finite(current.mean)?'no-current':!finite(previous.mean)?'no-previous':'ok'};
  }
  function stats(column,range){
-  const interval=evaluate(column,range),value=interval.value,trend=daily(column,range);
-  return {value,unit:interval.unit,label:'区间汇总值',detail:interval.reason??'先累计各输入指标，再代入公式。',count:trend.count,missing:trend.missing,totalCount:trend.count+trend.missing,rawUnit:column.unit,last:trend.points.filter(p=>finite(p.value)).at(-1)?.value??null,min:trend.min,max:trend.max,coverage:null,mean:trend.mean,meanUnit:column.unit,sourceMean:trend.mean,canTotal:false,totalValue:null,sourceValue:value,sourceUnit:interval.unit,interval,trend};
+  const trend=daily(column,range),value=trend.mean;
+  return {value,unit:column.unit,label:'每日计算结果均值',detail:'公式指标使用每日计算结果。',count:trend.count,missing:trend.missing,totalCount:trend.count+trend.missing,rawUnit:column.unit,last:trend.points.filter(p=>finite(p.value)).at(-1)?.value??null,min:trend.min,max:trend.max,coverage:null,mean:value,meanUnit:column.unit,sourceMean:value,canTotal:false,totalValue:null,sourceValue:value,sourceUnit:column.unit,trend};
  }
  function preview(state,id,column,body){
   if(!is(column))return null;
   const range=yr(body.from,body.to),interval=evaluate(column,range,state),valid=finite(interval.value)?1:0;
   return Response.json({column,referenceRevision:CrossUnit.revision($r().state),coverage:[],summary:{total:1,valid,missing:1-valid,errors:0},allCount:1,points:[],references:interval.operands,resultUnit:column.formula.resultUnit,interval:{...interval,range,dailyUnit:column.unit,daily:daily(column,range,state)}});
  }
- function Mode({value,onChange}){return h('div',{className:'interval-formula-mode'},h('label',{className:'form-label'},'计算口径',h('select',{'aria-label':'公式计算口径',value,onChange:e=>onChange(e.target.value)},h('option',{value:'point'},'逐点计算'),h('option',{value:'interval'},'区间累计值计算'))),h('p',{className:'small muted'},value==='interval'?'折线显示每日逐点计算结果的均值；区间汇总值先累计所选时段内各输入指标，再代入公式，例如累计出料 ÷ 累计进料。':'按每个采样时间的输入值计算。'))}
- function Operands({value}){return !value.operands.length?null:h('div',{className:'table-wrap'},h('table',{className:'data-table interval-formula-inputs'},h('thead',null,h('tr',null,h('th',null,'公式引用'),h('th',null,'代入的区间累计值'))),h('tbody',null,...value.operands.map(o=>h('tr',{key:o.name},h('td',null,o.name),h('td',{title:o.detail},finite(o.value)?PeriodComparison.number(o.value)+' '+o.unit:o.reason))))));}
+ function Mode({value,onChange}){return h('div',{className:'interval-formula-mode'},h('label',{className:'form-label'},'计算口径',h('select',{'aria-label':'公式计算口径',value,onChange:e=>onChange(e.target.value)},h('option',{value:'point'},'逐点计算'),h('option',{value:'interval'},'区间累计值计算'))),h('p',{className:'small muted'},value==='interval'?'折线显示每日逐点计算结果的均值；区间汇总值优先使用各输入的区间累计量；百分数等无累计量的输入使用区间均值，再代入公式。':'按每个采样时间的输入值计算。'))}
+ function Operands({value}){return !value.operands.length?null:h('div',{className:'table-wrap'},h('table',{className:'data-table interval-formula-inputs'},h('thead',null,h('tr',null,h('th',null,'公式引用'),h('th',null,'代入值（累计量 / 均值）'))),h('tbody',null,...value.operands.map(o=>h('tr',{key:o.name},h('td',null,o.name,h('small',{className:'history-file'},o.basis==='mean'?'区间均值':'区间累计量')),h('td',{title:o.detail},finite(o.value)?PeriodComparison.number(o.value)+' '+o.unit:o.reason))))));}
  function Result({value,comparison}){return h(R.Fragment,null,h('div',{className:'mean-period-row interval-formula-result'},h('b',null,h('small',{className:'stat-value-label'},'区间汇总值'),h('span',{'data-interval-value':value.value??''},PeriodComparison.number(value.value)),h('small',null,value.unit)),comparison&&h(PeriodComparison.Values,{result:comparison,unit:value.unit,current:value.value,basis:'按区间累计值代入公式',previousLabel:'上期结果'})),value.reason&&h('p',{className:'note-line',role:'status'},value.reason),h(Operands,{value}));}
- function Preview({value}){const column={key:'result',label:'每日计算结果均值',unit:value?.dailyUnit??value?.unit??''},series=value?.daily?{column,...LiveSeries.sample(value.daily.points.map(p=>({time:p.time,values:{result:p.value}})),'result')}:null;return value?h('section',{className:'formula-preview','aria-label':'公式计算预览'},h('h4',null,'区间累计值计算'),h('p',{className:'small muted'},finite(value.range.from)&&finite(value.range.to)?AnalysisMath.exactLocal(value.range.from).replace('T',' ')+' — '+AnalysisMath.exactLocal(value.range.to-1).replace('T',' '):'请选择起止时间'),value.daily&&h('p',null,'均值：'+PeriodComparison.number(value.daily.mean)+' '+column.unit),series&&h(LiveChart.Chart,{series,config:{compact:true},color:'#168577',title:'每日计算结果均值',pin:false,bare:true,showPoints:true,disabled:true}),h(Result,{value})):null;}
- function Value({column,from,to}){const range=yr(from,to),value=evaluate(column,range),trend=daily(column,range);return h('span',{title:value.reason??'均值按逐点结果统计，区间汇总值按累计量计算。'},h('span',null,'均值：'+PeriodComparison.number(trend.mean)+' '+column.unit),h('small',{className:'history-file'},'区间汇总值：'+PeriodComparison.number(value.value)+' '+value.unit));}
+ function Preview({value}){const column={key:'result',label:'每日计算结果均值',unit:value?.dailyUnit??value?.unit??''},series=value?.daily?{column,...LiveSeries.sample(value.daily.points.map(p=>({time:p.time,values:{result:p.value},...p.excludedValues?{excludedValues:{result:Object.values(p.excludedValues)[0]}}:{}})),'result')}:null;return value?h('section',{className:'formula-preview','aria-label':'公式计算预览'},h('h4',null,'区间累计值计算'),h('p',{className:'small muted'},finite(value.range.from)&&finite(value.range.to)?AnalysisMath.exactLocal(value.range.from).replace('T',' ')+' — '+AnalysisMath.exactLocal(value.range.to-1).replace('T',' '):'请选择起止时间'),value.daily&&h('p',null,'均值：'+PeriodComparison.number(value.daily.mean)+' '+column.unit),series&&h(LiveChart.Chart,{series,config:{compact:true},color:'#168577',title:'每日计算结果均值',pin:false,bare:true,showPoints:true,disabled:true}),h(Result,{value})):null;}
+ function Value({column,from,to}){const trend=daily(column,yr(from,to));return h('span',null,'每日结果均值：'+PeriodComparison.number(trend.mean)+' '+column.unit);}
  function TableValue({value}){return h('b',{'data-interval-summary':value.value??''},PeriodComparison.number(value.value)+' '+value.unit);}
- function KPISummary({column,stats,range}){
-  return h(R.Fragment,null,h('span',null,'均值'),is(column)&&h('small',{className:'interval-kpi-summary'},'区间汇总值：',h('span',{'data-interval-summary':stats.interval?.value??''},PeriodComparison.number(stats.interval?.value)), ' '+stats.interval.unit,h(PeriodComparison.Values,{result:compare(column,range),unit:stats.interval.unit,current:stats.interval?.value,basis:'按区间累计值代入公式',previousLabel:'上期汇总值'})));
+ function KPISummary({column}){return h('span',null,is(column)?'区间汇总值':'均值');}
+ function KPIValue({column,stats,range}){
+  const value=stats.interval??evaluate(column,range);
+  return h(R.Fragment,null,h('span',{'data-kpi-summary':value.value??''},nt(value.value,3),h('small',null,value.unit)),h(PeriodComparison.Values,{result:compare(column,range),unit:value.unit,current:value.value,basis:'累计量优先，其余指标使用区间均值',previousLabel:'上期汇总值'}));
  }
- function svg(column,range,result=evaluate(column,range),trend=daily(column,range)){
-  const escape=AnalysisPlots.escape,number=PeriodComparison.number,tr=Surface.t,lines=result.operands.map(o=>o.name+'：'+(finite(o.value)?number(o.value)+' '+o.unit:o.reason)),height=650+lines.length*30;
-  const rows=trend.points.map(p=>({time:p.time,values:{[column.key]:p.value}})),series={column,...LiveSeries.sample(rows,column.key)},config={from:finite(range?.from)?AnalysisMath.exactLocal(range.from):'',to:finite(range?.to)?AnalysisMath.exactLocal(range.to-1):'',width:1000},g=LiveChart.geometry(series,config);
+ function svg(column,range,trend=daily(column,range)){
+  const escape=AnalysisPlots.escape,number=PeriodComparison.number,tr=Surface.t,height=520;
+  const rows=trend.points.map(p=>({time:p.time,values:{[column.key]:p.value},...p.excludedValues?{excludedValues:p.excludedValues}:{}})),series={column,...LiveSeries.sample(rows,column.key)},config={from:finite(range?.from)?AnalysisMath.exactLocal(range.from):'',to:finite(range?.to)?AnalysisMath.exactLocal(range.to-1):'',width:1000},g=LiveChart.geometry(series,config);
   const chart=series.points.length?'<g transform="translate(0 110)">'+g.ticks.map(t=>'<line x1="'+g.L+'" x2="'+g.E+'" y1="'+g.y(t.value)+'" y2="'+g.y(t.value)+'" stroke="#e5edf1" stroke-dasharray="3 5"/><text x="'+(g.L-10)+'" y="'+(g.y(t.value)+4)+'" text-anchor="end">'+escape(t.label)+'</text>').join('')+ChartAxes.timeTicks(g.x0,g.x1,g.E-g.L,6).map(t=>'<text x="'+g.x(t.value)+'" y="339" text-anchor="'+(g.x(t.value)>g.E-25?'end':g.x(t.value)<g.L+25?'start':'middle')+'">'+escape(t.label)+'</text>').join('')+'<path data-daily-mean-series="true" d="'+g.path+'" fill="none" stroke="#168577" stroke-width="2"/>'+ (series.points.length<=80?series.points:[]).map(p=>'<circle data-daily-mean-point="'+p.time+'" data-daily-mean-value="'+p.value+'" cx="'+g.x(p.time)+'" cy="'+g.y(p.value)+'" r="3" fill="#168577"/>').join('')+'<text x="'+((g.L+g.E)/2)+'" y="380" text-anchor="middle">'+escape(tr('时间（北京时间）')+' · '+tr('每日均值'))+'</text><text x="18" y="180" transform="rotate(-90 18 180)" text-anchor="middle">'+escape(column.unit)+'</text></g>':'<text x="30" y="270">'+escape(tr(trend.reason??'当前时段暂无有效日均值。'))+'</text>';
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 '+height+'" role="img" data-complete-chart="1" aria-label="'+escape(column.label+' '+tr('每日均值')+' / '+tr('区间汇总值'))+'"><g font-family="Arial,Microsoft YaHei,sans-serif" font-size="12" fill="#243b31"><text x="30" y="35" font-size="20">'+escape(column.label+' · '+tr('每日均值折线'))+'</text><text x="30" y="65">'+escape(finite(range?.from)&&finite(range?.to)?AnalysisMath.exactLocal(range.from)+' — '+AnalysisMath.exactLocal(range.to-1):'全部时间')+'</text><text x="30" y="100" font-size="24">'+escape(tr('均值'))+' '+escape(number(trend.mean)+' '+column.unit)+'</text>'+chart+'<text x="30" y="550" font-size="20">'+escape(tr('区间汇总值'))+' '+escape(number(result.value)+' '+result.unit)+'</text>'+[...(result.reason?[result.reason]:[]),...lines].map((line,i)=>'<text x="30" y="'+(590+i*30)+'" font-size="14">'+escape(line)+'</text>').join('')+'</g></svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 '+height+'" role="img" data-complete-chart="1" aria-label="'+escape(column.label+' '+tr('每日均值'))+'"><g font-family="Arial,Microsoft YaHei,sans-serif" font-size="12" fill="#243b31"><text x="30" y="35" font-size="20">'+escape(column.label+' · '+tr('每日均值折线'))+'</text><text x="30" y="65">'+escape(finite(range?.from)&&finite(range?.to)?AnalysisMath.exactLocal(range.from)+' — '+AnalysisMath.exactLocal(range.to-1):'全部时间')+'</text><text x="30" y="100" font-size="24">'+escape(tr('均值'))+' '+escape(number(trend.mean)+' '+column.unit)+'</text>'+chart+'</g></svg>';
  }
  function Card({column,range,exportUrl,frame,onZoom}){
   PointExclusions.useVersion();const [error,setError]=R.useState(''),[zoom,setZoom]=R.useState(null),signature=JSON.stringify([column.formula.interval,column.key,range]),active=zoom?.signature===signature?zoom.range:range,isZoom=active!==range;
-  const value=!isZoom&&frame?.interval||evaluate(column,active),comparison=!isZoom&&frame?.comparison||compare(column,active),trend=!isZoom&&frame?.daily||daily(column,active),previousMean=!isZoom&&frame?.meanComparison||meanComparison(column,active),sourceId=column.formula.interval.datasetId,title=frame?.config.title||Surface.chartTitle({sourceId},[column]);
-  const config={compact:true,palette:frame?.config.palette??'coast',from:finite(active?.from)?AnalysisMath.exactLocal(active.from):'',to:finite(active?.to)?AnalysisMath.exactLocal(active.to-1):''},series={column,...LiveSeries.sample(trend.points.map(p=>({time:p.time,values:{[column.key]:p.value}})),column.key)},color=(AnalysisPlots.palettes[config.palette]??AnalysisPlots.palettes.coast)[0];
+  const trend=!isZoom&&frame?.daily||daily(column,active),previousMean=!isZoom&&frame?.meanComparison||meanComparison(column,active),sourceId=column.formula.interval.datasetId,title=frame?.config.title||Surface.chartTitle({sourceId},[column]);
+  const config={compact:true,palette:frame?.config.palette??'coast',from:finite(active?.from)?AnalysisMath.exactLocal(active.from):'',to:finite(active?.to)?AnalysisMath.exactLocal(active.to-1):''},series={column,...LiveSeries.sample(trend.points.map(p=>({time:p.time,values:{[column.key]:p.value},...p.excludedValues?{excludedValues:p.excludedValues}:{}})),column.key)},color=(AnalysisPlots.palettes[config.palette]??AnalysisPlots.palettes.coast)[0];
   function selectRange(next){if(onZoom)onZoom(next);else setZoom({signature,range:{from:AnalysisMath.time(next.from),to:AnalysisMath.time(next.to)+1}});}
-  async function save(png){try{setError('');const node=new DOMParser().parseFromString(svg(column,active,value,trend),'image/svg+xml').documentElement;await AnalysisPlots.saveSvg(node,title,png);}catch(e){setError(e.message);}}
-  return h('section',{className:'panel auto-chart-card compact-chart-card interval-formula-card','data-column-key':column.key},h('div',{className:'panel-head'},h('div',null,h('h3',null,title,h('span',{className:'badge neutral'},column.unit)),h('p',null,'每日均值折线 · 区间累计汇总')),h('div',{className:'button-row chart-actions'},!frame&&h(OverviewCards.Tools),exportUrl&&h(Dashboard.LegacyPin,{url:exportUrl,title:column.label}),h('button',{className:'button small-button','aria-label':'导出'+column.label+'图表',onClick:()=>save(true)},'PNG'),h('button',{className:'button small-button','aria-label':'导出'+column.label+'SVG',onClick:()=>save(false)},'导出 SVG'))),error&&h('p',{role:'alert',className:'error-banner'},error),
+  async function save(png){try{setError('');const node=new DOMParser().parseFromString(svg(column,active,trend),'image/svg+xml').documentElement;await AnalysisPlots.saveSvg(node,title,png);}catch(e){setError(e.message);}}
+  return h('section',{className:'panel auto-chart-card compact-chart-card interval-formula-card','data-column-key':column.key},h('div',{className:'panel-head'},h('div',null,h('h3',null,title,h('span',{className:'badge neutral'},column.unit)),h('p',null,'每日均值折线')),h('div',{className:'button-row chart-actions'},!frame&&h(OverviewCards.Tools),exportUrl&&h(Dashboard.LegacyPin,{url:exportUrl,title:column.label}),h('button',{className:'button small-button','aria-label':'导出'+column.label+'图表',onClick:()=>save(true)},'PNG'),h('button',{className:'button small-button','aria-label':'导出'+column.label+'SVG',onClick:()=>save(false)},'导出 SVG'))),error&&h('p',{role:'alert',className:'error-banner'},error),
    isZoom&&h('button',{className:'button small-button',onClick:()=>setZoom(null)},'恢复所选时段'),
-   h('div',{className:'auto-chart-stat'},h('div',{className:'mean-period-row'},h('b',null,h('small',{className:'stat-value-label'},'均值'),h('span',{'data-interval-mean':trend.mean??''},PeriodComparison.number(trend.mean)),h('small',null,column.unit)),h(PeriodComparison.Values,{result:previousMean,unit:column.unit,current:trend.mean,basis:'所选时段逐点计算结果的算术均值'}))),
+   h('div',{className:'auto-chart-stat'},h('div',{className:'mean-period-row'},h('b',null,h('small',{className:'stat-value-label'},'均值'),h('span',{'data-interval-mean':trend.mean??''},PeriodComparison.number(trend.mean)),h('small',null,column.unit)),h(PeriodComparison.Values,{result:previousMean,unit:column.unit,current:trend.mean,basis:'所选时段每日计算结果的算术均值'}))),
    h('div',{'data-interval-daily-chart':'true'},h(LiveChart.Chart,{series,config,color,title:column.label+' · 每日均值',pin:false,bare:true,showPoints:true,onZoom:selectRange})),
-   h('p',{className:'small muted interval-daily-basis'},'折线为每日逐点计算结果的均值；区间汇总值由整个所选时段的累计量代入公式计算。'),
-   h('div',{className:'interval-summary-row'},h('span',null,'区间汇总值'),h('b',{'data-interval-value':value.value??''},PeriodComparison.number(value.value)),h('small',null,value.unit),h(PeriodComparison.Values,{result:comparison,unit:value.unit,current:value.value,basis:'按区间累计值代入公式',previousLabel:'上期汇总值'})),value.reason&&h('p',{className:'note-line',role:'status'},value.reason),h(Operands,{value}));
+   h('p',{className:'small muted interval-daily-basis'},'公式指标按每日结果用于分析，原始指标保留原始采样点。'));
  }
- return {is,configuration,decorate,validate,presence,evaluate,compare,stats,preview,daily,meanComparison,KPISummary,TableValue,Mode,Preview,Value,Card,svg};
+ return {is,configuration,decorate,validate,presence,evaluate,compare,stats,preview,pointView,daily,meanComparison,KPISummary,KPIValue,TableValue,Mode,Preview,Value,Card,svg};
 })();

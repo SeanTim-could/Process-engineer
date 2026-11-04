@@ -8,10 +8,10 @@ let result=O.summarize({mdc:100,bounds,losses:[loss],integrate});near(result.tar
 result=O.summarize({mdc:100,bounds,losses:[{...loss,counted:false}],integrate});near(result.countedLoss,0);near(result.oee,100);near(result.target,250);
 result=O.summarize({mdc:100,bounds,losses:[],integrate:range=>({...integrate(range),value:0})});near(result.oee,100);near(result.actual,0);
 result=O.summarize({mdc:100,bounds,losses:[loss],integrate:range=>({...integrate(range),value:2000})});near(result.losses[0].tonnes,0);near(result.oee,100);
-result=O.summarize({mdc:100,bounds,losses:[loss],integrate:range=>({...integrate(range),coveredHours:1})});assert.equal(result.losses[0].tonnes,null);assert.equal(result.oee,null,'Missing coverage is not a recorded shutdown loss');
+result=O.summarize({mdc:100,bounds,losses:[loss],integrate:range=>({...integrate(range),coveredHours:1})});near(result.losses[0].tonnes,50);near(result.oee,80);near(result.losses[0].zeroFilledHours,23);
 result=O.summarize({mdc:100,bounds,losses:[{...loss,counted:false}],integrate:range=>({...integrate(range),coveredHours:1})});near(result.oee,100);
-result=O.summarize({mdc:100,bounds,integrate:()=>({value:null,coveredHours:0})});assert.equal(result.oee,null);assert.equal(result.actual,null);
+result=O.summarize({mdc:100,bounds,integrate:()=>({value:null,coveredHours:0})});near(result.oee,100);near(result.actual,0);
 result=O.summarize({mdc:100,bounds:O.monthRange('2026-12',now),integrate:()=>{throw Error('No future integration');}});assert.equal(result.oee,null);
 result=O.summarize({mdc:1.1,bounds,losses:Array.from({length:60},(_,i)=>({...loss,from:bounds.from+i*3600000,to:bounds.from+(i+1)*3600000})),integrate:range=>({value:0,coveredHours:(range.to-range.from)/3600000})});assert.equal(result.oee,0,'Floating point roundoff cannot turn complete loss into negative OEE');
 assert.deepEqual(O.union([{from:10,to:20},{from:0,to:10}]),[{from:0,to:20}]);assert.throws(()=>O.union([{from:1,to:1}]));assert.throws(()=>O.union([{from:0,to:Infinity}]));
-console.log(JSON.stringify({passed:true,checks:['Beijing calendar months, leap days, year rollover and elapsed partial months','OEE deducts only checked interval losses; monthly actual output does not silently deduct other losses','Zero output, above-MDC output, missing coverage, unchecked losses and future months remain distinct']},null,2));
+console.log(JSON.stringify({passed:true,checks:['Beijing calendar months, leap days, year rollover and elapsed partial months','OEE deducts only checked interval losses; monthly actual output does not silently deduct other losses','Uncovered production is zero only for OEE; unchecked losses and future months keep their rules']},null,2));

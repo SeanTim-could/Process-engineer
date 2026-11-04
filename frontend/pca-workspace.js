@@ -23,8 +23,8 @@ var PCAWorkspace = (() => {
     const source=catalog(state).sources.find(s=>s.id===choice.sourceId&&s.unitId===choice.unitId);if(!source)throw new Error('请选择当前装置的数据来源。');
     const group=text(choice.group??'',100);if(!source.groups.includes(group))throw new Error('请选择数据分组。');
     const range={from:text(choice.from??'',23),to:text(choice.to??'',23)},start=AnalysisMath.time(range.from),end=AnalysisMath.time(range.to);if(start===null||end===null||start>end)throw new Error('请填写有效的起止时间。');
-    const input=source.id.startsWith('raw:')?DataAnalysis.series(state,source.id).points:state.datasets[source.id].points;
-    const rows=input.filter(r=>r.unit===source.unitId&&r.group===group&&r.time>=start&&r.time<end+(choice.exact==='1'?1:60000)).sort((a,b)=>a.time-b.time);
+    const input=DataAnalysis.series(state,source.id).points;
+    const rows=input.filter(r=>columns.some(c=>Object.hasOwn(r.values,c.key))&&r.unit===source.unitId&&r.group===group&&r.time>=start&&r.time<end+(choice.exact==='1'?1:60000)).sort((a,b)=>a.time-b.time);
     if(rows.length>100000)throw new Error('PCA时段超过10万个样本，请缩短时间范围。');
     const selected=AnalysisPointMath.apply(source.id,rows,state.analytics?.excludedPoints??[]),complete=selected.filter(r=>columns.every(c=>AnalysisMath.finite(r.values[c.key])));
     return {source,rows:complete,total:rows.length,droppedCount:rows.length-complete.length};

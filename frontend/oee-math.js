@@ -13,15 +13,15 @@ var OEEMath=(()=>{
  }
  const clip=(ranges,bounds)=>union(ranges).map(r=>({from:Math.max(r.from,bounds.from),to:Math.min(r.to,bounds.to)})).filter(r=>r.to>r.from);
  function summarize({mdc,bounds,losses=[],integrate}){
-  const part=bounds.days>0?integrate(bounds):{value:null,coveredHours:0},actual=finite(part.value)?part.value:null,coveredHours=part.coveredHours,hours=(bounds.to-bounds.from)/3600000,target=finite(mdc)&&mdc>0?mdc*bounds.days:null;
+  const part=bounds.days>0?integrate(bounds):{value:null,coveredHours:0},actual=bounds.days>0?(finite(part.value)?part.value:0):null,coveredHours=part.coveredHours,hours=(bounds.to-bounds.from)/3600000,target=finite(mdc)&&mdc>0?mdc*bounds.days:null;
   const items=losses.map(loss=>{
    const [range]=clip([loss],bounds);if(!range)return {...loss,tonnes:null,coverage:0};
-   const data=integrate(range),durationHours=(range.to-range.from)/3600000,coverage=Math.min(1,data.coveredHours/durationHours),tonnes=coverage>=.999999&&finite(data.value)?Math.max(0,mdc*durationHours/24-data.value):null;
-   return {...loss,tonnes,coverage};
+   const data=integrate(range),durationHours=(range.to-range.from)/3600000,coverage=Math.min(1,data.coveredHours/durationHours),actual=finite(data.value)?data.value:0,tonnes=Math.max(0,mdc*durationHours/24-actual);
+   return {...loss,tonnes,coverage,actual,zeroFilledHours:Math.max(0,durationHours-data.coveredHours)};
   });
   const checked=items.filter(loss=>loss.counted),countedLoss=checked.some(loss=>!finite(loss.tonnes))?null:checked.reduce((sum,loss)=>sum+loss.tonnes,0),excludedLoss=items.filter(loss=>!loss.counted&&finite(loss.tonnes)).reduce((sum,loss)=>sum+loss.tonnes,0);
   const net=target===null||countedLoss===null?null:target-countedLoss,tolerance=Math.max(Math.abs(target??0),Math.abs(countedLoss??0))*Number.EPSILON*16;
-  return {days:bounds.days,actual,target,coveredHours,requestedHours:hours,coverage:hours?Math.min(1,coveredHours/hours):null,losses:items,countedLoss,excludedLoss,oee:actual!==null&&target>0&&net!==null?(Math.abs(net)<=tolerance?0:net)/target*100:null};
+  return {days:bounds.days,actual,target,coveredHours,requestedHours:hours,zeroFilledHours:Math.max(0,hours-coveredHours),coverage:hours?Math.min(1,coveredHours/hours):null,losses:items,countedLoss,excludedLoss,oee:actual!==null&&target>0&&net!==null?(Math.abs(net)<=tolerance?0:net)/target*100:null};
  }
  return {DAY,monthRange,union,clip,summarize};
 })();

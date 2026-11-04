@@ -41,17 +41,17 @@ var DataAnalysis = (() => {
     const raw=active.filter(u=>state.records.some(r=>r.unit===u.id)).map(u=>({id:"raw:"+u.id,name:u.name+" · 日报指标",groups:[""],columns:yf(state.settings,u).map(m=>({key:m.id,label:m.label,unit:m.unit,source:"production"}))})).filter(d=>d.columns.length);
     return [...datasets,...raw];
   }
-  function series(state,id){
+  function series(state,id,options={}){
     const meta=sources(state).find(s=>s.id===id);if(!meta)throw new Error("来源装置已停用、指标已隐藏或数据集不存在，请重新选择。");
     if(id.startsWith("raw:")){
       const unit=state.settings.units.find(u=>u.id===id.slice(4)),metrics=yf(state.settings,unit);
       return {...meta,points:state.records.filter(r=>r.unit===unit.id).map(r=>({unit:unit.id,time:St(r.date),group:"",values:Object.fromEntries(metrics.map(m=>[m.id,jmCore([r],m,unit)]))})).sort((a,b)=>a.time-b.time)};
     }
-    return {...meta,points:structuredClone(state.datasets[id].points).sort((a,b)=>a.time-b.time)};
+    return {...meta,points:FormulaDailyData.view(state,id,structuredClone(state.datasets[id].points),{raw:options.raw===true,columns:meta.columns})};
   }
   async function request(req){
     const state=$r().state,u=new URL(req.url),saved=normalize(state.analytics);
-    if(req.method==="GET"){if(!u.searchParams.has("id"))return Response.json({sources:sources(state),...saved});const data=series(state,u.searchParams.get("id"));return Response.json(u.searchParams.get("raw")==="1"?data:{...data,points:AnalysisPointMath.apply(data.id,data.points,saved.excludedPoints)});}
+    if(req.method==="GET"){if(!u.searchParams.has("id"))return Response.json({sources:sources(state),...saved});const data=series(state,u.searchParams.get("id"),{raw:u.searchParams.get("raw")==="1"});return Response.json(u.searchParams.get("raw")==="1"?data:{...data,points:AnalysisPointMath.apply(data.id,data.points,saved.excludedPoints)});}
     if(req.method!=="PUT")throw new Error("分析操作无效。");
     const body=await Ha(req);
     if(["exclude-points","restore-points"].includes(body.action)){
@@ -59,7 +59,7 @@ var DataAnalysis = (() => {
       const points=AnalysisPointMath.normalize(body.points);if(!points.length)throw new Error("请先选择读数。");
       const current=new Map(saved.excludedPoints.map(p=>[AnalysisPointMath.identity(p),p]));
       if(body.action==="exclude-points"){
-        const bySource=new Map();for(const p of points){if(!bySource.has(p.sourceId))bySource.set(p.sourceId,new Set(series(state,p.sourceId).points.flatMap(row=>Object.keys(row.values).filter(k=>M.finite(row.values[k])).map(k=>AnalysisPointMath.identity(AnalysisPointMath.observation(p.sourceId,row,k))))));if(!bySource.get(p.sourceId).has(AnalysisPointMath.identity(p)))throw new Error("所选原始读数已变化，请重新打开选点窗口核对。");current.set(AnalysisPointMath.identity(p),p);}
+        const bySource=new Map();for(const p of points){const scope=p.sourceId+":"+(p.basis??"raw");if(!bySource.has(scope))bySource.set(scope,new Set(series(state,p.sourceId,{raw:p.basis!=="daily-formula"}).points.flatMap(row=>Object.keys(row.values).filter(k=>M.finite(row.values[k])).map(k=>AnalysisPointMath.identity(AnalysisPointMath.observation(p.sourceId,row,k))))));if(!bySource.get(scope).has(AnalysisPointMath.identity(p)))throw new Error("所选原始读数已变化，请重新打开选点窗口核对。");current.set(AnalysisPointMath.identity(p),p);}
       }else for(const p of points)current.delete(AnalysisPointMath.identity(p));
       const result={...saved,exclusionRevision:saved.exclusionRevision+1,excludedPoints:AnalysisPointMath.normalize([...current.values()])};qt().analytics=result;return Response.json(result);
     }

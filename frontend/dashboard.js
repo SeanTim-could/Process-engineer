@@ -41,7 +41,7 @@ var Dashboard = (() => {
   function frame(state,board,item,budget){
     if(item.kind==='overlay')return DashboardOverlay.frame(state,board,item);
     const {source,unitId}=validate(state,item),selected=range(board,item),from=M.time(selected.from),to=M.time(selected.to),end=to===null?Infinity:to+(selected.exclusive?0:selected.exact?1:60000);
-    const original=source.id.startsWith('raw:')?DataAnalysis.series(state,source.id).points:state.datasets[source.id].points;
+    const original=item.kind==='live'?state.datasets[source.id].points:DataAnalysis.series(state,source.id).points;
     const wanted=new Set([...item.config.keys,...item.config.type==='scatter'?[item.config.xKey]:[]]);
     const filtered=original.filter(p=>Object.keys(p.values).some(k=>wanted.has(k))&&p.unit===unitId&&(item.config.allGroups||p.group===item.config.group)&&(from===null||p.time>=from)&&p.time<end).sort((a,b)=>a.time-b.time);
     const rows=PointExclusions.apply(source.id,filtered),config={...item.config,...selected},columns=source.columns.filter(c=>config.keys.includes(c.key)||config.type==='scatter'&&c.key===config.xKey),name=state.settings.units.find(u=>u.id===unitId).name;
@@ -50,7 +50,7 @@ var Dashboard = (() => {
       if(columns.length!==1||!IntervalFormulas.is(columns[0]))throw new Error('区间公式请使用单独的结果卡片。');
       const column=columns[0],bounds={from:from??-Infinity,to:end};
       const daily=IntervalFormulas.daily(column,bounds,state);
-      return {kind:'interval',column,range:bounds,interval:IntervalFormulas.evaluate(column,bounds,state),comparison:IntervalFormulas.compare(column,bounds,state),daily,meanComparison:IntervalFormulas.meanComparison(column,bounds,state),config,sourceName:source.name,unitName:name,count:daily.count};
+      return {kind:'interval',column,range:bounds,daily,meanComparison:IntervalFormulas.meanComparison(column,bounds,state),config,sourceName:source.name,unitName:name,count:daily.count};
     }
     if(item.control&&config.type==='line'&&config.keys.length===1&&!config.normalized){const stats=M.capability(rows,config.keys[0]);references.push(...[{label:'均值',value:stats.mean,color:'#477be3'},{label:'I图上控制限',value:stats.upperControl,color:'#b08b48'},{label:'I图下控制限',value:stats.lowerControl,color:'#b08b48'}].filter(r=>M.finite(r.value)));}
     if(config.type==='line'&&config.keys.length===1&&!config.allGroups&&!config.normalized){const column=columns[0],bounds={from:from??-Infinity,to:end},prior=PeriodMath.previous(bounds),previousRows=prior?PointExclusions.apply(source.id,original.filter(p=>p.unit===unitId&&p.group===config.group&&p.time>=prior.from&&p.time<prior.to)):[];return {kind:'series',series:{column,...LiveSeries.sample(rows,column.key),comparison:PeriodMath.compare([...rows,...previousRows],column.key,bounds)},sourceName:source.name,unitName:name,config,references,count:rows.length};}

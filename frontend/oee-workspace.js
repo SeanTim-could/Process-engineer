@@ -48,12 +48,13 @@ var OEEWorkspace=(()=>{
   if(status)return {...base,status,actual:null,target:null,oee:null,points:[]};
   // Use the exact selected sampling group once, even if it is also hidden in
   // Overview. Readings, sibling columns, source statistics and masks stay intact.
-  const rows=PointExclusions.apply(config.sourceId,entry.points.filter(p=>p.unit===device.id&&p.group===config.group&&Object.hasOwn(p.values,column.key))).sort((a,b)=>a.time-b.time),integrate=range=>{const result=HK(rows,column,range);return {...result,value:result.value===null?null:ro(result.value,meta.totalUnit,'t')};},summary=M.summarize({mdc:config.mdc,bounds,losses:base.edit.losses,integrate});
-  status=!bounds.days?'该月份尚未开始':summary.actual===null?'暂无可积分的出料数据':summary.countedLoss===null?'所选损失时段数据未齐':!summary.losses.some(loss=>loss.counted)?'未计入损失（按100%显示）':summary.oee<0?'损失超过理论产能，请核对流量':summary.coverage<.999999?'已按所选损失计算，月数据未齐':'已按所选损失计算';
+  const sourceRows=column.formula?FormulaDailyData.view(state,config.sourceId,entry.points,{columns:[column]}):entry.points,flowColumn=column.formula?{...column,flowBasis:'daily'}:column;
+  const rows=PointExclusions.apply(config.sourceId,sourceRows.filter(p=>p.unit===device.id&&p.group===config.group&&Object.hasOwn(p.values,column.key))).sort((a,b)=>a.time-b.time),gaps=rows.slice(1).map((p,i)=>p.time-rows[i].time).filter(v=>v>0).sort((a,b)=>a-b),cadence=gaps.length?gaps[Math.floor((gaps.length-1)/2)]/3600000:null,integrationColumn=cadence?{...flowColumn,maxGapHours:Math.min(flowColumn.maxGapHours??24,cadence*1.5)}:flowColumn,integrate=range=>{const result=HK(rows,integrationColumn,range);return {...result,value:result.value===null?null:ro(result.value,meta.totalUnit,'t')};},summary=M.summarize({mdc:config.mdc,bounds,losses:base.edit.losses,integrate});
+  status=!bounds.days?'该月份尚未开始':!summary.losses.some(loss=>loss.counted)?'未计入损失（按100%显示）':summary.oee<0?'损失超过理论产能，请核对流量':summary.coverage<.999999?'已按所选损失计算，缺失时段按0产量计':'已按所选损失计算';
   let points=[];
   if(plot&&rows.length){
    let before,after;for(const row of rows){if(row.time<bounds.from)before=row;else if(row.time>bounds.to){after=row;break;}}
-   const selected=rows.filter(p=>p.time>=bounds.from&&p.time<=bounds.to),plotRows=[...before?[before]:[],...selected,...after?[after]:[]],gap=HK(rows,column,bounds).maxGapHours*3600000,tagged=[];
+   const selected=rows.filter(p=>p.time>=bounds.from&&p.time<=bounds.to),plotRows=[...before?[before]:[],...selected,...after?[after]:[]],gap=HK(rows,integrationColumn,bounds).maxGapHours*3600000,tagged=[];
    for(const p of plotRows){const previous=tagged.at(-1);if(previous&&gap&&p.time-previous.time>gap)tagged.push({time:previous.time+1,values:{[column.key]:null}});tagged.push(p);}
    points=LiveSeries.sample(tagged,column.key).points;
   }
@@ -74,7 +75,7 @@ var OEEWorkspace=(()=>{
   const calculate=selected=>{
    const to=Math.max(selected.from,Math.min(selected.to,now)),bounds={from:selected.from,to,days:(to-selected.from)/M.DAY},losses=edits.flatMap(e=>e.losses.filter(l=>l.from<to&&l.to>bounds.from));
    return frame(state,device,null,{losses},now,false,bounds);
-  },current=calculate(range),previous=calculate(previousRange),stats=value=>({count:value.coveredHours>0?1:0,mean:value.oee}),comparison={range:current.bounds,previousRange:previous.bounds,current:stats(current),previous:stats(previous),status:current.oee===null?'no-current':previous.oee===null?'no-previous':'ok'};
+  },current=calculate(range),previous=calculate(previousRange),stats=value=>({count:value.oee!==null?1:0,mean:value.oee}),comparison={range:current.bounds,previousRange:previous.bounds,current:stats(current),previous:stats(previous),status:current.oee===null?'no-current':previous.oee===null?'no-previous':'ok'};
   return {unitId,name:device.name,current,previous,comparison};
  }
  async function request(req){

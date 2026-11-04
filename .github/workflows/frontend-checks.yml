@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login, codex/previous-period-means, codex/plain-period-comparison, codex/overview-card-layout, codex/overview-drag-preview, codex/imr-point-removal, codex/transparent-png-export, codex/monthly-oee, codex/oee-page-and-overview-card, codex/content-only-workspace-files, codex/dashboard-cumulative-totals, codex/daily-mean-flow-totals, codex/interval-total-formulas, codex/daily-formula-trends]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login, codex/previous-period-means, codex/plain-period-comparison, codex/overview-card-layout, codex/overview-drag-preview, codex/imr-point-removal, codex/transparent-png-export, codex/monthly-oee, codex/oee-page-and-overview-card, codex/content-only-workspace-files, codex/dashboard-cumulative-totals, codex/daily-mean-flow-totals, codex/interval-total-formulas, codex/daily-formula-trends, codex/summary-first-formula-cards]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -28,6 +28,8 @@ on:
       - 'scripts/test-dashboard-cumulative-totals.cjs'
       - 'scripts/test-daily-flow-totals.cjs'
       - 'scripts/test-interval-formulas.cjs'
+      - 'scripts/test-formula-daily-data.cjs'
+      - 'scripts/test-oee-missing-periods.cjs'
       - 'scripts/test-import-negative-values.cjs'
       - 'scripts/test-theme-and-language.cjs'
       - 'scripts/test-chart-tools-and-selection.cjs'
@@ -106,6 +108,8 @@ on:
       - 'scripts/test-dashboard-cumulative-totals.cjs'
       - 'scripts/test-daily-flow-totals.cjs'
       - 'scripts/test-interval-formulas.cjs'
+      - 'scripts/test-formula-daily-data.cjs'
+      - 'scripts/test-oee-missing-periods.cjs'
       - 'scripts/test-import-negative-values.cjs'
       - 'scripts/test-theme-and-language.cjs'
       - 'scripts/test-chart-tools-and-selection.cjs'
@@ -207,6 +211,7 @@ jobs:
           node --check frontend/dashboard-totals.js
           node --check frontend/daily-flow.js
           node --check frontend/interval-formulas.js
+          node --check frontend/formula-daily-data.js
           node --check frontend/import-values.js
           node --check frontend/dashboard-overlay.js
           node --check frontend/dashboard.js
@@ -310,6 +315,8 @@ jobs:
           node scripts/test-dashboard-cumulative-totals.cjs
           node scripts/test-daily-flow-totals.cjs
           node scripts/test-interval-formulas.cjs
+          node scripts/test-formula-daily-data.cjs
+          node scripts/test-oee-missing-periods.cjs
           node scripts/test-import-negative-values.cjs
           node scripts/test-chart-tools-and-selection.cjs
           node scripts/test-theme-and-language.cjs
