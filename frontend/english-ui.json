@@ -1177,5 +1177,10 @@
   "区间公式累计量": "Period total from a calculated metric",
   "已按所选损失计算，缺失时段按0产量计": "Calculated from selected losses; missing periods use zero production",
   "所选时段没有数据的部分按0产量计；仅勾选的损失项目扣减OEE，数据覆盖率仍按实际覆盖计算。": "Uncovered periods use zero production. Only checked losses reduce OEE, and coverage still reflects actual observations.",
-  "折线显示每日逐点计算结果的均值；区间汇总值优先使用各输入的区间累计量；百分数等无累计量的输入使用区间均值，再代入公式。": "The curve shows daily means of per-sample formula results. The overview formula uses period totals where available and period means for inputs such as percentages."
+  "折线显示每日逐点计算结果的均值；区间汇总值优先使用各输入的区间累计量；百分数等无累计量的输入使用区间均值，再代入公式。": "The curve shows daily means of per-sample formula results. The overview formula uses period totals where available and period means for inputs such as percentages.",
+  "所选时段无有效数据": "No valid readings in the selected period",
+  "有效采样不足以累计": "Insufficient sampling coverage for a total",
+  "累计量暂不可用": "Cumulative total is unavailable",
+  "汇总设置中未勾选": "Excluded in total settings",
+  "未找到可用的同名累计指标": "No available cumulative source for this indicator"
 }
