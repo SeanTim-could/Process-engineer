@@ -84,7 +84,7 @@ var AccountAuth = (() => {
         transaction.onerror=()=>{db.close();reject(new Error("无法读取旧版本机数据，请保留当前浏览器数据后重试。"));};
       };
     });
-    N$({format:"process-studio-offline",version:1,exportedAt:new Date().toISOString(),state},"工程师工作台_旧版本机备份.json");
+    N$({format:"process-studio-offline",version:1,exportedAt:new Date().toISOString(),state:WorkspaceFiles.exportState(state)},"工程师工作台_旧版本机备份.json");
   }
   async function leave(){
     await flush();

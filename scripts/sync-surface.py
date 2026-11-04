@@ -3,6 +3,10 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TITLE=(ROOT/'scripts/surface-root-title-original.txt').read_text()
 PAIRS=[
+ ('children:"\\u8D44\\u6599\\u3001\\u4E3B\\u9898\\u8272\\u548C\\u6587\\u4EF6\\u7D22\\u5F15\\u5747\\u5305\\u542B\\u5728\\u201C另存为\\u201D\\u4E2D\\u3002"', 'children:"另存为包含主题、语言和文件索引，不包含姓名、工号或登录信息。"'),
+ ('state:{...t.state,profile:AccountAuth.decorate(t.state.profile)}});else if', 'state:WorkspaceFiles.exportState(t.state)});else if'),
+ ('let i=DC(await e.json());Object.assign(qt(),i)', 'let i=WorkspaceFiles.restoreState(DC(await e.json()),t.state);Object.assign(qt(),i)'),
+ ('o="profile"in t?jx(t.profile):zd()', 'o="profile"in t?jx({name:"",employeeId:"",...t.profile}):zd()'),
  ('archived:!!s.archived}}),n=new Set(cc.map', 'archived:!!s.archived,...(s.oee===void 0?{}:{oee:OEEWorkspace.unit(s.oee)})}}),n=new Set(cc.map'),
  ('D?(0,Ce.jsxs)(Ce.Fragment,{children:[(0,Ce.jsxs)("div",{className:"mapping-grid"', 'D?(0,Ce.jsxs)(Ce.Fragment,{children:[(0,Ce.jsx)(OEEView.Settings,{unit:D,onChange:H,disabled:d}),(0,Ce.jsxs)("div",{className:"mapping-grid"'),
  ('else if(r.pathname==="/api/pca"){a=await PCAWorkspace.request(e)}', 'else if(r.pathname==="/api/oee"){a=await OEEWorkspace.request(e)}else if(r.pathname==="/api/pca"){a=await PCAWorkspace.request(e)}'),

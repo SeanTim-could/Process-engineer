@@ -122,7 +122,7 @@ const findings=[];
   await p.waitForFunction(()=>document.querySelector('.offline-bar')?.textContent.includes('员工乙'));
   assert.equal((await call('/api/excel-sync','POST',{action:'commit',id:adminExcelBatch})).ok,false);assert.deepEqual((await call('/api/excel-sync')).data.sources,[]);
   const staffBackup=(await call('/api/offline/backup')).data;assert.deepEqual(staffBackup.state.focusNotes,{});
-  assert.equal(staffBackup.state.profile.employeeId,'e002');
+  assert(!Object.hasOwn(staffBackup.state.profile,'employeeId'));assert(!Object.hasOwn(staffBackup.state.profile,'name'));assert.equal((await call('/api/personal')).data.profile.employeeId,'e002');
   assert.deepEqual((await call('/api/analytics')).data.charts,[],'saved chart recipes must be isolated between accounts');
   assert.deepEqual((await call('/api/analytics')).data.drafts,{});assert.deepEqual((await call('/api/analytics')).data.excludedPoints,[]);assert(!(await p.locator('.workspace-file-status').textContent()).includes('管理员专用.json'),'current-file handles must be isolated between accounts');
   assert.equal(await p.getByRole('button',{name:'加入数据',exact:true}).count(),0);

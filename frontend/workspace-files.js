@@ -2,6 +2,10 @@
 // outside exported workspace JSON; every disk write requires a user action.
 var WorkspaceFiles = (() => {
   const R=Se(),h=R.createElement,entries=new Map(),metaKey="current-document-file";
+  // Share working content and display preferences, never an account identity.
+  // Restoring an older file cannot replace the current user's personal details.
+  function exportState(state){return {...state,profile:{theme:state.profile?.theme??'forest',...state.profile?.language===undefined?{}:{language:state.profile.language}}};}
+  function restoreState(state,current){return {...state,profile:{...state.profile,name:current.profile?.name??'',employeeId:current.profile?.employeeId??''}};}
   const scope=()=>AccountAuth.storageKey(),supported=()=>typeof window.showSaveFilePicker==="function"&&window.isSecureContext;
   function item(){const id=scope();if(!entries.has(id))entries.set(id,{id,info:null,loaded:false,loading:null,revision:null});return entries.get(id);}
   function notify(){window.dispatchEvent(new Event("workbench-file-status"));}
@@ -17,7 +21,7 @@ var WorkspaceFiles = (() => {
   async function forget(){const id=scope(),e={id,info:null,loaded:true,loading:null,revision:item().revision};entries.set(id,e);notify();try{await meta("delete");}catch{}return e;}
   async function remember(info,id){AccountAuth.assertWorkspace(id);const e=item();e.info=info;e.loaded=true;notify();let remembered=true;try{await meta("put",info);}catch{remembered=false;}return remembered;}
   async function writePermission(handle){if(typeof handle.queryPermission!=="function")return;const options={mode:"readwrite"};let permission=await handle.queryPermission(options);if(permission!=="granted")permission=await handle.requestPermission(options);if(permission!=="granted")throw new Error("未获得文件写入权限，请点击“另存为”选择可写位置。");}
-  function filename(){const e=item();return e.info?.name||"工程师工作台"+(AccountAuth.decorate({}).employeeId?"_"+AccountAuth.decorate({}).employeeId:"")+".json";}
+  function filename(){const e=item();return e.info?.name||"工程师工作台.json";}
   function phase(e,message){e.activity=message;e.error="";notify();}
   async function choose(e){
     phase(e,"请选择保存位置…");
@@ -70,5 +74,5 @@ var WorkspaceFiles = (() => {
     const fileText=!info?"未命名 · 尚未保存为文件":info.kind==="download"?"副本："+info.name+"（下载模式）":info.kind==="unbound"?"已打开："+info.name+"（保存时选择位置）":info.name+(dirty?" · 有更改未保存":" · 已保存");
     const text=e.activity||(e.error?(info?.name?info.name+" · ":"")+e.error:fileText);return h("span",{className:"workspace-file-status",role:e.error?"alert":"status",title:text,"aria-busy":!!e.activity},text+(A0().mode==="temporary"?"（自动恢复不可用，请保存文件）":""));
   }
-  return {save,Status,changed,forget,chooseOpen,opened,shortcuts,hasUnsaved};
+  return {save,Status,changed,forget,chooseOpen,opened,shortcuts,hasUnsaved,exportState,restoreState};
 })();

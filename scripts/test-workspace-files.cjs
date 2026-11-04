@@ -29,7 +29,7 @@ async function pickers(){
  await focus('打开后更新');const countBefore=await calls();await p.getByRole('button',{name:'保存',exact:true}).click();await waitText('工作台A.json','打开后更新');assert.equal(await calls(),countBefore);assert.equal(await file('工作台B.json'),'EXTERNALLY MODIFIED');
  // Native handles survive serialization and a full application reload.
  await p.reload();await p.waitForFunction(()=>document.querySelector('.workspace-file-status')?.textContent.includes('工作台A.json'));await focus('刷新后更新');await p.keyboard.press('Control+s');await waitText('工作台A.json','刷新后更新');assert.equal(await calls(),countBefore);
- const saved=JSON.parse(await file('工作台A.json'));assert.equal(saved.format,'process-studio-offline');assert(Number.isSafeInteger(saved.workspaceRevision));assert(!JSON.stringify(saved).includes('current-document-file'));assert(!JSON.stringify(saved).includes('FileSystemFileHandle'));
+ const saved=JSON.parse(await file('工作台A.json'));assert.equal(saved.format,'process-studio-offline');assert(!Object.hasOwn(saved.state.profile,'name'));assert(!Object.hasOwn(saved.state.profile,'employeeId'));assert(Number.isSafeInteger(saved.workspaceRevision));assert(!JSON.stringify(saved).includes('current-document-file'));assert(!JSON.stringify(saved).includes('FileSystemFileHandle'));
  const options=await p.evaluate(()=>JSON.parse(sessionStorage.getItem('office-save-calls')));assert.equal(options[0].types[0].accept['application/json'][0],'.json');
  await p.screenshot({path:path.join(dir,'current-document.png')});assert.deepEqual(f.errors,[]);
  // Browsers without picker support download an explicitly labeled copy.

@@ -1130,5 +1130,6 @@
   "请填写有效的损失起止时间。": "Enter valid loss start and end times.",
   "OEE统计": "OEE statistics",
   "所选时段 OEE": "Selected-period OEE",
-  "OEE按所选时段理论产能与已勾选损失计算，上期使用相同口径。": "OEE uses theoretical capacity and checked losses for each period, with the same definition for the previous period."
+  "OEE按所选时段理论产能与已勾选损失计算，上期使用相同口径。": "OEE uses theoretical capacity and checked losses for each period, with the same definition for the previous period.",
+  "另存为包含主题、语言和文件索引，不包含姓名、工号或登录信息。": "Save As includes theme, language and file links, but excludes names, employee IDs and sign-in information."
 }
