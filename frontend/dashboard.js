@@ -49,7 +49,8 @@ var Dashboard = (() => {
     if(columns.some(IntervalFormulas.is)){
       if(columns.length!==1||!IntervalFormulas.is(columns[0]))throw new Error('区间公式请使用单独的结果卡片。');
       const column=columns[0],bounds={from:from??-Infinity,to:end};
-      return {kind:'interval',column,range:bounds,interval:IntervalFormulas.evaluate(column,bounds,state),comparison:IntervalFormulas.compare(column,bounds,state),config,sourceName:source.name,unitName:name,count:1};
+      const daily=IntervalFormulas.daily(column,bounds,state);
+      return {kind:'interval',column,range:bounds,interval:IntervalFormulas.evaluate(column,bounds,state),comparison:IntervalFormulas.compare(column,bounds,state),daily,meanComparison:IntervalFormulas.meanComparison(column,bounds,state),config,sourceName:source.name,unitName:name,count:daily.count};
     }
     if(item.control&&config.type==='line'&&config.keys.length===1&&!config.normalized){const stats=M.capability(rows,config.keys[0]);references.push(...[{label:'均值',value:stats.mean,color:'#477be3'},{label:'I图上控制限',value:stats.upperControl,color:'#b08b48'},{label:'I图下控制限',value:stats.lowerControl,color:'#b08b48'}].filter(r=>M.finite(r.value)));}
     if(config.type==='line'&&config.keys.length===1&&!config.allGroups&&!config.normalized){const column=columns[0],bounds={from:from??-Infinity,to:end},prior=PeriodMath.previous(bounds),previousRows=prior?PointExclusions.apply(source.id,original.filter(p=>p.unit===unitId&&p.group===config.group&&p.time>=prior.from&&p.time<prior.to)):[];return {kind:'series',series:{column,...LiveSeries.sample(rows,column.key),comparison:PeriodMath.compare([...rows,...previousRows],column.key,bounds)},sourceName:source.name,unitName:name,config,references,count:rows.length};}

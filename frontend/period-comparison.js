@@ -14,7 +14,7 @@ var PeriodComparison=(()=>{
       h('span',{className:'period-change','data-period-delta':delta,'aria-label':Surface.t(direction==='up'?'较上期上升':direction==='down'?'较上期下降':'较上期持平')+(delta?' '+number(Math.abs(delta))+' '+changeUnit:'')},h('span',{'aria-hidden':true,className:'period-arrow'},arrow),direction==='flat'?Surface.t('持平'):number(Math.abs(delta))+(changeUnit?' '+changeUnit:'')));
   }
   function Legacy({rows,column,range,current,sourceId}){
-    if(IntervalFormulas.is(column))return h(Values,{result:IntervalFormulas.compare(column,range),unit:column.unit,current:current.mean,basis:'按区间累计值代入公式',previousLabel:'上期结果'});
+    if(IntervalFormulas.is(column))return h(Values,{result:IntervalFormulas.meanComparison(column,range),unit:column.unit,current:current.mean,basis:'所选时段逐点计算结果的算术均值'});
     const input=sourceId?PointExclusions.apply(sourceId,rows):rows,result=PeriodMath.compare(input,column.key,range),unit=current.meanUnit??column.unit??'';
     const convert=value=>unit==='万'+Vl(column.unit)?value/10000:ro(value,column.unit,unit);
     return h(Values,{result,unit,convert,current:current.mean});

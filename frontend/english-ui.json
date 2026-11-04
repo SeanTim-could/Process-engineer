@@ -1152,5 +1152,16 @@
   "先累计所选时段内各输入指标，再代入公式。流量使用累计量，例如累计出料 ÷ 累计进料；结果随查看时段更新。": "Total each input over the selected period, then evaluate the formula. Flow inputs use cumulative quantities, e.g. total output / total feed. Results follow the viewed period.",
   "按每个采样时间的输入值计算。": "Evaluate the formula at each sample time.",
   "先累计所选时段输入量，再代入公式。": "Total the inputs over the selected period, then evaluate the formula.",
-  "区间公式请使用单独的结果卡片。": "Use a separate result card for each period formula."
+  "区间公式请使用单独的结果卡片。": "Use a separate result card for each period formula.",
+  "区间汇总值": "Period summary",
+  "上期汇总值": "Previous period summary",
+  "每日均值折线": "Daily mean trend",
+  "每日均值": "Daily mean",
+  "每日均值折线 · 区间累计汇总": "Daily mean trend · Cumulative period summary",
+  "每日计算结果均值": "Daily mean formula result",
+  "当前时段暂无有效日均值。": "No valid daily means in this period.",
+  "恢复所选时段": "Restore selected period",
+  "所选时段逐点计算结果的算术均值": "Arithmetic mean of per-sample formula results over the selected period",
+  "折线为每日逐点计算结果的均值；区间汇总值由整个所选时段的累计量代入公式计算。": "The curve shows daily means of per-sample formula results; the period summary evaluates the formula using cumulative input quantities.",
+  "折线显示每日逐点计算结果的均值；区间汇总值先累计所选时段内各输入指标，再代入公式，例如累计出料 ÷ 累计进料。": "The curve shows daily means of per-sample formula results. For the period summary, first total each input, then evaluate the formula, e.g. cumulative output / cumulative feed."
 }
