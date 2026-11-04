@@ -21,6 +21,7 @@ var FormulaHealth = (() => {
     if(!entry)return [];
     const from=AnalysisMath.time(range.from?.replace(' ','T')),to=AnalysisMath.time(range.to?.replace(' ','T')),selected=p=>(from===null||p.time>=from)&&(to===null||p.time<=to+59999)&&(range.group===undefined||p.group===range.group);
     return entry.dataset.columns.filter(c=>c.formula).map(column=>{
+      if(IntervalFormulas.is(column)){const result=IntervalFormulas.evaluate(column,yr(range.from,range.to),state),valid=Number.isFinite(result.value)?1:0;return {key:column.key,label:column.label,unit:column.unit,source:column.source??'production',valid:'按区间计算',inRange:valid,missing:1-valid,reasons:[result.reason??'先累计所选时段输入量，再代入公式。'],status:column.enabled?'区间计算':'已隐藏'};}
       const rows=entry.points.filter(p=>Object.hasOwn(p.values,column.key)),valid=rows.filter(p=>AnalysisMath.finite(p.values[column.key])),visible=valid.filter(selected),issues=new Map();
       for(const row of entry.points){const issue=row.calculationIssues?.[column.key];if(issue)issues.set(issue.message,(issues.get(issue.message)??0)+1);}
       const reasons=[...issues].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([reason,count])=>reason+'（'+count+'条）');

@@ -140,6 +140,7 @@ var CrossUnit = (() => {
   }
 
   function computeCross(state, entry, column, nodes) {
+    if(column.formula?.calculationMode==='interval'){IntervalFormulas.presence([column],entry.points);return;}
     const groups = new Set(entry.points.filter(p => Object.keys(p.values).some(k => entry.dataset.columns.some(c => c.key === k && !c.formula && c.source !== 'lims'))).map(p => p.group));
     computeCrossGroup(state,entry,column,nodes);
     for (const group of groups) {

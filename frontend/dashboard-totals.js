@@ -12,6 +12,7 @@ var DashboardTotals=(()=>{
     const unit=units.find(u=>u.id===unitId);if(!unit)continue;
     const columns=raw?source.columns.filter(c=>{const u=xr(c.unit),metric=yf(state.settings,unit).find(m=>m.id===c.key);return u?.totalUnit||['mass','volume','normal-volume','energy'].includes(u?.dimension)||!u&&metric?.mode==='sum';}).map(c=>({...c,kind:xr(c.unit)?.totalUnit?'rate':'quantity',aggregation:xr(c.unit)?.totalUnit?'auto':'sum',showTotal:true})):entry.dataset.columns.filter(c=>c.enabled&&c.kind!=='limit'),pi=new Set(provenance.filter(p=>p.unitId===unitId).map(p=>p.group));
     for(const column of columns){
+     if(IntervalFormulas.is(column))continue;
      const input=xr(column.unit),method=input?.totalUnit&&column.kind!=='counter'?'integral':column.aggregation==='auto'?lc(column).method:column.aggregation,totalUnit=method==='integral'?input?.totalUnit:column.unit;
      if(column.source==='lims'||!['sum','integral','difference'].includes(method)||!totalUnit||xr(totalUnit)?.totalUnit)continue;
      // Prefer one history/daily group per Beijing day; PI fills uncovered days.

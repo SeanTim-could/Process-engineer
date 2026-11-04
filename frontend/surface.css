@@ -136,3 +136,6 @@ body.overview-dragging,body.overview-dragging *{cursor:grabbing!important;user-s
 .oee-counted-option{display:flex;gap:8px;align-items:center;margin:12px 0}.oee-counted-option input{width:auto}
 .oee-overview input[type=checkbox],.oee-counted-option input[type=checkbox]{accent-color:var(--surface-accent)}
 @media(max-width:600px){.oee-overview{padding:12px}.oee-overview .section-heading>.button-row{width:100%}.oee-chart-tools{align-items:stretch;flex-direction:column}.oee-overview .form-label input,.oee-overview .form-label select{max-width:100%}}
+
+/* Whole-window formulas use the same unboxed comparison beside the result. */
+.interval-formula-mode{margin-bottom:16px}.interval-formula-result{margin:18px 0}.interval-formula-result>b{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:27px;font-weight:500;color:var(--surface-ink)}.interval-formula-result>b>.stat-value-label{flex-basis:100%;font-size:11px;font-weight:400;letter-spacing:normal}.interval-formula-result>b>small:not(.stat-value-label){font-size:10px;font-weight:400}.interval-formula-inputs{width:100%;font-variant-numeric:tabular-nums}.interval-formula-inputs td{overflow-wrap:anywhere}.interval-formula-card .period-comparison{align-self:flex-end}

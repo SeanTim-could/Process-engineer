@@ -1139,5 +1139,18 @@
   "瞬时采样": "Instantaneous samples",
   "日均流量累计": "Daily average flow total",
   "按所选每日均值×24小时累加；已计入": "Sum of selected daily averages × 24 hours; included",
-  "天；缺测日不补零，当天暂存按已过时长计算。": "days; missing dates are not zero-filled, and provisional today uses elapsed time."
+  "天；缺测日不补零，当天暂存按已过时长计算。": "days; missing dates are not zero-filled, and provisional today uses elapsed time.",
+  "计算口径": "Calculation method",
+  "公式计算口径": "Formula calculation method",
+  "逐点计算": "Calculate per sample",
+  "区间累计值计算": "Calculate using period totals",
+  "区间计算值": "Period formula result",
+  "上期结果": "Previous result",
+  "公式引用": "Formula reference",
+  "代入的区间累计值": "Period total used",
+  "按区间累计值代入公式": "Formula evaluated using period totals",
+  "先累计所选时段内各输入指标，再代入公式。流量使用累计量，例如累计出料 ÷ 累计进料；结果随查看时段更新。": "Total each input over the selected period, then evaluate the formula. Flow inputs use cumulative quantities, e.g. total output / total feed. Results follow the viewed period.",
+  "按每个采样时间的输入值计算。": "Evaluate the formula at each sample time.",
+  "先累计所选时段输入量，再代入公式。": "Total the inputs over the selected period, then evaluate the formula.",
+  "区间公式请使用单独的结果卡片。": "Use a separate result card for each period formula."
 }

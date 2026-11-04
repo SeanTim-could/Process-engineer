@@ -7,7 +7,7 @@ var SharedFormulas = (() => {
     return groups.length===1?groups[0]:'';
   }
   function reusable(column, columns, seen = new Set()) {
-    if (!column?.formula || column.source === 'lims' || eg(column.formula).timeline === 'lims' || seen.has(column.key)) return false;
+    if (!column?.formula || column.formula.calculationMode === 'interval' || column.source === 'lims' || eg(column.formula).timeline === 'lims' || seen.has(column.key)) return false;
     const formula = column.formula, origin = home(formula,columns), next = new Set([...seen, column.key]), lims=ag(columns);
     let local = false;
     for (const binding of Object.values(formula.bindings)) {
@@ -30,6 +30,12 @@ var SharedFormulas = (() => {
     return {...column, formula};
   }
   function calculate(columns, points) {
+    const interval=columns.filter(c=>c.formula?.calculationMode==='interval');
+    if(interval.length){
+      const keys=new Set(interval.map(c=>c.key)),input=points.map(p=>({...p,values:Object.fromEntries(Object.entries(p.values).filter(([key])=>!keys.has(key)))}));
+      const perPoint=columns.map(c=>keys.has(c.key)?{...c,formula:undefined}:c);
+      return IntervalFormulas.presence(interval,calculate(perPoint,input));
+    }
     const result = HoCore(columns, points), byGroup = new Map();
     for (const point of result) {if (!byGroup.has(point.group)) byGroup.set(point.group, []);byGroup.get(point.group).push(point);}
     for (const [group, rows] of byGroup) {
