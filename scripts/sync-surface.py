@@ -101,6 +101,20 @@ PAIRS += [('let D=f===S?.id?s:cachedSeries?.points??[],z=S?to({dataset:f===S.id?
 
 PAIRS += [('FormulaDailyData.view($r().state,S.id,z,{columns:S.columns})', 'FormulaDailyData.view($r().state,S.id,z,{columns:S.columns.filter(column=>Ql(column)===e)})')]
 
+
+# Custom indicator modules retain the six built-in IDs and store new names with
+# each column. Every reader uses the same catalog, label and colour helpers.
+PAIRS += [
+ ('!Yl.some(l=>l.id===o.module)||!FE.some', '!MetricModules.valid(o.module)||!FE.some'),
+ ('unit:o.unit.trim(),module:o.module,kind:', 'unit:o.unit.trim(),module:MetricModules.normalize(o.module),kind:'),
+ ('(0,se.jsx)("select",{"aria-label":`${o.header}\\u6240\\u5C5E\\u6A21\\u5757`,value:o.module,onChange:s=>i(o.key,{module:s.target.value}),children:Yl.map(s=>(0,se.jsx)("option",{value:s.id,children:s.label},s.id))})', '(0,se.jsx)(MetricModules.Field,{column:o,columns:e,onChange:module=>i(o.key,{module})})'),
+ ('Yl.find(v=>v.id===e.module)?.label', '(0,ue.jsx)(MetricModules.Label,{value:e.module})'),
+ ('Qt=Yl.filter(Q=>ne?.columns.some', 'Qt=MetricModules.catalog(ne?.columns??[]).filter(Q=>ne?.columns.some'),
+ ('h=EN[e.module],p=', 'h=MetricModules.color(e.module),p='),
+ ('style:{background:EN[Q.id]}}),Q.label]', 'style:{background:MetricModules.color(Q.id)}}),(0,ue.jsx)(MetricModules.Label,{value:Q.id})]'),
+ ('(!Yl.some(G=>G.id===S)||I.module===S)', '(!MetricModules.valid(S)||I.module===S)'),
+]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')
@@ -111,6 +125,6 @@ def prepare(js):
 
 def apply(js):
  for old,new in PAIRS:
-  if js.count(old)!=(2 if old in ['children:[b.label,x.label?','let b=x.column,S=pg(x.points,b,l.columns,u);'] else 1):raise ValueError('Surface integration marker missing: '+old[:85])
+  if js.count(old)!=(2 if old in ['children:[b.label,x.label?','let b=x.column,S=pg(x.points,b,l.columns,u);','style:{background:EN[Q.id]}}),Q.label]'] else 1):raise ValueError('Surface integration marker missing: '+old[:85])
   js=js.replace(old,new)
  return js

@@ -1182,5 +1182,9 @@
   "有效采样不足以累计": "Insufficient sampling coverage for a total",
   "累计量暂不可用": "Cumulative total is unavailable",
   "汇总设置中未勾选": "Excluded in total settings",
-  "未找到可用的同名累计指标": "No available cumulative source for this indicator"
+  "未找到可用的同名累计指标": "No available cumulative source for this indicator",
+  "所属模块": "Module",
+  "选择或输入模块名称": "Choose or enter a module name",
+  "可输入自定义名称，同名归为一组": "Enter a custom name; matching names share a module",
+  "所属模块须填写1至40字的名称。": "Enter a module name of 1 to 40 characters."
 }
