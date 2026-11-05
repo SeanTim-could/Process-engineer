@@ -53,5 +53,5 @@ var DailyFlow=(()=>{
   const R=Se(),h=R.createElement;
   return h('label',{className:'gap-setting'},'流量采样口径',h('select',{'aria-label':column.header+'流量采样口径',value:column.flowBasis??'auto',onChange:e=>onChange({flowBasis:e.target.value})},... [['auto','自动识别'],['daily','每日平均流量'],['instant','瞬时采样']].map(([value,label])=>h('option',{key:value,value},label))));
  }
- return {basis,integral,summarize,Settings};
+ return {basis,split,integral,summarize,Settings};
 })();

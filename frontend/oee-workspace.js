@@ -54,9 +54,11 @@ var OEEWorkspace=(()=>{
   let points=[];
   if(plot&&rows.length){
    let before,after;for(const row of rows){if(row.time<bounds.from)before=row;else if(row.time>bounds.to){after=row;break;}}
-   const selected=rows.filter(p=>p.time>=bounds.from&&p.time<=bounds.to),plotRows=[...before?[before]:[],...selected,...after?[after]:[]],gap=HK(rows,integrationColumn,bounds).maxGapHours*3600000,tagged=[];
-   for(const p of plotRows){const previous=tagged.at(-1);if(previous&&gap&&p.time-previous.time>gap)tagged.push({time:previous.time+1,values:{[column.key]:null}});tagged.push(p);}
-   points=LiveSeries.sample(tagged,column.key).points;
+   const selected=rows.filter(p=>p.time>=bounds.from&&p.time<=bounds.to),plotRows=[...before?[before]:[],...selected,...after?[after]:[]],gap=HK(rows,integrationColumn,bounds).maxGapHours*3600000,daily=new Set(DailyFlow.split(rows,flowColumn).daily),tagged=[],day=time=>Math.floor((time+28800000)/M.DAY);
+   // Daily averages cover calendar days, independent of an instant-sampling
+   // gap limit. Missing dates and masked values still break the displayed line.
+   for(const p of plotRows){const previous=tagged.at(-1),missing=previous&&(daily.has(previous)&&daily.has(p)?day(p.time)-day(previous.time)>1:gap&&p.time-previous.time>gap);if(missing)tagged.push({time:previous.time+1,values:{[column.key]:null}});tagged.push(p);}
+   points=LiveSeries.sample(tagged.map(p=>({time:p.time,values:{[column.key]:p.values[column.key]}})),column.key).points;
   }
   return {...base,...summary,status,mdcRate:ro(config.mdc,'t',meta.totalUnit)*(meta.seconds??3600)/86400,column:{key:column.key,label:column.label,unit:column.unit},points};
  }

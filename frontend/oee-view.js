@@ -52,6 +52,9 @@ var OEEView=(()=>{
   const ref=R.useRef(null),svgRef=R.useRef(null),drag=R.useRef(null),[box,setBox]=R.useState(null),[hover,setHover]=R.useState(null),[error,setError]=R.useState(''),width=ChartAxes.useWidth(ref,1000,true),W=Math.max(320,width),H=360,T=52,B=290;
   const ticks=ChartAxes.ticks(...(()=>{const values=[frame.mdcRate,...frame.points.map(p=>p.value)].filter(Number.isFinite);return values.length?[Math.min(...values),Math.max(...values)]:[0,1];})(),5),L=ChartAxes.left(ticks),E=W-25,from=frame.bounds.from,to=frame.bounds.to,span=Math.max(1,to-from),x=time=>L+(time-from)/span*(E-L),low=ticks[0]?.value??0,high=ticks.at(-1)?.value??1,y=value=>B-(value-low)/Math.max(1e-12,high-low)*(B-T),clipId=R.useId().replace(/:/g,'');
   let path='',previous=null;for(const p of frame.points){path+=(p.segment===previous?'L':'M')+x(p.time).toFixed(2)+','+y(p.value).toFixed(2);previous=p.segment;}
+  // SVG move commands do not paint. Give isolated samples a visible marker
+  // within the same path, preserving true gaps and both export formats.
+  for(const [i,p]of frame.points.entries())if(frame.points[i-1]?.segment!==p.segment&&frame.points[i+1]?.segment!==p.segment){const px=x(p.time),py=y(p.value);path+=`M${(px-2).toFixed(2)},${py.toFixed(2)}a2,2 0 1,0 4,0a2,2 0 1,0 -4,0`;}
   const position=event=>{const point=svgRef.current.createSVGPoint();point.x=event.clientX;point.y=event.clientY;return Math.max(L,Math.min(E,point.matrixTransform(svgRef.current.getScreenCTM().inverse()).x));};
   function cancel(){drag.current=null;setBox(null);}
   function down(event){if(busy||mode==='view'||event.button!==0)return;event.preventDefault();event.currentTarget.focus({preventScroll:true});const at=position(event);drag.current={at,clientX:event.clientX};setBox([at,at]);event.currentTarget.setPointerCapture(event.pointerId);}
