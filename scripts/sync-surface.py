@@ -115,6 +115,10 @@ PAIRS += [
  ('(!Yl.some(G=>G.id===S)||I.module===S)', '(!MetricModules.valid(S)||I.module===S)'),
 ]
 
+
+# Overview cards and the detail table share the same enabled indicator catalog.
+PAIRS += [('g=new Set([...d.filter(x=>!x.formula).slice(0,4),...d.filter(x=>x.formula)].map(x=>x.key))', 'g=new Set(d.map(x=>x.key))')]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')
