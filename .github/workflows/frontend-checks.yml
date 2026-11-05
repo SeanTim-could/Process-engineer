@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login, codex/previous-period-means, codex/plain-period-comparison, codex/overview-card-layout, codex/overview-drag-preview, codex/imr-point-removal, codex/transparent-png-export, codex/monthly-oee, codex/oee-page-and-overview-card, codex/content-only-workspace-files, codex/dashboard-cumulative-totals, codex/daily-mean-flow-totals, codex/interval-total-formulas, codex/daily-formula-trends, codex/summary-first-formula-cards, codex/oee-visible-series, codex/custom-metric-modules, codex/overview-all-enabled-metrics]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login, codex/previous-period-means, codex/plain-period-comparison, codex/overview-card-layout, codex/overview-drag-preview, codex/imr-point-removal, codex/transparent-png-export, codex/monthly-oee, codex/oee-page-and-overview-card, codex/content-only-workspace-files, codex/dashboard-cumulative-totals, codex/daily-mean-flow-totals, codex/interval-total-formulas, codex/daily-formula-trends, codex/summary-first-formula-cards, codex/oee-visible-series, codex/custom-metric-modules, codex/overview-all-enabled-metrics, codex/permanent-units-and-yearly-means]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -61,6 +61,8 @@ on:
       - 'scripts/png-alpha-fixture.cjs'
       - 'scripts/test-bulk-metric-removal.cjs'
       - 'scripts/test-custom-metric-modules.cjs'
+      - 'scripts/test-unit-permanent-delete.cjs'
+      - 'scripts/test-yearly-means.cjs'
       - 'scripts/test-data-analysis.cjs'
       - 'scripts/test-capability-math.cjs'
       - 'scripts/test-capability-reports.cjs'
@@ -144,6 +146,8 @@ on:
       - 'scripts/png-alpha-fixture.cjs'
       - 'scripts/test-bulk-metric-removal.cjs'
       - 'scripts/test-custom-metric-modules.cjs'
+      - 'scripts/test-unit-permanent-delete.cjs'
+      - 'scripts/test-yearly-means.cjs'
       - 'scripts/test-data-analysis.cjs'
       - 'scripts/test-capability-math.cjs'
       - 'scripts/test-capability-reports.cjs'
@@ -214,6 +218,8 @@ jobs:
           node --check frontend/oee-workspace.js
           node --check frontend/oee-view.js
           node --check frontend/metric-removal.js
+          node --check frontend/unit-removal.js
+          node --check frontend/yearly-means.js
           node --check frontend/dashboard-totals.js
           node --check frontend/daily-flow.js
           node --check frontend/metric-modules.js
@@ -290,6 +296,8 @@ jobs:
           WORKBENCH_PCA_ENTRY=workbench-compatible.html node scripts/test-pca-workspace.cjs
           node scripts/test-bulk-metric-removal.cjs
           node scripts/test-custom-metric-modules.cjs
+          node scripts/test-unit-permanent-delete.cjs
+          node scripts/test-yearly-means.cjs
           node scripts/test-data-analysis.cjs
           node scripts/test-capability-reports.cjs
           node scripts/test-analysis-session.cjs

@@ -119,6 +119,30 @@ PAIRS += [
 # Overview cards and the detail table share the same enabled indicator catalog.
 PAIRS += [('g=new Set([...d.filter(x=>!x.formula).slice(0,4),...d.filter(x=>x.formula)].map(x=>x.key))', 'g=new Set(d.map(x=>x.key))')]
 
+
+PAIRS += [
+ ('else if(r.pathname==="/api/oee"){a=await OEEWorkspace.request(e)}', 'else if(r.pathname==="/api/unit-removal"){a=await UnitRemoval.request(e)}else if(r.pathname==="/api/oee"){a=await OEEWorkspace.request(e)}'),
+ ('PointExclusions.seed(n.state.analytics);LiveData.seed(n.state);if(r.pathname', 'PointExclusions.seed(n.state.analytics);LiveData.seed(n.state);if(r.pathname==="/api/unit-removal")UnitRemoval.committed(n.state);if(r.pathname'),
+ ('u(L.id),p(!1)},children:[(0,Ce.jsx)(Qi,{size:13}),"\\u6062\\u590D\\u88C5\\u7F6E"]})]},L.id))', 'u(L.id),p(!1)},children:[(0,Ce.jsx)(Qi,{size:13}),"\\u6062\\u590D\\u88C5\\u7F6E"]}),(0,Ce.jsx)(UnitRemoval.Control,{unit:L,draft:o})]},L.id))'),
+]
+
+
+PAIRS += [
+ ('else if(r.pathname==="/api/unit-removal"){a=await UnitRemoval.request(e)}', 'else if(r.pathname==="/api/yearly-means"){a=await YearlyMeans.request(e)}else if(r.pathname==="/api/unit-removal"){a=await UnitRemoval.request(e)}'),
+ ('h=MetricModules.color(e.module),p=m.some', 'h=MetricModules.color(e.module),annual=YearlyMeans.use(YearlyMeans.fromExport(o),[e],f.unit),p=m.some'),
+ ('(0,ue.jsx)("div",{className:"auto-chart-canvas"', '(0,ue.jsx)(YearlyMeans.Controls,{model:annual}),(0,ue.jsx)("div",{className:"auto-chart-canvas"'),
+ ('(0,ue.jsx)(Fv,{type:"linear",dataKey:"value",name:e.label', '...annual.refs.map(ref=>(0,ue.jsx)(f2,{y:ref.value,ifOverflow:"extendDomain",stroke:ref.color,strokeDasharray:ref.dash,label:{value:YearlyMeans.caption(ref),position:ref.kind==="current"?"insideTopRight":"insideBottomRight",fill:ref.color,fontSize:10}},ref.id)),(0,ue.jsx)(Fv,{type:"linear",dataKey:"value",name:e.label'),
+]
+
+
+PAIRS += [
+ ('function ug(e,t,r,a,n,connectMissing=!1){if(IntervalFormulas.is(t))', 'function ug(e,t,r,a,n,connectMissing=!1,yearlyConfig){if(IntervalFormulas.is(t))'),
+ ('let i=UE(e,t,r,a,n),o=i.data,s=lg(o),l=s.flatMap(A=>[A.value,A.limit]).filter(A=>A!==null);', 'let i=UE(e,t,r,a,n),o=i.data,s=lg(o),annual=yearlyConfig?YearlyMeans.model(yearlyConfig,[t],i.unit).refs:[],l=[...s.flatMap(A=>[A.value,A.limit]),...annual.map(ref=>ref.value)].filter(A=>A!==null);'),
+ ('ug(v,I,u.columns,b,y,s==="lims"&&t.get("connectMissing")==="1")', 'ug(v,I,u.columns,b,y,s==="lims"&&t.get("connectMissing")==="1",{sourceId:o.id,unitId:a.id,group:m,keys:[I.key],period:b})'),
+ ('ug(c,d,e.columns,s,u?.range,u?.connectMissing)', 'ug(c,d,e.columns,s,u?.range,u?.connectMissing,{sourceId:e.id,unitId:t[0]?.unit,group:o,keys:[d.key],period:s})'),
+ ('${y}${x}${b("limit"', '${y}${x}${YearlyMeans.svg(annual,{L:75,E:870,y:v})}${b("limit"'),
+]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')

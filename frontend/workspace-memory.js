@@ -2,7 +2,7 @@
 // workspace only. Source data and account identities are never persisted here.
 var WorkspaceMemory = (() => {
   const R=Se(),epochs=new Map(),channels=new Map(),eventName='workbench-series-changed';
-  const dataPaths=new Set(['/api/series','/api/calculations','/api/settings','/api/offline/restore','/api/offline/merge','/api/excel-sync','/api/live-data','/api/formula-health','/api/records','/api/state']);
+  const dataPaths=new Set(['/api/series','/api/unit-removal','/api/calculations','/api/settings','/api/offline/restore','/api/offline/merge','/api/excel-sync','/api/live-data','/api/formula-health','/api/records','/api/state']);
   function changed(path,exclusionsChanged=false) {
     // Filters, notes, saved recipes and drafts do not invalidate measurements.
     if(!dataPaths.has(path)&&!(path==='/api/analytics'&&exclusionsChanged))return;

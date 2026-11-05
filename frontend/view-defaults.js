@@ -27,6 +27,11 @@ var ViewDefaults = (() => {
     try{const mirror=[...rows].slice(-1024);let json=JSON.stringify(mirror);while(json.length>524288&&mirror.length>1){mirror.shift();json=JSON.stringify(mirror);}sessionStorage.setItem('workbench-view-session:'+namespace(),json);}catch{}
     return value;
   }
+  function forgetUnit(unitId,sourceIds=[]){
+    const ids=new Set(['raw:'+unitId,...sourceIds]),rows=entries(),touches=value=>typeof value==='string'?(value===unitId||ids.has(value)):Array.isArray(value)?value.some(touches):value&&typeof value==='object'?Object.values(value).some(touches):false;
+    for(const [key,value]of rows)if(key.split(':').includes(unitId)||[...ids].some(id=>key.endsWith(':'+id))||touches(value))rows.delete(key);
+    try{sessionStorage.setItem('workbench-view-session:'+namespace(),JSON.stringify([...rows].slice(-1024)));}catch{}
+  }
   function useState(key,initial){
     const R=Se(),scope=namespace(),id=scope+':'+key,ref=R.useRef(null),[,render]=R.useState(0);
     if(ref.current?.id!==id)ref.current={id,value:read(key)??(typeof initial==='function'?initial():initial)};
@@ -54,7 +59,7 @@ var ViewDefaults = (() => {
       }else remember(key,{from:view.from,to:view.to,month:view.month});
     },[page,ready,view?.unitId,view?.from,view?.to,view?.month]);
   }
-  return {range,analysis,today,useOpeningRange,read,remember,useState,useRemember};
+  return {range,analysis,today,forgetUnit,useOpeningRange,read,remember,useState,useRemember};
 })();
 
 if(typeof module!=='undefined'&&module.exports)module.exports=ViewDefaults;

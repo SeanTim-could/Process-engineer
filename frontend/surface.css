@@ -143,3 +143,5 @@ body.overview-dragging,body.overview-dragging *{cursor:grabbing!important;user-s
 .interval-daily-plot{min-width:0}.interval-summary-row{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 12px;padding:12px 0;margin-bottom:12px;border-top:1px solid var(--surface-line,#c9dcd8);font-size:13px}.interval-summary-row>b{font-size:16px}.interval-summary-row .period-comparison{margin-left:auto}.interval-daily-basis{margin:4px 0 8px}.interval-kpi-summary{display:block;font-size:11px!important;line-height:1.6}.interval-formula-card .auto-chart-stat{margin-bottom:0}
 
 .metric-module-field{min-width:160px;max-width:260px}.metric-module-field input{width:100%;box-sizing:border-box}.metric-module-field small{display:block;margin-top:6px;font-size:11px;line-height:1.5;white-space:normal;color:var(--surface-muted)}
+
+.yearly-mean-controls{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin:8px 0;font-size:11px}.yearly-mean-controls label{display:flex;gap:6px;align-items:center;cursor:pointer}.yearly-mean-controls input{width:auto;accent-color:var(--surface-accent)}.yearly-mean-controls small{color:var(--surface-muted)}
