@@ -156,3 +156,11 @@ body.overview-dragging,body.overview-dragging *{cursor:grabbing!important;user-s
 @keyframes workbench-notice-in{from{opacity:0;transform:translate(-50%,calc(-100% - 24px))}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes workbench-notice-out{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,calc(-100% - 24px))}}
 @media(prefers-reduced-motion:reduce){.toast.workbench-notice,.toast.workbench-notice.is-leaving,.offline-message.workbench-notice,.offline-message.workbench-notice.is-leaving{animation-duration:1ms}}
+
+/* Reference switches belong with the chart tools, aligned to the upper right. */
+.chart-head-actions{display:flex;flex-direction:column;align-items:flex-end;flex:0 1 auto;min-width:0;max-width:62%;gap:7px}
+.chart-head-actions>.button-row{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap;min-width:0;margin:0}
+.chart-head-actions>.yearly-mean-controls{justify-content:flex-end;margin:0;gap:5px 12px;max-width:100%;font-size:10px}
+.chart-head-actions>.yearly-mean-controls label{gap:4px;flex-wrap:wrap;justify-content:flex-end}.chart-head-actions>.yearly-mean-controls input{margin:0}
+.auto-chart-card .chart-module-dot{background:var(--module-accent)!important}
+@media(max-width:600px){.chart-head-actions{max-width:62%;gap:6px}.chart-head-actions>.button-row{gap:3px}.chart-head-actions>.yearly-mean-controls{gap:4px 9px;font-size:9px}}

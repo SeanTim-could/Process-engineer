@@ -152,6 +152,15 @@ PAIRS += [
  ('a&&(0,Ye.jsxs)("div",{className:"offline-message",role:"status",children:[(0,Ye.jsx)("span",{children:a}),(0,Ye.jsx)("button",{"aria-label":"\\u5173\\u95ED\\u79BB\\u7EBF\\u63D0\\u793A",onClick:()=>n(""),children:(0,Ye.jsx)(Ai,{size:16})})]})', '(0,Ye.jsx)(Surface.Notification,{notice:a,onClose:()=>n(""),kind:"offline-message"})'),
 ]
 
+# Keep selected-period yearly comparisons and compact chart controls consistent.
+PAIRS += [
+ ('annual=YearlyMeans.use(YearlyMeans.fromExport(o),[e],f.unit)', 'annual=YearlyMeans.use(YearlyMeans.fromExport(o),[e],f.unit,{range:n})'),
+ ('(0,ue.jsxs)("div",{className:"button-row chart-actions",children:[(0,ue.jsx)(OverviewCards.Tools,{})', '(0,ue.jsxs)(YearlyMeans.Header,{model:annual,children:[(0,ue.jsx)(OverviewCards.Tools,{})'),
+ ('(0,ue.jsx)(YearlyMeans.Controls,{model:annual}),(0,ue.jsx)("div",{className:"auto-chart-canvas"', 'null/* annual controls moved to header */,(0,ue.jsx)("div",{className:"auto-chart-canvas"'),
+ ('(0,ue.jsxs)("p",{children:[(0,ue.jsx)(MetricModules.Label,{value:e.module})," \\xB7 ",f.label]})', 'null/* chart module and sampling subtitle removed */'),
+ ('YearlyMeans.model(yearlyConfig,[t],i.unit)', 'YearlyMeans.model({...yearlyConfig,range:n},[t],i.unit)'),
+]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')

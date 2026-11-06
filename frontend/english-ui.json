@@ -1208,5 +1208,7 @@
   "正在永久删除…": "Deleting permanently…",
   "年均值参考线设置无效。": "Invalid yearly mean settings.",
   "年均值参考线设置重复。": "Duplicate yearly mean settings.",
-  "参考线的数据来源已移除，请刷新图表。": "The reference line source was removed. Refresh the chart."
+  "参考线的数据来源已移除，请刷新图表。": "The reference line source was removed. Refresh the chart.",
+  "今年年初至今": "Year to date",
+  "当前所选时间区间向前一年": "Selected interval shifted back one year"
 }
