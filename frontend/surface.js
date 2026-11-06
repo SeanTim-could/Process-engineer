@@ -90,11 +90,22 @@ var Surface=(()=>{
    if(el.matches('h1,h2,h3,h4,th')&&(!el.hasAttribute('title')||el.dataset.autoTitle)){el.title=el.textContent;el.dataset.autoTitle='true';}
   }
  }
+ // Give identical consecutive messages separate lifetimes and clean up on replacement.
+ function useNotice(){const [notice,setNotice]=R.useState(null),sequence=R.useRef(0),set=R.useCallback(value=>setNotice(old=>{const text=typeof value==='function'?value(old?.text??''):value;return text?{id:++sequence.current,text:String(text)}:null;}),[]);return [notice,set];}
+ let currentNoticeClose=null;
+ function NotificationItem({notice,onClose,kind,icon}){
+  const [leaving,setLeaving]=R.useState(false),close=R.useRef(onClose);close.current=onClose;
+  R.useLayoutEffect(()=>{currentNoticeClose?.();const remove=()=>close.current();currentNoticeClose=remove;return()=>{if(currentNoticeClose===remove)currentNoticeClose=null;};},[]);
+  R.useEffect(()=>{const timer=setTimeout(()=>setLeaving(true),3000);return()=>clearTimeout(timer);},[]);
+  R.useEffect(()=>{if(!leaving)return;const timer=setTimeout(()=>close.current(),260);return()=>clearTimeout(timer);},[leaving]);
+  return h('div',{className:kind+' workbench-notice'+(leaving?' is-leaving':''),role:'status','aria-live':'polite','data-notice-id':notice.id,onAnimationEnd:e=>{if(leaving&&e.target===e.currentTarget)close.current();}},icon,h('span',null,notice.text),h('button',{type:'button','aria-label':kind==='offline-message'?'关闭离线提示':'关闭提示',onClick:()=>setLeaving(true)},h('svg',{width:15,height:15,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round','aria-hidden':true},h('path',{d:'M6 6l12 12M18 6L6 18'}))));
+ }
+ function Notification({notice,onClose,kind='toast',icon}){return notice?h(NotificationItem,{key:notice.id,notice,onClose,kind,icon}):null;}
  function use(current,profile={}){
   const revision=useRefresh(),key=AccountAuth.storageKey();names=new Set([profile.name,profile.employeeId,AccountAuth.decorate(profile).name].filter(Boolean));
   R.useLayoutEffect(()=>{scope=key;previewLanguage(profile.language??'zh-CN',true);},[key,profile.language]);
   R.useLayoutEffect(()=>{page=current;document.documentElement.dataset.workbenchPage=current;syncTheme();scan(document.getElementById('root'));},[current,revision]);
   R.useEffect(()=>{let frame=null,roots=new Set();const observer=new MutationObserver(records=>{for(const item of records){const node=item.target.nodeType===1?item.target:item.target.parentElement;if(node&&!node.closest('svg,script,style'))roots.add(node);}if(!frame&&roots.size)frame=requestAnimationFrame(()=>{frame=null;for(const node of roots)scan(node);roots.clear();});});observer.observe(document.getElementById('root'),{childList:true,subtree:true,characterData:true});const theme=new MutationObserver(syncTheme);theme.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});return()=>{observer.disconnect();theme.disconnect();if(frame)cancelAnimationFrame(frame);};},[]);
  }
- return {en,t,localize,weekday,monthLabel,language,validLanguage,previewLanguage,useRefresh,LanguageSettings,Logo,chartTitle,comparisonTitle,pageTitle,use,svgText,exportSvg,appendTitle,localizeDocument,transparentPng};
+ return {useNotice,Notification,en,t,localize,weekday,monthLabel,language,validLanguage,previewLanguage,useRefresh,LanguageSettings,Logo,chartTitle,comparisonTitle,pageTitle,use,svgText,exportSvg,appendTitle,localizeDocument,transparentPng};
 })();

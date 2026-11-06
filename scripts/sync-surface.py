@@ -143,6 +143,15 @@ PAIRS += [
  ('${y}${x}${b("limit"', '${y}${x}${YearlyMeans.svg(annual,{L:75,E:870,y:v})}${b("limit"'),
 ]
 
+# Shared top notifications, including file actions. Keep each event separately timed.
+PAIRS += [
+ ('[A,E]=(0,It.useState)(""),[D,z]', '[A,E]=Surface.useNotice(),[D,z]'),
+ ('[a,n]=(0,Pi.useState)(""),[i,o]', '[a,n]=Surface.useNotice(),[i,o]'),
+ ('(0,It.useEffect)(()=>{if(!A)return;let he=setTimeout(()=>E(""),5e3);return()=>clearTimeout(he)},[A]),', '/* notice timer owned by Surface.Notification */'),
+ ('A&&(0,B.jsxs)("div",{className:"toast",role:"status",children:[(0,B.jsx)(ar,{size:18}),(0,B.jsx)("span",{children:A}),(0,B.jsx)("button",{"aria-label":"\\u5173\\u95ED\\u63D0\\u793A",onClick:()=>E(""),children:(0,B.jsx)(Ai,{size:15})})]})', '(0,B.jsx)(Surface.Notification,{notice:A,onClose:()=>E(""),icon:(0,B.jsx)(ar,{size:18})})'),
+ ('a&&(0,Ye.jsxs)("div",{className:"offline-message",role:"status",children:[(0,Ye.jsx)("span",{children:a}),(0,Ye.jsx)("button",{"aria-label":"\\u5173\\u95ED\\u79BB\\u7EBF\\u63D0\\u793A",onClick:()=>n(""),children:(0,Ye.jsx)(Ai,{size:16})})]})', '(0,Ye.jsx)(Surface.Notification,{notice:a,onClose:()=>n(""),kind:"offline-message"})'),
+]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')

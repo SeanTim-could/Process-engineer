@@ -148,3 +148,11 @@ body.overview-dragging,body.overview-dragging *{cursor:grabbing!important;user-s
 
 /* Round the inset footer without clipping the date picker outside the panel. */
 .series-controls>.series-control-foot{border-radius:0 0 17px 17px}
+
+/* Transient operation feedback enters from the top and retracts after 3 s. */
+.toast.workbench-notice,.offline-message.workbench-notice{top:max(12px,env(safe-area-inset-top));bottom:auto;left:50%;transform:translate(-50%,0);z-index:10020;box-sizing:border-box;width:max-content;max-width:min(700px,calc(100vw - 24px));margin:0;animation:workbench-notice-in .26s cubic-bezier(.2,.8,.2,1) both;overflow-wrap:anywhere}
+.workbench-notice>span{min-width:0}.workbench-notice>svg,.workbench-notice>button{flex-shrink:0}.workbench-notice>button{cursor:pointer;padding:5px;display:inline-flex;align-items:center;justify-content:center}.workbench-notice>button:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:4px}
+.toast.workbench-notice.is-leaving,.offline-message.workbench-notice.is-leaving{animation:workbench-notice-out .22s ease-in both;pointer-events:none}
+@keyframes workbench-notice-in{from{opacity:0;transform:translate(-50%,calc(-100% - 24px))}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes workbench-notice-out{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,calc(-100% - 24px))}}
+@media(prefers-reduced-motion:reduce){.toast.workbench-notice,.toast.workbench-notice.is-leaving,.offline-message.workbench-notice,.offline-message.workbench-notice.is-leaving{animation-duration:1ms}}
