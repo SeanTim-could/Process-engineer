@@ -145,3 +145,6 @@ body.overview-dragging,body.overview-dragging *{cursor:grabbing!important;user-s
 .metric-module-field{min-width:160px;max-width:260px}.metric-module-field input{width:100%;box-sizing:border-box}.metric-module-field small{display:block;margin-top:6px;font-size:11px;line-height:1.5;white-space:normal;color:var(--surface-muted)}
 
 .yearly-mean-controls{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin:8px 0;font-size:11px}.yearly-mean-controls label{display:flex;gap:6px;align-items:center;cursor:pointer}.yearly-mean-controls input{width:auto;accent-color:var(--surface-accent)}.yearly-mean-controls small{color:var(--surface-muted)}
+
+/* Round the inset footer without clipping the date picker outside the panel. */
+.series-controls>.series-control-foot{border-radius:0 0 17px 17px}
