@@ -128,22 +128,22 @@ def build(config_override=None):
     public={**config,'entry':'./workbench.html?v='+entry_version,'prefetch':['./workbench.html?v='+entry_version,startup_assets['script']['compressed'],startup_assets['style']['compressed']]}
     origin=config['url'] if config['enabled'] else ''
     connect="'self' "+origin if origin else "'self'"
-    css=(ROOT/'frontend/account-auth.css').read_text()
+    css=(ROOT/'frontend/account-auth.css').read_text()+'\n'+(ROOT/'frontend/form-controls.css').read_text()
     css+='\n*{box-sizing:border-box}body{margin:0;color:#244435;font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}.account-form{width:min(440px,100%)}.account-login>section{width:min(440px,100%)}.account-form button{font:inherit;cursor:pointer;border:0;border-radius:9px;background:#087f5b;color:#fff}.account-form button:disabled{opacity:.6;cursor:wait}.account-form .form-label{display:block}.muted{color:#77897f}.small{font-size:12px}.error-banner{padding:10px;background:#fff1ef;border-radius:8px;color:#a83627}#web-login-status{min-height:1.6em} .account-form input{font:inherit}'
     script=loader_source('login-interactions.js')+'\n'+(ROOT/'frontend/web-login.js').read_text()
     page='''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src CONNECT; form-action 'none'; base-uri 'none'">
 <title>登录 · 工艺工程师工作台</title>PRECONNECT<style>STYLE</style></head><body><main class="account-login"><section><form id="web-login-form" class="account-form">
 <span class="account-brand">工程师工作台</span><h1>登录你的工作台</h1><p class="muted">请使用管理员发放的工号和密码。</p>
-<label class="form-label">登录工号<input aria-label="登录工号" name="employee" autocomplete="username" maxlength="40" required></label>
-<label class="form-label">登录密码<input aria-label="登录密码" name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
+<label class="form-label floating-field has-caption">登录工号<input placeholder=" " aria-label="登录工号" name="employee" autocomplete="username" maxlength="40" required></label>
+<label class="form-label floating-field has-caption">登录密码<input placeholder=" " aria-label="登录密码" name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
 <p id="web-login-error" class="error-banner" role="alert" hidden></p><button id="web-login-submit" class="login-submit" type="submit" disabled>登录</button>
 <p id="web-login-status" class="small muted" role="status" aria-live="polite"></p><p class="small muted">没有账号或忘记密码，请联系管理员。</p>
 <noscript>请启用浏览器的 JavaScript 后使用工作台。</noscript></form></section></main><script>window.WorkbenchWebConfig=CONFIG;
 SCRIPT</script></body></html>'''
     page=page.replace('PRECONNECT',f'<link rel="preconnect" href="{markup.escape(origin)}" crossorigin>' if origin else '').replace('CONNECT',markup.escape(connect,quote=True))
     page=page.replace('STYLE',css).replace('CONFIG',json.dumps(public,ensure_ascii=True)).replace('SCRIPT',script)
-    page=page.replace('>登录工号<input','><span data-en="Employee ID">登录工号</span><input').replace('>登录密码<input','><span data-en="Password">登录密码</span><input')
+    page=page.replace('>登录工号<input','><span class="floating-caption" data-en="Employee ID">登录工号</span><input').replace('>登录密码<input','><span class="floating-caption" data-en="Password">登录密码</span><input')
     terms={'登录你的工作台':'Sign in to your workbench','登录':'Sign in','工程师工作台':'Engineer Workbench','请使用管理员发放的工号和密码。':'Use the employee ID and password issued by your administrator.','没有账号或忘记密码，请联系管理员。':'Contact your administrator for an account or password reset.'}
     for zh,en in terms.items():
         page=page.replace('>'+zh+'<',' aria-label="'+zh+'" data-en="'+en+'">'+zh+'<')

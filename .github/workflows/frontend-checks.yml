@@ -2,7 +2,7 @@ name: Workbench browser checks
 
 on:
   push:
-    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login, codex/previous-period-means, codex/plain-period-comparison, codex/overview-card-layout, codex/overview-drag-preview, codex/imr-point-removal, codex/transparent-png-export, codex/monthly-oee, codex/oee-page-and-overview-card, codex/content-only-workspace-files, codex/dashboard-cumulative-totals, codex/daily-mean-flow-totals, codex/interval-total-formulas, codex/daily-formula-trends, codex/summary-first-formula-cards, codex/oee-visible-series, codex/custom-metric-modules, codex/overview-all-enabled-metrics, codex/permanent-units-and-yearly-means, codex/formula-chart-point-removal, codex/top-sliding-notifications, codex/selected-yearly-reference-and-chart-header, codex/visible-calendar-popovers]
+    branches: [main, codex/cross-unit-calculations, codex/enable-account-login, codex/faster-web-entry, codex/general-workbench-labels, codex/admin-add-data, codex/analysis-and-chart-workspace, codex/capability-reference-reports, codex/persistent-analysis-and-office-save, codex/formulas-capability-and-outlier-selection, codex/connect-excluded-chart-points, codex/python-excel-auto-sync, codex/pi-refresh-formulas-daily, codex/device-sync-live-data, codex/live-chart-performance, codex/excel-background-sync, codex/faster-login-paint, codex/dashboard-and-axis-layout, codex/smaller-startup-download, codex/remember-device-overview, codex/reliable-startup-fallback, codex/preserve-page-date-ranges, codex/enterprise-dashboard-refresh, codex/refine-interface-contrast, codex/theme-language-layout, codex/compact-chart-tools, codex/reliable-entry-and-compact-dashboard, codex/glass-login-and-stable-sidebar, codex/reliable-save-actions, codex/pca-workspace, codex/custom-domain-sync, codex/plain-login-background, codex/bulk-metric-removal, codex/responsive-chart-axes, codex/pi-minute-points, codex/offline-without-login, codex/previous-period-means, codex/plain-period-comparison, codex/overview-card-layout, codex/overview-drag-preview, codex/imr-point-removal, codex/transparent-png-export, codex/monthly-oee, codex/oee-page-and-overview-card, codex/content-only-workspace-files, codex/dashboard-cumulative-totals, codex/daily-mean-flow-totals, codex/interval-total-formulas, codex/daily-formula-trends, codex/summary-first-formula-cards, codex/oee-visible-series, codex/custom-metric-modules, codex/overview-all-enabled-metrics, codex/permanent-units-and-yearly-means, codex/formula-chart-point-removal, codex/top-sliding-notifications, codex/selected-yearly-reference-and-chart-header, codex/visible-calendar-popovers, codex/floating-fields-comparison]
     paths:
       - '*.html'
       - 'frontend/**'
@@ -41,6 +41,8 @@ on:
       - 'scripts/test-workspace-memory.cjs'
       - 'scripts/test-navigation-ranges.cjs'
       - 'scripts/test-calendar-popovers.cjs'
+      - 'scripts/test-floating-forms-comparison.cjs'
+      - 'scripts/choose-form-option.cjs'
       - 'scripts/excel-sync-fixture.py'
       - 'scripts/sync-cross-unit-calculations.py'
       - 'scripts/test-cross-unit-calculations.cjs'
@@ -128,6 +130,8 @@ on:
       - 'scripts/test-workspace-memory.cjs'
       - 'scripts/test-navigation-ranges.cjs'
       - 'scripts/test-calendar-popovers.cjs'
+      - 'scripts/test-floating-forms-comparison.cjs'
+      - 'scripts/choose-form-option.cjs'
       - 'scripts/excel-sync-fixture.py'
       - 'scripts/sync-cross-unit-calculations.py'
       - 'scripts/test-cross-unit-calculations.cjs'
@@ -219,6 +223,8 @@ jobs:
           node --check frontend/overview-cards.js
           node --check frontend/surface.js
           node --check frontend/calendar-overlay.js
+          node --check frontend/form-controls.js
+          node --check frontend/comparison-chart.js
           node --check frontend/oee-math.js
           node --check frontend/oee-workspace.js
           node --check frontend/oee-view.js
@@ -348,4 +354,5 @@ jobs:
           node scripts/test-workspace-memory.cjs
           node scripts/test-navigation-ranges.cjs
           node scripts/test-calendar-popovers.cjs
+          node scripts/test-floating-forms-comparison.cjs
           WORKBENCH_RANGE_ENTRY=workbench.html node scripts/test-navigation-ranges.cjs

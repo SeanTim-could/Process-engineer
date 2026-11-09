@@ -1,3 +1,4 @@
+const {chooseFormOption,formOptionValue}=require('./choose-form-option.cjs');
 // Run with Node.js and Playwright installed. All data stays in isolated browser contexts.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
@@ -130,20 +131,20 @@ const values=(d,key,group='P')=>d.points.filter(p=>p.group===group&&Object.hasOw
   // Actual editor flow: choose a remote device, insert a metric, preview and save.
   await p.reload();await p.getByRole('button',{name:'数据管理',exact:true}).click();await p.getByRole('button',{name:'数据中心',exact:true}).click();
   await p.getByRole('button',{name:'编辑公式跨装置含量折算',exact:true}).click();
-  const anchorChooser=p.getByRole('combobox',{name:'公式主LIMS时间轴',exact:true});
-  await anchorChooser.locator('option').filter({hasText:'B重命名'}).waitFor({state:'attached'});
-  const selectedAnchor=JSON.parse(await anchorChooser.inputValue());
+  const anchorChooser=p.getByLabel('公式主LIMS时间轴',{exact:true});
+  await anchorChooser.locator('label').filter({hasText:'B重命名'}).waitFor({state:'attached'});
+  const selectedAnchor=JSON.parse(await formOptionValue(anchorChooser));
   assert.equal(selectedAnchor.datasetId,'ds_unit_b');assert.equal(selectedAnchor.group,'SP 955');
   await p.getByRole('button',{name:'取消',exact:true}).click();
   await p.getByRole('button',{name:'新增计算指标',exact:true}).click();
-  const chooser=p.getByRole('combobox',{name:'公式引用装置',exact:true});await chooser.waitFor();await chooser.selectOption('b');
-  await p.getByRole('combobox',{name:'公式引用数据分组',exact:true}).selectOption('production');
-  await p.getByRole('combobox',{name:'公式引用采样点',exact:true}).selectOption('B生产');
+  const chooser=p.getByLabel('公式引用装置',{exact:true});await chooser.waitFor();await chooseFormOption(chooser,'b');
+  await chooseFormOption(p.getByLabel('公式引用数据分组',{exact:true}),'production');
+  await chooseFormOption(p.getByLabel('公式引用采样点',{exact:true}),'B生产');
   await p.getByRole('textbox',{name:'计算指标显示名称',exact:true}).fill('界面跨装置测试');
-  await p.getByRole('combobox',{name:'计算指标输出单位',exact:true}).selectOption('kg/h');
+  await chooseFormOption(p.getByLabel('计算指标输出单位',{exact:true}),'kg/h');
   const referenceButton=p.locator('.formula-reference').filter({hasText:'B重命名（b）｜生产｜B生产｜流量'});await referenceButton.click();
-  assert((await p.getByRole('textbox',{name:'计算公式',exact:true}).inputValue()).includes('B重命名（b）'));
-  await p.getByRole('combobox',{name:'公式时间匹配基准',exact:true}).selectOption('production');
+  assert((await formOptionValue(p.getByRole('textbox',{name:'计算公式',exact:true}))).includes('B重命名（b）'));
+  await chooseFormOption(p.getByLabel('公式时间匹配基准',{exact:true}),'production');
   await p.getByRole('spinbutton',{name:'公式最大匹配时间差',exact:true}).fill('10');
   await p.getByRole('button',{name:'预览计算',exact:true}).click();await p.locator('.formula-preview').waitFor();
   assert((await p.locator('.formula-preview').innerText()).includes('装置 b'));
@@ -152,7 +153,7 @@ const values=(d,key,group='P')=>d.points.filter(p=>p.group===group&&Object.hasOw
   const uiResult=(await dataset(p)).dataset.columns.find(c=>c.label==='界面跨装置测试');assert(uiResult.formula.bindings);
   report.push('The real Data Center editor can choose another device, insert its metric, preview matching device/time, and save the result into the current device.');
   await p.getByRole('button',{name:'新增计算指标',exact:true}).click();
-  await p.setViewportSize({width:390,height:844});await p.getByRole('combobox',{name:'公式引用装置',exact:true}).selectOption('b');
+  await p.setViewportSize({width:390,height:844});await chooseFormOption(p.getByLabel('公式引用装置',{exact:true}),'b');
   assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await p.getByRole('button',{name:'取消',exact:true}).click();
   const archiveSettings=(await backup(p)).state.settings;

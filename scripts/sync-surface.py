@@ -170,6 +170,21 @@ PAIRS += [
 
 PAIRS += [('onKeyDown:b=>{b.key==="Enter"&&g()}', 'onKeyDown:b=>{if(b.key==="Enter"){b.preventDefault();b.stopPropagation();g()}}')]
 
+# Adaptive form fields and native comparison interaction hooks.
+PAIRS += [
+ ('if(typeof Surface!=="undefined"&&Surface)t=Surface.localize(e,t);var a=null;', 'if(typeof Surface!=="undefined"&&Surface)t=Surface.localize(e,t);if(typeof FormControls!=="undefined"&&FormControls)[e,t]=FormControls.adapt(e,t);var a=null;'),
+ ('if(typeof Surface!=="undefined"&&Surface)n=Surface.localize(e,n);return qC(e,i,n)', 'if(typeof Surface!=="undefined"&&Surface)n=Surface.localize(e,n);if(typeof FormControls!=="undefined"&&FormControls)[e,n]=FormControls.adapt(e,n);return qC(e,i,n)'),
+ ('let I=i.lines.filter(H=>!b.some', 'let comparisonZoom=ComparisonChart.useZoom(i),I=i.lines.filter(H=>!b.some'),
+ ('T=jG(H,i);return{data:T,svg:HG(T)', 'T=ComparisonChart.model(jG(H,i),comparisonZoom.range);return{data:T,svg:HG(T)'),
+ ('[u,p,w,i,a,e,v]);async function j()', '[u,p,w,i,a,e,v,comparisonZoom.range]);async function j()'),
+ ('(0,Ie.jsx)("div",{className:"comparison-plot","data-testid":"comparison-chart",dangerouslySetInnerHTML:{__html:Surface.exportSvg(G.svg,Surface.comparisonTitle(i.lines))}})', '(0,Ie.jsx)(ComparisonChart.Plot,{data:G.data,svg:G.svg,title:Surface.comparisonTitle(i.lines),zoom:comparisonZoom})'),
+ ('let o=Math.min(...i),s=Math.max(...i),l=v=>', 'let o=e.range?.[0]??Math.min(...i),s=e.range?.[1]??Math.max(...i),l=v=>'),
+ ('unit:g,color:IN[o%8],title:', 'unit:g,color:ComparisonChart.color(i.selection.color,o),title:'),
+ ('style:{background:IN[T]}})', 'style:{background:ComparisonChart.color(H.color,T)}})'),
+ ('className:"comparison-line-head",children:[(0,Ie.jsxs)("b",', 'className:"comparison-line-head",children:[(0,Ie.jsx)(ComparisonChart.Color,{value:H.color,index:T,onChange:color=>A(H.id,{color})}),(0,Ie.jsxs)("b",'),
+ ('return a.add(i.id),{id:i.id,unitId:i.unitId,datasetId:i.datasetId,key:i.key,group:i.group,', 'if(i.color!==undefined&&!ComparisonChart.validColor(i.color))throw new Error("曲线颜色无效，请选择有效颜色。");return a.add(i.id),{...i.color?{color:i.color}:{},id:i.id,unitId:i.unitId,datasetId:i.datasetId,key:i.key,group:i.group,'),
+]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')

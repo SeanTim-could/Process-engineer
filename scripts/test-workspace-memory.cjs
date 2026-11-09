@@ -1,3 +1,4 @@
+const {chooseFormOption}=require('./choose-form-option.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),{fixture}=require('./workbench-browser-fixture.cjs');
 (async()=>{const f=await fixture(),p=f.page,dir=await fs.mkdtemp(path.join(os.tmpdir(),'workbench-device-memory-'));try{
  await p.clock.setFixedTime(new Date('2026-10-31T07:45:00Z'));await p.goto(f.site);const backup=await f.api('/api/offline/backup');
@@ -9,15 +10,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=r
  const month=async value=>{await p.getByRole('button',{name:'范围月份',exact:true}).click();await p.getByRole('textbox',{name:'范围月份直接输入',exact:true}).fill(value);await p.getByRole('dialog',{name:'范围月份日历',exact:true}).getByRole('button',{name:'确定',exact:true}).click();};
  const selected=async value=>assert.equal((await p.getByRole('button',{name:'范围月份',exact:true}).innerText()).trim(),value);
  await month('2026-09');await f.api('/api/offline/backup');
- await p.getByLabel('选择装置',{exact:true}).selectOption('b');await p.locator('.shared-range-heading').waitFor();await month('2026-08');await f.api('/api/offline/backup');
+ await chooseFormOption(p.getByLabel('选择装置',{exact:true}),'b');await p.locator('.shared-range-heading').waitFor();await month('2026-08');await f.api('/api/offline/backup');
  const requests=await p.evaluate(()=>window.__seriesRequests.length);assert.equal(requests,1,'The first visit to B loads its readings once');
- await p.getByLabel('选择装置',{exact:true}).selectOption('mmp2');await selected('2026-09');await p.locator('.shared-range-heading').waitFor();assert((await p.locator('.metrics-panel tbody').innerText()).includes('10.000'));
- await p.getByLabel('选择装置',{exact:true}).selectOption('b');await selected('2026-08');await p.locator('.shared-range-heading').waitFor();assert.equal(await p.evaluate(()=>window.__seriesRequests.length),requests,'Returning to either unchanged device must not reread its full series');
- await p.getByLabel('选择装置',{exact:true}).selectOption('mmp2');await selected('2026-09');await f.api('/api/offline/backup');
+ await chooseFormOption(p.getByLabel('选择装置',{exact:true}),'mmp2');await selected('2026-09');await p.locator('.shared-range-heading').waitFor();assert((await p.locator('.metrics-panel tbody').innerText()).includes('10.000'));
+ await chooseFormOption(p.getByLabel('选择装置',{exact:true}),'b');await selected('2026-08');await p.locator('.shared-range-heading').waitFor();assert.equal(await p.evaluate(()=>window.__seriesRequests.length),requests,'Returning to either unchanged device must not reread its full series');
+ await chooseFormOption(p.getByLabel('选择装置',{exact:true}),'mmp2');await selected('2026-09');await f.api('/api/offline/backup');
  const updated=await f.api('/api/offline/backup');updated.state.datasets.ds_unit_mmp2.points[1].values.c_1=30;
  await f.api('/api/offline/restore','POST',updated);await p.waitForFunction(()=>document.querySelector('.metrics-panel tbody')?.textContent.includes('30.000'));await selected('2026-09');
  assert((await p.evaluate(()=>window.__seriesRequests.length))>requests,'A restore with unchanged row counts/timestamps still invalidates cached readings');
- await p.getByLabel('选择装置',{exact:true}).selectOption('b');await p.locator('.shared-range-heading').waitFor();await p.getByLabel('选择装置',{exact:true}).selectOption('mmp2');await p.locator('.shared-range-heading').waitFor();await selected('2026-09');assert((await p.locator('.metrics-panel tbody').innerText()).includes('30.000'));
+ await chooseFormOption(p.getByLabel('选择装置',{exact:true}),'b');await p.locator('.shared-range-heading').waitFor();await chooseFormOption(p.getByLabel('选择装置',{exact:true}),'mmp2');await p.locator('.shared-range-heading').waitFor();await selected('2026-09');assert((await p.locator('.metrics-panel tbody').innerText()).includes('30.000'));
  // Another tab updates the same account; a cached view must not hide its changes.
  await f.api('/api/offline/backup');const other=await f.context.newPage();other.on('pageerror',e=>f.errors.push(e.message));await other.goto(f.site);await other.getByLabel('共享数据源',{exact:true}).waitFor();
  await other.evaluate(async()=>{await fetch('/api/offline/backup');});

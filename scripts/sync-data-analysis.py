@@ -68,7 +68,7 @@ def render(html):
     ]
     for old,new in dashboard_hooks:
         if new in js:js=js.replace(new,old)
-    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['vendor/tiny-pinyin.js','surface.js','calendar-overlay.js','metric-modules.js','unit-removal.js','metric-removal.js','workspace-memory.js','overview-cards.js','view-defaults.js','analysis-math.js','period-math.js','analysis-point-math.js','formula-syntax.js','import-values.js','daily-flow.js','interval-formulas.js','formula-daily-data.js','chart-axes.js','analysis-plots.js','period-comparison.js','yearly-means.js','point-exclusions.js','analysis-drafts.js','capability-math.js','pca-math.js','pca-workspace.js','pca-charts.js','pca-page.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','oee-math.js','oee-workspace.js','oee-view.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js','dashboard-totals.js','dashboard-overlay.js','dashboard.js','dashboard-page.js'])
+    code='\n'.join((ROOT/'frontend'/name).read_text() for name in ['vendor/tiny-pinyin.js','surface.js','calendar-overlay.js','form-controls.js','comparison-chart.js','metric-modules.js','unit-removal.js','metric-removal.js','workspace-memory.js','overview-cards.js','view-defaults.js','analysis-math.js','period-math.js','analysis-point-math.js','formula-syntax.js','import-values.js','daily-flow.js','interval-formulas.js','formula-daily-data.js','chart-axes.js','analysis-plots.js','period-comparison.js','yearly-means.js','point-exclusions.js','analysis-drafts.js','capability-math.js','pca-math.js','pca-workspace.js','pca-charts.js','pca-page.js','capability-split-chart.js','capability-reports.js','process-capability.js','pi-daily.js','live-series.js','oee-math.js','oee-workspace.js','oee-view.js','live-chart.js','live-page.js','live-data.js','formula-health.js','excel-sync.js','data-analysis.js','dashboard-totals.js','dashboard-overlay.js','dashboard.js','dashboard-page.js'])
     code=code.replace('/*COMPANY_LOGO*/\'\'',json.dumps('data:image/webp;base64,'+base64.b64encode((ROOT/'frontend/company-logo.webp').read_bytes()).decode())).replace('/*ENGLISH_UI*/{}',(ROOT/'frontend/english-ui.json').read_text())
     block=START+'\n'+code+'\n'+END
     if START in js:
@@ -228,7 +228,7 @@ def render(html):
 
     js=surface.apply(js)
     html=html[:match.start(2)]+base64.b64encode(js.encode()).decode()+html[match.end(2):]
-    css='<style id="data-analysis-style">\n'+((ROOT/'frontend/data-analysis.css').read_text()+'\n'+(ROOT/'frontend/surface.css').read_text()+'\n'+(ROOT/'frontend/pca.css').read_text()).rstrip()+'\n</style>'
+    css='<style id="data-analysis-style">\n'+((ROOT/'frontend/data-analysis.css').read_text()+'\n'+(ROOT/'frontend/surface.css').read_text()+'\n'+(ROOT/'frontend/form-controls.css').read_text()+'\n'+(ROOT/'frontend/pca.css').read_text()).rstrip()+'\n</style>'
     if 'id="data-analysis-style"' in html:html=re.sub(r'<style id="data-analysis-style">.*?</style>',lambda _:css,html,flags=re.S)
     else:html=html.replace('</head>',css+'\n</head>',1)
     return html

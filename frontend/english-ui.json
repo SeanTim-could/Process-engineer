@@ -1210,5 +1210,12 @@
   "年均值参考线设置重复。": "Duplicate yearly mean settings.",
   "参考线的数据来源已移除，请刷新图表。": "The reference line source was removed. Refresh the chart.",
   "今年年初至今": "Year to date",
-  "当前所选时间区间向前一年": "Selected interval shifted back one year"
+  "当前所选时间区间向前一年": "Selected interval shifted back one year",
+  "线条颜色": "Line color",
+  "拖动框选放大；双击恢复全部": "Drag to zoom; double-click to reset",
+  "恢复全部": "Reset zoom",
+  "没有匹配选项": "No matching options",
+  "输入关键词查找更多选项": "Type keywords to find more options",
+  "对比图交互层": "Comparison chart interaction",
+  "拖动框选对比时间范围，双击恢复全部；Escape取消框选": "Drag to zoom the comparison time range; double-click to reset; Escape cancels selection"
 }

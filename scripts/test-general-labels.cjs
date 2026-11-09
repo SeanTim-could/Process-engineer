@@ -1,3 +1,4 @@
+const {chooseFormOption}=require('./choose-form-option.cjs');
 // Exercise the public presets while preserving users' business-specific names.
 const {chromium}=require('playwright');
 const fs=require('node:fs/promises');
@@ -18,7 +19,7 @@ async function csv(p,name,rows,count=1){
 }
 async function daily(p,headers,values){
  await p.getByRole('button',{name:'表格输入',exact:true}).click();
- await p.getByRole('combobox',{name:'表格导入用途',exact:true}).selectOption('daily');
+ await chooseFormOption(p.getByLabel('表格导入用途',{exact:true}),'daily');
  await p.getByRole('button',{name:'批量粘贴',exact:true}).click();
  await p.getByRole('textbox',{name:'批量粘贴内容',exact:true}).fill(headers.join('\t')+'\n'+values.join('\t'));
  await p.getByRole('button',{name:'填入表格',exact:true}).click();
