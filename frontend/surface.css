@@ -164,3 +164,7 @@ body.overview-dragging,body.overview-dragging *{cursor:grabbing!important;user-s
 .chart-head-actions>.yearly-mean-controls label{gap:4px;flex-wrap:wrap;justify-content:flex-end}.chart-head-actions>.yearly-mean-controls input{margin:0}
 .auto-chart-card .chart-module-dot{background:var(--module-accent)!important}
 @media(max-width:600px){.chart-head-actions{max-width:62%;gap:6px}.chart-head-actions>.button-row{gap:3px}.chart-head-actions>.yearly-mean-controls{gap:4px 9px;font-size:9px}}
+
+/* Portaled calendars retain the card corners and stay usable near viewport edges. */
+.calendar-popover.calendar-floating{position:fixed!important;left:var(--calendar-left,8px)!important;top:var(--calendar-top,8px)!important;right:auto!important;bottom:auto!important;transform:none!important;z-index:10030!important;width:320px;max-width:var(--calendar-max-width,calc(100vw - 16px));max-height:var(--calendar-max-height,calc(100dvh - 16px));overflow:auto;overscroll-behavior:contain;box-sizing:border-box;margin:0;box-shadow:0 10px 40px #25442325}
+.calendar-floating .calendar-navigation select,.calendar-floating .calendar-clock select{min-height:32px}.calendar-floating .calendar-entry input{min-height:34px}.calendar-floating .calendar-hint{display:none}

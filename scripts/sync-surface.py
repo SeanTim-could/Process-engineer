@@ -161,6 +161,15 @@ PAIRS += [
  ('YearlyMeans.model(yearlyConfig,[t],i.unit)', 'YearlyMeans.model({...yearlyConfig,range:n},[t],i.unit)'),
 ]
 
+# Calendar portals escape panel clipping and synchronize valid date edits.
+PAIRS += [
+ ('d.current?.contains(C.target)||i(!1)', '(d.current?.contains(C.target)||CalendarOverlay.contains(m.current,C.target))||i(!1)'),
+ ('(0,Ps.useEffect)(()=>u(h),[h]),(0,Ps.useEffect)(()=>{if(!n)return;', '(0,Ps.useEffect)(()=>u(h),[h]),(0,Ps.useEffect)(()=>{if(!a&&Pn(l))s(l.slice(0,7))},[a,l]),(0,Ps.useEffect)(()=>{if(!n)return;'),
+ ('n&&(0,et.jsxs)("div",{className:"calendar-popover",role:"dialog"', 'n&&(0,et.jsxs)(CalendarOverlay.Popover,{anchor:m,onClose:()=>{i(!1),m.current?.focus()},className:"calendar-popover",role:"dialog"'),
+]
+
+PAIRS += [('onKeyDown:b=>{b.key==="Enter"&&g()}', 'onKeyDown:b=>{if(b.key==="Enter"){b.preventDefault();b.stopPropagation();g()}}')]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')
