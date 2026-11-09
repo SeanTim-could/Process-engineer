@@ -49,3 +49,12 @@
 .account-form .floating-field>input,.account-create .floating-field>input{margin-top:0}
 
 .comparison-interactive .comparison-plot{padding:0;overflow:auto}.comparison-canvas{position:relative;min-width:750px;width:100%}.comparison-canvas svg{min-width:0}
+
+.select-wrap.toolbar-device-select{display:inline-flex;align-items:center;gap:10px;box-sizing:border-box;min-height:44px;max-width:100%;padding:0 12px;border:1px solid var(--surface-border);border-radius:11px;background:#fff;color:var(--surface-ink)}
+.toolbar-device-select>svg{flex:0 0 16px;color:var(--surface-accent)}
+.toolbar-device-caption{flex:0 0 auto;line-height:20px;padding-right:10px;border-right:1px solid var(--surface-rule);font-size:12px;color:var(--surface-muted)}
+.select-wrap.toolbar-device-select>select{flex:1 1 auto;width:auto;min-width:140px;max-width:260px;min-height:42px;margin:0;padding:0 24px 0 0;border:0;background-color:transparent;box-shadow:none;font:inherit;font-size:13px;font-weight:600;color:var(--surface-ink);text-overflow:ellipsis}
+.toolbar-device-select>.field-radio-group{flex:1 1 auto;gap:6px 14px;padding:8px 0}
+.toolbar-device-select>.field-autocomplete{flex:1 1 160px;width:220px;max-width:260px}
+.toolbar-device-select>.field-autocomplete>input{height:42px;min-height:42px;border:0!important;box-shadow:none;background:transparent;padding:0 26px 0 0;font-size:13px;font-weight:600;color:var(--surface-ink)}
+.toolbar-device-select:focus-within{border-color:var(--surface-accent);box-shadow:0 0 0 2px var(--surface-hover)}
