@@ -7,8 +7,16 @@
 .floating-field.has-caption>input::placeholder,.floating-field.has-caption>textarea::placeholder{color:transparent}
 .floating-field.has-caption:focus-within>input::placeholder,.floating-field.has-caption:focus-within>textarea::placeholder{color:var(--surface-muted,#6c8284)}
 .floating-field.has-caption[data-filled="false"]:not(:focus-within)>input:is([type="date"],[type="datetime-local"],[type="month"],[type="time"]){color:transparent}
+.floating-field.has-caption[data-filled="false"]:not(:focus-within)>select{color:transparent!important}
+.floating-field.has-caption>select option,.floating-field.has-caption>select optgroup{color:var(--surface-ink,#174849)}
 .floating-date .calendar-trigger{min-height:44px;width:100%}
-.floating-date[data-filled="false"]:not(:focus-within) .calendar-trigger>span{visibility:hidden}
+.floating-date .calendar-trigger>svg{flex-shrink:0}
+.floating-date .calendar-trigger>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.floating-date[data-filled="false"] .calendar-trigger>span{visibility:hidden}
+/* Reserve the same leading-icon space as the date button's value. Once raised,
+   the caption returns to the ordinary border position. */
+.floating-date[data-filled="false"]:not(:focus-within):not(:has([aria-expanded="true"]))>.floating-caption{left:33px;max-width:calc(100% - 48px)}
+.field-autocomplete>.floating-caption{max-width:calc(100% - 44px)}
 .form-label:has(>.floating-field){gap:0;padding-top:7px}
 .field-radio-group{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;min-width:0;margin:0;padding:5px 0;border:0;color:inherit}
 .field-radio-group legend{float:none;display:block;width:100%;padding:0;margin:0 0 6px;font-size:12px;line-height:1.4;color:var(--surface-muted,#5b7e80)}
