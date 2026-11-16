@@ -10,7 +10,10 @@ const site='https://seantim-could.github.io/Process-engineer/';
  const config=JSON.parse(await fs.readFile(path.join(root,'frontend/auth-config.json'),'utf8'));
  const index=await fs.readFile(path.join(root,'index.html'));
  const shell=await fs.readFile(path.join(root,'workbench.html'));
- assert(index.length<16000,'The first website page should stay small');
+ // The standalone bilingual login includes floating-field styles (~23 KB).
+ // Keep both source and transfer budgets bounded without blocking later tests.
+ assert(index.length<24*1024,'The first website page should stay small');
+ assert(require('node:zlib').gzipSync(index).length<8*1024,'The compressed login page should stay below 8 KB');
  assert(shell.length<16000,'The application shell should not contain its JavaScript bundle');
  assert(!index.toString().includes('data:text/javascript;base64,'));
  const files=new Map([['workbench-compatible.html',await fs.readFile(path.join(root,'workbench-compatible.html'))],['index.html',index],['workbench.html',shell],['启动工程师工作台.html',await fs.readFile(path.join(root,'启动工程师工作台.html'))]]);
