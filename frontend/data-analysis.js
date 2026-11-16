@@ -26,10 +26,10 @@ var DataAnalysis = (() => {
       aggregation:value.aggregation==="sum"?"sum":"mean",boxBy:value.boxBy==="group"?"group":"metric",capabilitySize:Number.isInteger(value.capabilitySize)&&value.capabilitySize>=1&&value.capabilitySize<=100?value.capabilitySize:1,bins:Number.isInteger(value.bins)&&value.bins>=5&&value.bins<=100?value.bins:0,lsl,usl};
   }
   function normalize(value){
-    if(value===undefined)return {version:1,revision:0,charts:[],drafts:{},exclusionRevision:0,excludedPoints:[],dashboard:Dashboard.normalize(),pca:PCAWorkspace.normalize()};
+    if(value===undefined)return {version:1,revision:0,charts:[],drafts:{},exclusionRevision:0,excludedPoints:[],dashboard:Dashboard.normalize(),pca:PCAWorkspace.normalize(),pcaData:PCAData.normalize()};
     if(!value||value.version!==1||!Number.isSafeInteger(value.revision)||value.revision<0||!Array.isArray(value.charts)||value.charts.length>24)throw new Error("作图区备份格式无效，最多保存24张图表。");
     if(value.exclusionRevision!==undefined&&(!Number.isSafeInteger(value.exclusionRevision)||value.exclusionRevision<0))throw new Error("异常点版本无效。");
-    const ids=new Set();return {version:1,...(value.yearlyMeans===undefined?{}:{yearlyMeans:YearlyMeans.normalize(value.yearlyMeans)}),...(value.oee===undefined?{}:{oee:OEEWorkspace.normalize(value.oee)}),pca:PCAWorkspace.normalize(value.pca),dashboard:Dashboard.normalize(value.dashboard),revision:value.revision,exclusionRevision:value.exclusionRevision??0,excludedPoints:AnalysisPointMath.normalize(value.excludedPoints),drafts:AnalysisDrafts.normalize(value.drafts),charts:value.charts.map(chart=>{
+    const ids=new Set();return {version:1,...(value.yearlyMeans===undefined?{}:{yearlyMeans:YearlyMeans.normalize(value.yearlyMeans)}),...(value.oee===undefined?{}:{oee:OEEWorkspace.normalize(value.oee)}),pca:PCAWorkspace.normalize(value.pca),pcaData:PCAData.normalize(value.pcaData),dashboard:Dashboard.normalize(value.dashboard),revision:value.revision,exclusionRevision:value.exclusionRevision??0,excludedPoints:AnalysisPointMath.normalize(value.excludedPoints),drafts:AnalysisDrafts.normalize(value.drafts),charts:value.charts.map(chart=>{
       if(!chart||!/^chart_[\w-]{1,80}$/.test(chart.id)||ids.has(chart.id))throw new Error("图表编号无效或重复。");ids.add(chart.id);
       for(const key of ["createdAt","updatedAt"])if(typeof chart[key]!=="string"||!Number.isFinite(Date.parse(chart[key])))throw new Error("图表保存时间无效。");
       return {...chartConfig(chart),id:chart.id,createdAt:chart.createdAt,updatedAt:chart.updatedAt};
@@ -39,10 +39,11 @@ var DataAnalysis = (() => {
     const active=state.settings.units.filter(u=>!u.archived),units=new Map(active.map(u=>[u.id,u]));
     const datasets=Object.values(state.datasets).filter(e=>e.dataset.status==="ready"&&e.dataset.role==="ledger"&&e.dataset.unitIds.some(id=>units.has(id))).map(e=>({id:e.dataset.id,name:(units.get(e.dataset.unitIds[0])?.name??e.dataset.name)+" · 完整指标",columns:e.dataset.columns.filter(c=>c.enabled&&c.kind!=="limit"),groups:e.dataset.groups})).filter(d=>d.columns.length);
     const raw=active.filter(u=>state.records.some(r=>r.unit===u.id)).map(u=>({id:"raw:"+u.id,name:u.name+" · 日报指标",groups:[""],columns:yf(state.settings,u).map(m=>({key:m.id,label:m.label,unit:m.unit,source:"production"}))})).filter(d=>d.columns.length);
-    return [...datasets,...raw];
+    return [...datasets,...raw,...PCAData.sources(state)];
   }
   function series(state,id,options={}){
     const meta=sources(state).find(s=>s.id===id);if(!meta)throw new Error("来源装置已停用、指标已隐藏或数据集不存在，请重新选择。");
+    if(PCAData.owns(id)){const own=PCAData.series(state,id,{raw:options.raw===true});return {...meta,points:own.points};}
     if(id.startsWith("raw:")){
       const unit=state.settings.units.find(u=>u.id===id.slice(4)),metrics=yf(state.settings,unit);
       return {...meta,points:state.records.filter(r=>r.unit===unit.id).map(r=>({unit:unit.id,time:St(r.date),group:"",values:Object.fromEntries(metrics.map(m=>[m.id,jmCore([r],m,unit)]))})).sort((a,b)=>a.time-b.time)};
@@ -119,7 +120,7 @@ var DataAnalysis = (() => {
     const figureConfig={...config,title:config.title||(mode==="timeseries"?"时序分析 · "+(column?.label??""):P.types[config.type]),type:mode==="timeseries"?"line":config.type};
     const references=mode==="timeseries"&&summary?[{label:"均值",value:summary.mean,color:"#477be3"},{label:"I图上控制限",value:summary.upperControl,color:"#b08b48"},{label:"I图下控制限",value:summary.lowerControl,color:"#b08b48"},...refs(config)]:refs(config);
     return h("div",{className:"analysis-workbench",ref:root},h(AnalysisDrafts.Notice,{mode}),loading&&h("p",{role:"status"},"正在读取分析数据…"),
-      h("section",{className:"panel analysis-controls"},h("div",{className:"analysis-figure-head"},h("div",null,h("h2",null,mode==="capability"?"前后能力分析":mode==="timeseries"?"时序分析":"自由作图"),h("p",{className:"muted"},"直接使用当前账号已导入的生产、LIMS检验或日报指标，分析过程不修改原始数据。")),h("button",{className:"button",onClick:onImport},"导入分析数据")),
+      h("section",{className:"panel analysis-controls"},h("div",{className:"analysis-figure-head"},h("div",null,h("h2",null,mode==="capability"?"前后能力分析":mode==="timeseries"?"时序分析":"自由作图"),h("p",{className:"muted"},"可选择生产、LIMS、日报或PCA独立数据，分析过程不修改原始数据。")),h("button",{className:"button",onClick:onImport},"导入分析数据")),
         !loading&&!catalog.sources.length?h("p",{className:"analysis-empty"},"还没有可分析的数据。请先导入表格，再选择装置和指标。"):h(R.Fragment,null,h("div",{className:"analysis-fields"},
           h(Select,{label:"分析数据来源",value:config.sourceId,onChange:sourceId=>{setEditing(null);update({sourceId,keys:[],group:"",allGroups:false,...(ViewDefaults.read('analysis:'+mode+':'+sourceId)??ViewDefaults.analysis()),xKey:"",lsl:"",usl:"",normalized:false});},options:catalog.sources.map(s=>({value:s.id,label:s.name}))}),
           h(Select,{label:mode==="plotting"?"主要指标 / 纵轴":"分析指标",value:config.keys[0]??"",onChange:key=>update({keys:[key],group:data?.points.find(r=>Object.hasOwn(r.values,key))?.group??"",allGroups:false,normalized:false,lsl:"",usl:""}),options:(data?.columns??[]).map(c=>({value:c.key,label:(c.source==="lims"?"LIMS · ":"")+c.label+(c.unit?" / "+c.unit:"")}))}),

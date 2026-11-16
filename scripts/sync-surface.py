@@ -185,6 +185,44 @@ PAIRS += [
  ('return a.add(i.id),{id:i.id,unitId:i.unitId,datasetId:i.datasetId,key:i.key,group:i.group,', 'if(i.color!==undefined&&!ComparisonChart.validColor(i.color))throw new Error("曲线颜色无效，请选择有效颜色。");return a.add(i.id),{...i.color?{color:i.color}:{},id:i.id,unitId:i.unitId,datasetId:i.datasetId,key:i.key,group:i.group,'),
 ]
 
+# Read-only PCA projections are available only in analysis views. The source
+# collection remains analytics.pcaData, outside production/LIMS datasets.
+PAIRS += [
+ ('else if(r.pathname==="/api/pca"){a=await PCAWorkspace.request(e)}', 'else if(r.pathname==="/api/pca-data"){a=await PCAData.request(e)}else if(r.pathname==="/api/pca"){a=await PCAWorkspace.request(e)}'),
+ ('let G=await Vo("GET",void 0,"?scope="+e),j=y.current', 'let G=PCAData.workspace(await Vo("GET",void 0,"?scope="+e),viewPage),j=y.current'),
+ ('}},[x,e]);(0,Wa.useEffect)(()=>{b().catch', '}},[x,e,viewPage]);(0,Wa.useEffect)(()=>{b().catch'),
+ ('n=e.sourceId==="raw"?void 0:a.find(o=>o.role==="ledger"', 'n=e.sourceId==="raw"?void 0:a.find(o=>o.id===e.sourceId&&PCAData.owns(o.id))??a.find(o=>o.role==="ledger"'),
+ ('async function I0(e){return structuredClone(Px(e)?.dataset??null)}', 'async function I0(e){return PCAData.owns(e)?PCAData.series($r().state,e).dataset:structuredClone(Px(e)?.dataset??null)}'),
+ ('async function Rx(e){return structuredClone(Px(e)?.points??[])', 'async function Rx(e){return (PCAData.owns(e)?PCAData.series($r().state,e).points:structuredClone(Px(e)?.points??[]))'),
+ ('async function va(e,t,r,a){let result=await vaOriginal(e,t,r,a);return', 'async function va(e,t,r,a){let result=await vaOriginal(e,t,r,a);if(e==="GET"&&!r&&result.datasets)result={...result,datasets:PCAData.list(result.datasets)};return'),
+ ('let r=new URL(e.url),a;if(e.method==="GET"&&["/api/series"', 'let r=new URL(e.url),a;if(r.pathname==="/api/series"&&e.method!=="GET"){const body=await Ha(e.clone());if(PCAData.owns(r.searchParams.get("id")??body.id??body.dataset?.id))throw new Error("PCA独立数据请在PCA模块管理。");}if(e.method==="GET"&&["/api/series"'),
+ ('children:d.units.filter(he=>!he.archived).map(he=>(0,B.jsx)("option",{value:he.id,children:he.name},he.id))', 'children:(PCAData.analysisPage(c)?PCAData.units(d.units):d.units).filter(he=>!he.archived).map(he=>(0,B.jsx)("option",{value:he.id,children:he.name},he.id))'),
+ ('x=(0,Nn.useRef)(!1),b=e.units.filter(H=>!H.archived)', 'x=(0,Nn.useRef)(!1),b=PCAData.units(e.units).filter(H=>!H.archived)'),
+]
+
+PAIRS += [('function Rn(e){return ViewDefaults.range()}', 'function Rn(e){return PCAData.owns(e?.id)?{from:AnalysisMath.exactLocal(e.start).replace("T"," "),to:AnalysisMath.exactLocal(e.end).replace("T"," ")}:ViewDefaults.range()}')]
+
+PAIRS += [('const body=await Ha(e.clone());if(PCAData.owns(r.searchParams.get("id")??body.id??body.dataset?.id))', 'const body=e.headers.get("content-type")?.includes("application/json")?await Ha(e.clone()):{};if(PCAData.owns(r.searchParams.get("id")??body.id??body.dataset?.id))')]
+
+PAIRS += [
+ ('pe=re?[re]:Oe;', 'pe=re?[re,...Oe.filter(Q=>PCAData.owns(Q.id)&&Q.id!==re.id)]:Oe;'),
+ ('children:!E&&(0,ue.jsxs)("button",{className:"button small-button",onClick:()=>M(!0)', 'children:!E&&!PCAData.owns(ne?.id)&&(0,ue.jsxs)("button",{className:"button small-button",onClick:()=>M(!0)'),
+ ('(0,Ie.jsx)("option",{value:"production",children:"\\u751F\\u4EA7\\u6570\\u636E"}),(0,Ie.jsx)("option",{value:"lims",children:"LIMS\\u6570\\u636E"})', '(0,Ie.jsx)("option",{value:"production",children:PCAData.owns(H.datasetId)?"PCA独立数据":"生产数据"}),!PCAData.owns(H.datasetId)&&(0,Ie.jsx)("option",{value:"lims",children:"LIMS\\u6570\\u636E"})'),
+]
+
+PAIRS += [('l=e.units.filter(ve=>!ve.archived),[u,c]=(0,pr.useState)', 'l=PCAData.units(e.units).filter(ve=>!ve.archived),[u,c]=(0,pr.useState)')]
+
+PAIRS += [
+ ('children:a?e.scope==="lims"?"LIMS', 'children:a?PCAData.owns(e.view.sourceId)?"PCA独立数据，仅在数据分析模块调用":e.scope==="lims"?"LIMS'),
+ ('let S=t.datasets.find(I=>I.id===t.view.sourceId);', 'let S=t.datasets.find(I=>I.id===t.view.sourceId&&(!PCAData.owns(I.id)||PCAData.analysisPage(viewPage)));'),
+ ('return{...t,scope:e,allPoints:D', 'return{...t,datasets:PCAData.analysisPage(viewPage)?t.datasets:t.datasets.filter(item=>!PCAData.owns(item.id)),scope:e,allPoints:D'),
+]
+
+PAIRS += [('(0,ge.jsx)("option",{value:"production",children:"\\u751F\\u4EA7\\u6570\\u636E"}),(0,ge.jsx)("option",{value:"lims",children:"LIMS\\u6570\\u636E"})', '(0,ge.jsx)("option",{value:"production",children:PCAData.owns(Je.id)?"PCA独立数据":"生产数据"}),!PCAData.owns(Je.id)&&(0,ge.jsx)("option",{value:"lims",children:"LIMS\\u6570\\u636E"})')]
+
+# Analysis-only selections stay in analysis view preferences, not production view.
+PAIRS += [('y.current&&R1("view:"+e,async()=>{try{await Vo("PUT",{action:"view",view:G,scope:e})', 'y.current&&!PCAData.owns(G.sourceId)&&R1("view:"+e,async()=>{try{await Vo("PUT",{action:"view",view:G,scope:e})'), ('AnalysisMath.exactLocal(e.start).replace("T"," "),to:AnalysisMath.exactLocal(e.end).replace("T"," ")', 'AnalysisMath.exactLocal(e.start).slice(0,16).replace("T"," "),to:AnalysisMath.exactLocal(e.end).slice(0,16).replace("T"," ")')]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')

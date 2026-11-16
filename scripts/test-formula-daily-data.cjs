@@ -1,3 +1,4 @@
+const {importPcaData}=require('./pca-test-data.cjs');
 const {chooseFormOption}=require('./choose-form-option.cjs');
 const assert=require('node:assert/strict'),{expect}=require('playwright/test'),{fixture}=require('./workbench-browser-fixture.cjs'),fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 (async()=>{
@@ -12,7 +13,8 @@ const assert=require('node:assert/strict'),{expect}=require('playwright/test'),{
   for(let i=0;i<12;i++){const own=points.slice(i*2,i*2+2),r=selected(ratio.key)[i],t=selected(total.key)[i];near(r.values[ratio.key],own.reduce((n,p)=>n+p.values.c_2/p.values.c_1*100,0)/2);near(t.values[total.key],own.reduce((n,p)=>n+p.values.c_2+p.values.c_1,0)/2);assert.equal(r.time,start+i*day);}
   for(const row of points){const actual=view.points.find(r=>r.time===row.time&&r.group===row.group);assert.equal(actual.values.c_1,row.values.c_1);assert.equal(actual.values.c_2,row.values.c_2);}
   await p.reload();await nav('时序分析');await chooseFormOption(p.getByLabel('分析数据来源',{exact:true}),id);await chooseFormOption(p.getByLabel('分析指标',{exact:true}),ratio.key);await p.getByLabel('分析开始（北京时间）',{exact:true}).fill('2026-10-01T00:00');await p.getByLabel('分析结束（北京时间）',{exact:true}).fill('2026-10-12T23:59');await expect(p.getByText(/选中 12 条记录/)).toHaveCount(1);await expect(p.locator('.analysis-figure svg').first()).toBeVisible();
-  const config={unitId:unit,sourceId:id,group:'历史',from:'2026-10-01T00:00',to:'2026-10-12T23:59',keys:[ratio.key,total.key],name:'每日公式PCA',threshold:.9,confidence:.95,exclusions:[]};const trained=await api('/api/pca','PUT',{action:'train',expectedRevision:(await api('/api/pca')).revision,config});const model=trained.models.at(-1),result=await api('/api/pca?'+new URLSearchParams({...config,modelId:model.id}));assert.equal(result.total,12);assert.equal(result.droppedCount,0);assert.equal(result.points.length,12);
+  const pcaId=await importPcaData(api,{dataset:{...before[id].dataset,name:'每日计算结果独立导入'},points:view.points.filter(r=>Object.hasOwn(r.values,ratio.key))},{columns:[ratio,total]});
+  const config={unitId:unit,sourceId:pcaId,group:'历史',from:'2026-10-01T00:00',to:'2026-10-12T23:59',keys:[ratio.key,total.key],name:'每日公式PCA',threshold:.9,confidence:.95,exclusions:[]};const trained=await api('/api/pca','PUT',{action:'train',expectedRevision:(await api('/api/pca')).revision,config});const model=trained.models.at(-1),result=await api('/api/pca?'+new URLSearchParams({...config,modelId:model.id}));assert.equal(result.total,12);assert.equal(result.droppedCount,0);assert.equal(result.points.length,12);
   assert.deepEqual((await api('/api/offline/backup')).state.datasets,before);
   // Point selection sees actual calculation timestamps; exclusions affect the
   // daily formula result without rewriting source measurements.

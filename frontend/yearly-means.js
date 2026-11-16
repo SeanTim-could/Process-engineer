@@ -8,7 +8,7 @@ var YearlyMeans=(()=>{
  function selectedRange(config={},extent=null){const from=AnalysisMath.time((config.from??'').replace(' ','T')),to=AnalysisMath.time((config.to??'').replace(' ','T'));return validRange({from:from??extent?.from,to:to===null?extent?.to:to+(config.exclusive?0:config.exact?1:60000)});}
  function fromExport(url){const q=new URL(url,'http://offline.local').searchParams;return {sourceId:q.get('id')??'',unitId:q.get('unit')??'',group:q.get('group')??'',keys:q.get('column')?[q.get('column')]:[],period:q.get('period')??'raw',from:(q.get('from')??'').replace(' ','T'),to:(q.get('to')??'').replace(' ','T'),exclusive:q.get('exclusive')==='1',exact:q.get('exact')==='1'};}
  function selections(config,columns,state=$r().state){
-  const id=config?.sourceId,raw=id?.startsWith('raw:'),entry=state.datasets[id],unit=config?.unitId||(raw?id.slice(4):entry?.dataset.unitIds[0]);if(!unit||!raw&&!entry)return [];
+  const id=config?.sourceId,raw=id?.startsWith('raw:'),entry=PCAData.owns(id)?PCAData.series(state,id):state.datasets[id],unit=config?.unitId||(raw?id.slice(4):entry?.dataset.unitIds[0]);if(!unit||!raw&&!entry)return [];
   const actual=raw?DataAnalysis.sources(state).find(s=>s.id===id)?.columns??[]:entry.dataset.columns,groups=config.allGroups?(raw?['']:entry.dataset.groups):[config.group??''];
   return columns.filter(c=>(!config.keys?.length||config.keys.includes(c.key))&&actual.some(a=>a.key===c.key)).flatMap(c=>groups.map(group=>({sourceId:id,unitId:unit,key:c.key,group})));
  }

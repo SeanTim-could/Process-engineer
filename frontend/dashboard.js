@@ -94,7 +94,7 @@ var Dashboard = (() => {
   async function api(params={},body){const response=await T0('/api/dashboard'+(body?'':'?'+new URLSearchParams(params)),{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined}),data=await response.json();if(!response.ok)throw new Error(data.error);return data;}
   function notify(){window.dispatchEvent(new CustomEvent(eventName,{detail:{scope:AccountAuth.storageKey()}}));}
   function Pin({kind='chart',config,unitId='',rangeMode,control=false}){
-    const [busy,setBusy]=R.useState(false),[notice,setNotice]=R.useState('');
+    const [busy,setBusy]=R.useState(false),[notice,setNotice]=R.useState('');if(PCAData.owns(config?.sourceId))return null;
     async function pin(){setBusy(true);setNotice('');try{const scope=AccountAuth.storageKey(),{board}=await api();AccountAuth.assertWorkspace(scope);const result=await api({}, {action:'add',expectedRevision:board.revision,card:{kind,unitId,config,rangeMode:rangeMode??(config.from||config.to?'fixed':'month'),exact:config.exact,exclusive:config.exclusive,control}});AccountAuth.assertWorkspace(scope);setNotice(result.duplicate?'已在Dashboard中':'已加入Dashboard');notify();}catch(e){setNotice(e.message);}finally{setBusy(false);}}
     return h('span',{className:'dashboard-pin'},h('button',{className:'button small-button',disabled:busy,onClick:pin},busy?'正在加入…':'加入Dashboard'),notice&&h('span',{role:'status',className:'small'},notice));
   }
