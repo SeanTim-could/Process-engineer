@@ -9,6 +9,11 @@ var PCAData=(()=>{
   if(!s||!Number.isInteger(s.from)||!Number.isInteger(s.to)||s.from<0||s.to>=length||s.to<s.from||!Array.isArray(s.excluded)||s.excluded.length>length||new Set(s.excluded).size!==s.excluded.length||s.excluded.some(i=>!Number.isInteger(i)||i<0||i>=length))throw new Error('PCA样本筛选无效。');
   return {from:s.from,to:s.to,excluded:[...s.excluded].sort((a,b)=>a-b)};
  }
+ function importReport(value,count){
+  if(value===undefined)return undefined;
+  if(!value||!Number.isInteger(value.sourceRows)||value.sourceRows<1||value.sourceRows>20000||!Array.isArray(value.skippedRows)||value.skippedRows.length+count!==value.sourceRows)throw new Error('PCA导入清理记录无效。');
+  const seen=new Set();return {sourceRows:value.sourceRows,skippedRows:value.skippedRows.map(r=>{if(!r||!Number.isInteger(r.row)||r.row<2||r.row>1048576||seen.has(r.row))throw new Error('PCA导入清理行号无效。');seen.add(r.row);return {row:r.row,column:str(r.column,200,'异常变量名称'),value:str(r.value,200,'异常内容')};})};
+ }
  function normalize(value){
   if(value===undefined)return {version:1,revision:0,datasets:[]};
   if(!value||value.version!==1||!Number.isSafeInteger(value.revision)||value.revision<0||!Array.isArray(value.datasets)||value.datasets.length>20)throw new Error('PCA独立数据仓库无效，最多20份数据。');
@@ -17,7 +22,7 @@ var PCAData=(()=>{
    if(!e||!owns(e.id)||ids.has(e.id)||!/^[-\w]{1,40}$/.test(e.unitId)||!Array.isArray(e.columns)||e.columns.length<2||e.columns.length>80||!Array.isArray(e.points)||!e.points.length||e.points.length>20000||!finite(Date.parse(e.createdAt))||!finite(Date.parse(e.updatedAt)))throw new Error('PCA独立数据格式无效，每份需要2至80个变量、1至20000个样本。');ids.add(e.id);total+=e.points.length;
    const keys=new Set(),columns=e.columns.map(c=>{if(!c||!/^\w{1,100}$/.test(c.key)||keys.has(c.key))throw new Error('PCA变量编号重复或无效。');keys.add(c.key);return {key:c.key,label:str(c.label,200,'变量名称'),unit:str(c.unit??'',100,'变量单位')};});
    const seen=new Set(),points=e.points.map(p=>{if(!p||!Number.isSafeInteger(p.time)||Math.abs(p.time)>8640000000000000||typeof p.group!=='string'||p.group.length>100||!p.values||Array.isArray(p.values)||Object.keys(p.values).some(k=>!keys.has(k)))throw new Error('PCA采样记录无效。');const identity=JSON.stringify([p.time,p.group]);if(seen.has(identity))throw new Error('PCA数据存在同一分组、同一时间的重复样本，请先核对。');seen.add(identity);return {unit:e.unitId,time:p.time,group:p.group,values:Object.fromEntries(columns.map(c=>{const v=p.values[c.key]??null;if(v!==null&&!finite(v))throw new Error('PCA变量必须为数值或空白。');return [c.key,v];}))};});
-   return {id:e.id,name:str(e.name,120,'数据名称'),filename:str(e.filename,200,'文件名'),sheet:str(e.sheet,100,'工作表'),unitId:e.unitId,unitName:str(e.unitName,120,'装置名称'),columns,points,selection:selection(e.selection,points.length),createdAt:e.createdAt,updatedAt:e.updatedAt};
+   return {id:e.id,name:str(e.name,120,'数据名称'),filename:str(e.filename,200,'文件名'),sheet:str(e.sheet,100,'工作表'),unitId:e.unitId,unitName:str(e.unitName,120,'装置名称'),columns,points,selection:selection(e.selection,points.length),...(e.importReport===undefined?{}:{importReport:importReport(e.importReport,points.length)}),createdAt:e.createdAt,updatedAt:e.updatedAt};
   });if(total>100000)throw new Error('PCA数据仓库最多10万个原始样本。');return {version:1,revision:value.revision,datasets};
  }
  const store=state=>state.analytics?.pcaData??{version:1,revision:0,datasets:[]};
@@ -50,9 +55,19 @@ var PCAData=(()=>{
   const header=rows[config.headerRow??0];if(!Array.isArray(header))throw new Error('请选择表头行。');const indices=config.columns;if(!Array.isArray(indices)||indices.length<2||indices.length>80||new Set(indices).size!==indices.length)throw new Error('请选择2至80个数值变量。');
   const columns=indices.map((index,i)=>{const title=String(header[index]??'').trim();if(!title)throw new Error('选中的变量列缺少表头。');const match=title.match(/^(.*?)\s*[（(]([^()（）]*)[）)]\s*$/);return {key:'c_'+(i+1),label:(match?.[1]??title).trim(),unit:match?.[2]?.trim()??''};});
   const start=Number(config.timeColumn)<0?AnalysisMath.time(config.start):null,interval=Number(config.interval);if(Number(config.timeColumn)<0&&(start===null||!finite(interval)||interval<=0))throw new Error('没有时间列时，请填写真实采样开始时间和采样间隔（秒）。');
-  const data=rows.slice((config.headerRow??0)+1).filter(row=>Array.isArray(row)&&row.some(v=>v!==null&&v!==undefined&&String(v).trim()!==''));if(!data.length||data.length>20000)throw new Error('需要1至20000行样本。');
-  const points=data.map((row,i)=>{let time;try{time=Number(config.timeColumn)<0?start+Math.round(i*interval*1000):timestamp(row[Number(config.timeColumn)]);}catch{throw new Error('第'+(i+(config.headerRow??0)+2)+'行时间无法识别。');}return {time,group:Number(config.groupColumn)>=0?String(row[Number(config.groupColumn)]??''):config.group??'',values:Object.fromEntries(columns.map((c,j)=>[c.key,number(row[indices[j]])]))};});
-  return {columns,points,selection:selection(undefined,points.length)};
+  const data=rows.slice((config.headerRow??0)+1).map((row,index)=>({row,index})).filter(({row})=>Array.isArray(row)&&row.some(v=>v!==null&&v!==undefined&&String(v).trim()!==''));if(!data.length||data.length>20000)throw new Error('需要1至20000行样本。');
+  const points=[],skippedRows=[];
+  for(const {row,index}of data){
+   const rowNumber=index+(config.headerRow??0)+2,values={};let invalid=null;
+   for(let j=0;j<columns.length;j++){try{values[columns[j].key]=number(row[indices[j]]);}catch{invalid={row:rowNumber,column:columns[j].label,value:String(row[indices[j]]).slice(0,200)};break;}}
+   // Textual tags, Excel errors and other nonnumeric cells exclude the whole
+   // sample. Preserve time spacing; never turn a bad reading into a zero.
+   if(invalid){skippedRows.push(invalid);continue;}
+   let time;try{time=Number(config.timeColumn)<0?start+Math.round(index*interval*1000):timestamp(row[Number(config.timeColumn)]);}catch{throw new Error('第'+rowNumber+'行时间无法识别。');}
+   points.push({time,group:Number(config.groupColumn)>=0?String(row[Number(config.groupColumn)]??''):config.group??'',values});
+  }
+  if(!points.length)throw new Error('已剔除全部'+skippedRows.length+'行非数值样本，没有可导入的数据。请核对表头和所选变量列。');
+  return {columns,points,selection:selection(undefined,points.length),importReport:{sourceRows:data.length,skippedRows}};
  }
  async function request(req){
   const state=$r().state,current=normalize(state.analytics?.pcaData),params=new URL(req.url).searchParams;

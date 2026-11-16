@@ -964,7 +964,7 @@
   "所选时段没有该类超限样本。": "No alarms of this type in this period.",
   "所选时段没有完整样本。": "No complete samples in this period.",
   "查看当前基准": "Current baseline details",
-  "正在读取PCA数据…": "Loading PCA data…",
+  "正在读取PCA数据…": "Reading PCA data…",
   "基准至少需要10个完整样本。": "At least 10 complete baseline samples are required.",
   "请选择2至40个建模变量。": "Select 2 to 40 model variables.",
   "基准有效样本数必须大于变量数量。": "Baseline samples must outnumber variables.",
@@ -1264,5 +1264,10 @@
   "历史模型基准已保留，请从PCA独立数据仓库选择分析来源。": "The historical model is retained. Choose an analysis source from the independent PCA library.",
   "可选择生产、LIMS、日报或PCA独立数据，分析过程不修改原始数据。": "Choose production, LIMS, daily reports or independent PCA data. Analysis leaves original data unchanged.",
   "同时移除该装置的OEE、旧PCA关联和同步配置。PCA独立仓库及其模型保留。此操作无法在工作台中恢复；已有导出文件保留。": "Also removes OEE, legacy PCA links and sync settings for this unit. Independent PCA data and models are retained. This action cannot be undone; exported files are retained.",
-  "按原始样本顺序展示。拖动图表框选；灰色区域不参与后续分析。多变量使用0–1归一化显示，悬停查看原始数值。": "Displayed in original sample order. Drag to select; gray samples are excluded from later analysis. Multiple variables use 0–1 scaling; hover for original values."
+  "按原始样本顺序展示。拖动图表框选；灰色区域不参与后续分析。多变量使用0–1归一化显示，悬停查看原始数值。": "Displayed in original sample order. Drag to select; gray samples are excluded from later analysis. Multiple variables use 0–1 scaling; hover for original values.",
+  "粘贴内容已更改，请点击“解析PCA粘贴数据”。": "The pasted content changed. Click “Read pasted PCA data”.",
+  "请先选择数据文件，或粘贴包含表头和至少两个数值变量的数据。": "Choose a data file or paste data with headers and at least two numeric variables.",
+  "请填写数据名称。": "Enter a dataset name.",
+  "以下行在所选变量中含有文字或错误值，整行未导入；空白读数仍保留为缺失值。": "These rows contain text or errors in selected variables and were skipped. Blank readings remain missing values.",
+  "这里只展示前100行，完整清理记录随工作文件保存。": "Only the first 100 skipped rows are shown. The complete cleanup record is saved with the workspace file."
 }
