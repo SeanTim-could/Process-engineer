@@ -110,7 +110,7 @@ var PCAData=(()=>{
  async function request(req){
   const state=$r().state,current=normalize(state.analytics?.pcaData),params=new URL(req.url).searchParams;
   if(req.method==='GET'){
-   if(params.has('id')){const e=find({...state,analytics:{...state.analytics,pcaData:current}},params.get('id'));if(!e)throw new Error('PCA独立数据已不存在。');return Response.json({dataset:e,revision:current.revision});}
+   if(params.has('id')){const local={...state,analytics:{...state.analytics,pcaData:current}},e=find(local,canonical(local,params.get('id')));if(!e)throw new Error('PCA独立数据已不存在。');return Response.json({dataset:e,revision:current.revision});}
    return Response.json({...response(current),datasets:entries(current).map(e=>({...e,points:undefined,count:e.points.length,selectedCount:selected(e).length}))});
   }
   if(req.method!=='PUT')throw new Error('PCA数据操作无效。');const input=await req.text();if(input.length>64*1024*1024)throw new Error('PCA导入内容过大，请减少变量或样本。');const body=JSON.parse(input);if(body.expectedRevision!==current.revision)throw new Error('PCA数据已更新，请刷新后重试。');
