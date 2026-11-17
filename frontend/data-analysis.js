@@ -42,8 +42,8 @@ var DataAnalysis = (() => {
     return [...datasets,...raw,...PCAData.sources(state)];
   }
   function series(state,id,options={}){
+    if(PCAData.owns(id)){const own=PCAData.series(state,id,{raw:options.raw===true});return {...own.dataset,points:own.points};}
     const meta=sources(state).find(s=>s.id===id);if(!meta)throw new Error("来源装置已停用、指标已隐藏或数据集不存在，请重新选择。");
-    if(PCAData.owns(id)){const own=PCAData.series(state,id,{raw:options.raw===true});return {...meta,points:own.points};}
     if(id.startsWith("raw:")){
       const unit=state.settings.units.find(u=>u.id===id.slice(4)),metrics=yf(state.settings,unit);
       return {...meta,points:state.records.filter(r=>r.unit===unit.id).map(r=>({unit:unit.id,time:St(r.date),group:"",values:Object.fromEntries(metrics.map(m=>[m.id,jmCore([r],m,unit)]))})).sort((a,b)=>a.time-b.time)};

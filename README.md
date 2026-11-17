@@ -8,7 +8,7 @@
 
 ## 发布网址
 
-PCA支持独立Excel/CSV导入与图表样本筛选，不与生产或LIMS混存，其他数据分析页面可调用。操作见 [PCA使用说明](PCA使用说明.md)。
+PCA支持独立Excel/CSV导入与图表样本筛选。同一装置分批导入时自动归集为一个分析来源，重叠数据由用户选择使用新值或旧值；不与生产或LIMS混存，其他数据分析页面可调用。操作见 [PCA使用说明](PCA使用说明.md)。
 
 将本目录中的 `index.html`、`workbench.html`、`assets/`、`.nojekyll` 和 `启动工程师工作台.html` 一起提交到 GitHub 的 `main` 分支。在支持 GitHub Pages 的仓库中：
 

@@ -9,7 +9,7 @@ var PCAWorkspace = (() => {
       if(!m||!/^pca_[\w-]{1,80}$/.test(m.id)||ids.has(m.id)||!/^[-\w]{1,40}$/.test(m.unitId)||!Array.isArray(m.columns)||m.columns.length<2||m.columns.length>40||!Number.isFinite(Date.parse(m.createdAt)))throw new Error('PCA模型记录无效。');
       ids.add(m.id);const keys=new Set(),columns=m.columns.map(c=>{if(!c||!/^\w{1,100}$/.test(c.key)||keys.has(c.key))throw new Error('PCA变量顺序无效。');keys.add(c.key);return {key:c.key,label:text(c.label,200),unit:text(c.unit??'',100)};});
       const model=M.validate(m.model);if(model.center.length!==columns.length)throw new Error('PCA模型变量数量不匹配。');
-      return {...(m.trainingSelection===undefined?{}:{sourceSampleCount:m.sourceSampleCount,trainingSelection:PCAData.selection(m.trainingSelection,m.sourceSampleCount),sourceUpdatedAt:text(m.sourceUpdatedAt,40)}),id:m.id,name:text(m.name,100),unitId:m.unitId,sourceId:text(m.sourceId,200),unitName:text(m.unitName,120),sourceName:text(m.sourceName,200),group:text(m.group,100),from:text(m.from,23),to:text(m.to,23),createdAt:m.createdAt,columns,model,excludedCount:Number.isSafeInteger(m.excludedCount)&&m.excludedCount>=0?m.excludedCount:0,droppedCount:Number.isSafeInteger(m.droppedCount)&&m.droppedCount>=0?m.droppedCount:0};
+      return {...(m.trainingSelection===undefined?{}:{sourceSampleCount:m.sourceSampleCount,trainingSelection:PCAData.selection(m.trainingSelection,m.sourceSampleCount),sourceUpdatedAt:text(m.sourceUpdatedAt,40)}),id:m.id,name:text(m.name,100),unitId:m.unitId,sourceId:text(m.sourceId,200),unitName:text(m.unitName,120),sourceName:text(m.sourceName,200),group:text(m.group,100),...m.allGroups===true?{allGroups:true}:{},from:text(m.from,23),to:text(m.to,23),createdAt:m.createdAt,columns,model,excludedCount:Number.isSafeInteger(m.excludedCount)&&m.excludedCount>=0?m.excludedCount:0,droppedCount:Number.isSafeInteger(m.droppedCount)&&m.droppedCount>=0?m.droppedCount:0};
     })};
   }
   function catalog(state){
@@ -18,10 +18,10 @@ var PCAWorkspace = (() => {
   }
   function data(state,choice,columns){
     const source=catalog(state).sources.find(s=>s.id===choice.sourceId&&s.unitId===choice.unitId);if(!source)throw new Error('请选择当前装置的数据来源。');
-    const group=text(choice.group??'',100);if(!source.groups.includes(group))throw new Error('请选择数据分组。');
+    const group=text(choice.group??'',100);if(!choice.allGroups&&!source.groups.includes(group))throw new Error('请选择数据分组。');
     const range={from:text(choice.from??'',23),to:text(choice.to??'',23)},start=AnalysisMath.time(range.from),end=AnalysisMath.time(range.to);if(start===null||end===null||start>end)throw new Error('请填写有效的起止时间。');
     const input=DataAnalysis.series(state,source.id).points;
-    const rows=input.filter(r=>columns.some(c=>Object.hasOwn(r.values,c.key))&&r.unit===source.unitId&&r.group===group&&r.time>=start&&r.time<end+(choice.exact==='1'?1:60000)).sort((a,b)=>a.time-b.time);
+    const rows=input.filter(r=>columns.some(c=>Object.hasOwn(r.values,c.key))&&r.unit===source.unitId&&(choice.allGroups===true||choice.allGroups==='1'||r.group===group)&&r.time>=start&&r.time<end+(choice.exact==='1'?1:60000)).sort((a,b)=>a.time-b.time);
     if(rows.length>100000)throw new Error('PCA时段超过10万个样本，请缩短时间范围。');
     const selected=AnalysisPointMath.apply(source.id,rows,state.analytics?.excludedPoints??[]),complete=selected.filter(r=>columns.every(c=>AnalysisMath.finite(r.values[c.key])));
     return {source,rows:complete,total:rows.length,droppedCount:rows.length-complete.length};
@@ -37,12 +37,12 @@ var PCAWorkspace = (() => {
     if(req.method==='GET'){
       if(!params.get('modelId'))return Response.json({...cat,...saved});
       const baseline=saved.models.find(m=>m.id===params.get('modelId'));if(!baseline)throw new Error('基准模型已不存在。');
-      const choice=Object.fromEntries(params);if(choice.unitId!==baseline.unitId)throw new Error('分析装置必须与基准模型一致。');
+      const choice=Object.fromEntries(params);choice.sourceId=PCAData.canonical(state,choice.sourceId);if(choice.unitId!==baseline.unitId)throw new Error('分析装置必须与基准模型一致。');
       const source=cat.sources.find(s=>s.id===choice.sourceId&&s.unitId===choice.unitId);if(!source)throw new Error('请选择分析数据来源。');
-      const columns=match(baseline.columns,source),selected=data(state,choice,columns),sampleRow=params.has('at')?selected.rows.find(r=>r.time===Number(params.get('at'))):selected.rows.at(-1),sample=sampleRow?{...M.project(baseline.model,columns.map(c=>sampleRow.values[c.key])),time:sampleRow.time}:null;
+      const columns=match(baseline.columns,source),selected=data(state,choice,columns),sampleRow=params.has('at')?selected.rows.find(r=>r.time===Number(params.get('at'))&&(!params.has('atGroup')||r.group===params.get('atGroup'))):selected.rows.at(-1),sample=sampleRow?{...M.project(baseline.model,columns.map(c=>sampleRow.values[c.key])),time:sampleRow.time,group:sampleRow.group}:null;
       if(params.get('detail')==='1'){if(!sample)throw new Error('所选采样已变化，请刷新分析。');return Response.json({sample});}
       const result=M.analyze(baseline.model,selected.rows.map(r=>columns.map(c=>r.values[c.key])),{compact:true});
-      return Response.json({modelId:baseline.id,total:selected.total,droppedCount:selected.droppedCount,columns:baseline.columns,...result,sample,points:result.points.map((p,i)=>({...p,time:selected.rows[i].time}))});
+      return Response.json({modelId:baseline.id,total:selected.total,droppedCount:selected.droppedCount,columns:baseline.columns,...result,sample,points:result.points.map((p,i)=>({...p,time:selected.rows[i].time,group:selected.rows[i].group}))});
     }
     if(req.method!=='PUT')throw new Error('PCA操作无效。');
     const body=await Ha(req);if(body.expectedRevision!==saved.revision)throw new Error('PCA模型已被其他操作更新，请刷新后重试。');
@@ -58,7 +58,7 @@ var PCAWorkspace = (() => {
       if(!Array.isArray(c.exclusions)||c.exclusions.length>20)throw new Error('排除区段设置无效。');
       const exclusions=c.exclusions.map(r=>{const a=AnalysisMath.time(r.from),b=AnalysisMath.time(r.to);if(a===null||b===null||a>b)throw new Error('请完整填写排除区段的起止时间。');return [a,b+60000];});
       const training=selected.rows.filter(r=>!exclusions.some(([a,b])=>r.time>=a&&r.time<b)),model=M.train(training.map(r=>columns.map(c=>r.values[c.key])),{threshold:Number(c.threshold),confidence:Number(c.confidence)});
-      const sourceEntry=PCAData.find(state,c.sourceId);const baseline={sourceSampleCount:sourceEntry.points.length,trainingSelection:sourceEntry.selection,sourceUpdatedAt:sourceEntry.updatedAt,id:'pca_'+crypto.randomUUID(),name,unitId:c.unitId,unitName:cat.units.find(u=>u.id===c.unitId).name,sourceId:c.sourceId,sourceName:source.name,group:c.group,from:c.from,to:c.to,columns,model,excludedCount:selected.rows.length-training.length,droppedCount:selected.droppedCount,createdAt:new Date().toISOString()};models.push(baseline);
+      const sourceEntry=PCAData.find(state,c.sourceId);const baseline={sourceSampleCount:sourceEntry.points.length,trainingSelection:sourceEntry.selection,sourceUpdatedAt:sourceEntry.updatedAt,id:'pca_'+crypto.randomUUID(),name,unitId:c.unitId,unitName:cat.units.find(u=>u.id===c.unitId).name,sourceId:c.sourceId,sourceName:source.name,group:c.group,...c.allGroups===true?{allGroups:true}:{},from:c.from,to:c.to,columns,model,excludedCount:selected.rows.length-training.length,droppedCount:selected.droppedCount,createdAt:new Date().toISOString()};models.push(baseline);
     }else throw new Error('PCA操作无效。');
     const next=normalize({...saved,revision:saved.revision+1,models});qt().analytics={...DataAnalysis.normalize(state.analytics),pca:next};return Response.json({...cat,...next});
   }

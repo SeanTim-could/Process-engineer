@@ -1269,5 +1269,19 @@
   "请先选择数据文件，或粘贴包含表头和至少两个数值变量的数据。": "Choose a data file or paste data with headers and at least two numeric variables.",
   "请填写数据名称。": "Enter a dataset name.",
   "以下行在所选变量中含有文字或错误值，整行未导入；空白读数仍保留为缺失值。": "These rows contain text or errors in selected variables and were skipped. Blank readings remain missing values.",
-  "这里只展示前100行，完整清理记录随工作文件保存。": "Only the first 100 skipped rows are shown. The complete cleanup record is saved with the workspace file."
+  "这里只展示前100行，完整清理记录随工作文件保存。": "Only the first 100 skipped rows are shown. The complete cleanup record is saved with the workspace file.",
+  "PCA数据装置": "PCA data unit",
+  "导入批次名称": "Import batch name",
+  "同一装置分批导入的数据自动归集；图表筛选不删除原始样本。": "Imports are grouped by unit. Chart selection retains original samples.",
+  "重叠样本处理": "Overlapping samples",
+  "使用新数据": "Use new data",
+  "保留旧数据": "Keep old data",
+  "请选择重叠部分使用哪份数据。使用新数据时，只更新本批次包含的指标，其他指标保留。": "Choose which readings to keep for overlaps. New data updates only variables present in this batch; other readings are retained.",
+  "历史批次重叠处理": "Resolve overlapping historical imports",
+  "使用较新批次数据": "Use newer batches",
+  "保留较早批次数据": "Keep earlier batches",
+  "确认重叠样本处理": "Confirm overlap choice",
+  "删除装置PCA数据": "Delete unit PCA data",
+  "删除此装置全部PCA批次与数据？已有模型保留，生产和LIMS数据不受影响。": "Delete all independent PCA batches for this unit? Saved models, production and LIMS data are retained.",
+  "请选择重叠样本使用新数据还是旧数据。": "Choose whether overlapping samples use new or old data."
 }
