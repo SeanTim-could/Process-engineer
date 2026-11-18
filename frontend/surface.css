@@ -168,3 +168,27 @@ body.overview-dragging,body.overview-dragging *{cursor:grabbing!important;user-s
 /* Portaled calendars retain the card corners and stay usable near viewport edges. */
 .calendar-popover.calendar-floating{position:fixed!important;left:var(--calendar-left,8px)!important;top:var(--calendar-top,8px)!important;right:auto!important;bottom:auto!important;transform:none!important;z-index:10030!important;width:320px;max-width:var(--calendar-max-width,calc(100vw - 16px));max-height:var(--calendar-max-height,calc(100dvh - 16px));overflow:auto;overscroll-behavior:contain;box-sizing:border-box;margin:0;box-shadow:0 10px 40px #25442325}
 .calendar-floating .calendar-navigation select,.calendar-floating .calendar-clock select{min-height:32px}.calendar-floating .calendar-entry input{min-height:34px}.calendar-floating .calendar-hint{display:none}
+
+/* Sidebar geometry: retain the existing theme, connected panels and interactions. */
+.sidebar{--sidebar-font-size:14px;--sidebar-line-height:20px;--sidebar-panel-radius:12px;--sidebar-item-radius:10px;--sidebar-row-height:44px;--sidebar-icon-size:13px;--sidebar-icon-gap:10px;--sidebar-group-gap:12px;--sidebar-item-gap:4px;padding-inline:12px!important;font-size:var(--sidebar-font-size)!important;line-height:var(--sidebar-line-height)}
+.sidebar>.brand{padding:12px 10px 16px!important;margin-bottom:0;gap:12px!important}
+.sidebar .brand b,html[lang=en] .sidebar .brand b{font-size:16px!important;line-height:24px!important}
+.sidebar>.grouped-nav{gap:var(--sidebar-group-gap)!important;margin-top:16px;padding-inline:0!important;scrollbar-gutter:stable both-edges}
+.sidebar .nav-group{flex:0 0 auto;min-width:0;border-radius:var(--sidebar-panel-radius)}
+.sidebar .nav-group-toggle{min-height:var(--sidebar-row-height)!important;height:auto;padding:10px 12px!important;gap:var(--sidebar-icon-gap);font-size:var(--sidebar-font-size)!important;line-height:var(--sidebar-line-height);border-radius:var(--sidebar-panel-radius)!important}
+.sidebar .nav-group-toggle[aria-expanded=true]{border-radius:var(--sidebar-panel-radius) var(--sidebar-panel-radius) 0 0!important}
+.sidebar .nav-group-toggle>span:first-child{min-width:0;overflow-wrap:anywhere}
+.sidebar .nav-group-toggle>span:last-child{flex:0 0 14px;display:grid;place-items:center;font-size:14px;line-height:20px}
+.sidebar .nav-group-inner{display:flex;flex-direction:column;gap:var(--sidebar-item-gap);padding:8px 8px 8px 6px;border-radius:0 0 var(--sidebar-panel-radius) var(--sidebar-panel-radius)}
+.sidebar .nav-child,html[lang=en] .sidebar .nav-child{min-width:0;min-height:var(--sidebar-row-height);height:auto;margin:0!important;padding:10px 12px!important;gap:var(--sidebar-icon-gap);font-size:var(--sidebar-font-size)!important;line-height:var(--sidebar-line-height);border-radius:var(--sidebar-item-radius)!important}
+.sidebar .nav-child>span{flex:1 1 auto;min-width:0;line-height:var(--sidebar-line-height);white-space:normal;overflow-wrap:anywhere}
+.sidebar .nav-child>svg,.sidebar .profile>svg{width:var(--sidebar-icon-size);height:var(--sidebar-icon-size);flex:0 0 var(--sidebar-icon-size)}
+.sidebar .nav-child>i,.sidebar .nav-child>small{flex-shrink:0}
+.sidebar>.sidebar-bottom{display:flex;flex-direction:column;gap:12px;margin-top:12px!important;padding-top:12px}
+.sidebar .connection{min-height:32px;padding:6px 10px;font-size:12px;line-height:20px;gap:8px}
+.sidebar .connection>span{margin-inline:0;min-width:0;overflow-wrap:anywhere}
+.sidebar .profile{width:100%;min-height:64px;padding:12px 10px;gap:var(--sidebar-icon-gap);text-align:left}
+.sidebar .profile>span{flex:0 0 32px;width:32px;height:32px}
+.sidebar .profile>div{min-width:0}
+.sidebar .profile b{font-size:var(--sidebar-font-size);line-height:20px;overflow-wrap:anywhere}
+.sidebar .profile small{margin-top:4px;font-size:12px;line-height:18px;overflow-wrap:anywhere}
