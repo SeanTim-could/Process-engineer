@@ -1286,5 +1286,6 @@
   "请选择重叠样本使用新数据还是旧数据。": "Choose whether overlapping samples use new or old data.",
   "自定义单位": "Custom unit",
   "请选择单位": "Choose unit",
-  "填写单位": "Enter unit"
+  "填写单位": "Enter unit",
+  "工艺流程标识": "Process flow mark"
 }

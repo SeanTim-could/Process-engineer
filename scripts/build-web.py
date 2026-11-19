@@ -80,9 +80,6 @@ def build(config_override=None):
     match=re.search(r'<script[^>]+src="data:text/javascript;base64,([^\"]+)"[^>]*></script>',html)
     if not match:raise ValueError('Standalone application script not found')
     script=base64.b64decode(match[1])
-    logo_data='data:image/webp;base64,'+base64.b64encode((ROOT/'frontend/company-logo.webp').read_bytes()).decode()
-    logo_url='./'+asset(('company-logo','webp'),(ROOT/'frontend/company-logo.webp').read_bytes())
-    script=script.replace(logo_data.encode(),logo_url.encode())
     split_spec=importlib.util.spec_from_file_location('web_spreadsheet_split',ROOT/'scripts/split-web-spreadsheet.py')
     splitter=importlib.util.module_from_spec(split_spec)
     split_spec.loader.exec_module(splitter)
@@ -113,7 +110,7 @@ def build(config_override=None):
     compatible_css=css
     compatible=web.replace('</head>',inline_script(loader_source('web-compatible.js'))+'<style>'+compatible_css+'</style></head>',1)
     compatible=compatible.replace('</button></div></main>','</button><a href="./workbench-compatible.html?v='+entry_version+'" style="margin-left:12px;color:#087f5b">重新打开兼容入口</a></div></main>',1)
-    embedded=inline_script((ROOT/spreadsheet_url).read_bytes())+inline_script(script.replace(logo_url.encode(),logo_data.encode()))
+    embedded=inline_script((ROOT/spreadsheet_url).read_bytes())+inline_script(script)
     compatible=compatible.replace('</body>',embedded+'</body>',1)
     (ROOT/'workbench-compatible.html').write_text(compatible)
     compatible_link='<a id="web-startup-compatible" href="'+markup.escape(startup_assets['compatible'],quote=True)+'" style="margin-left:12px;color:#087f5b">使用兼容模式打开</a>'

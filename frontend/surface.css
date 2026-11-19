@@ -5,7 +5,7 @@ body{line-height:1.5}button,input,select,textarea{font-family:inherit!important}
 .main-content{padding:28px!important;min-width:0}.main-content>*{min-width:0}
 .sidebar{background:linear-gradient(180deg,var(--surface-nav),var(--surface-nav-end))!important;color:var(--surface-ink)!important;border-right:1px solid var(--surface-border)!important;box-shadow:none!important}
 .brand{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:10px!important;padding:12px 8px 16px!important;margin-bottom:10px;border-bottom:1px solid var(--surface-border)}
-.company-logo{display:block;width:210px;max-width:100%;height:auto;object-fit:contain}.brand b{color:var(--surface-ink)!important;font-size:14px!important}.brand small{display:none!important}
+.workbench-mark{display:block;width:210px;max-width:100%;height:auto;color:var(--surface-accent)}.brand b{color:var(--surface-ink)!important;font-size:14px!important}.brand small{display:none!important}
 .nav-group-toggle{background:transparent!important;color:var(--surface-muted)!important;font-size:11px!important;padding:12px 10px 8px!important;margin:8px 0 6px;border-bottom:1px solid var(--surface-rule)!important;font-weight:650!important}
 .nav-group-items{padding-left:0}.sidebar .nav-child{border-radius:11px!important;margin:3px 0!important;padding:11px 12px!important;min-height:44px;color:var(--surface-ink)!important;gap:10px;overflow-wrap:anywhere}
 .sidebar .nav-child span{min-width:0;white-space:normal;line-height:1.35}.sidebar .nav-child.active{background:var(--surface-accent)!important;color:#fff!important;box-shadow:0 3px 10px #13291c18!important}

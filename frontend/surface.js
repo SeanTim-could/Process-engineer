@@ -1,6 +1,6 @@
 // Presentation and language preferences. Rendering translates labels, never model values.
 var Surface=(()=>{
- const R=Se(),h=R.createElement,logo=/*COMPANY_LOGO*/'',lex=/*ENGLISH_UI*/{},han=/[\u3400-\u9fff]/,terms=Object.keys(lex).sort((a,b)=>b.length-a.length),englishCache=new Map(),untranslated=new Set();
+ const R=Se(),h=R.createElement,lex=/*ENGLISH_UI*/{},han=/[\u3400-\u9fff]/,terms=Object.keys(lex).sort((a,b)=>b.length-a.length),englishCache=new Map(),untranslated=new Set();
  const starts=new Map();for(const term of terms){const list=starts.get(term[0])??[];list.push(term);starts.set(term[0],list);}
  let active='zh-CN',page='overview',scope='',names=new Set();const listeners=new Set();
  try{const last=localStorage.getItem('workbench-last-language');if(last==='en')active='en';}catch{}
@@ -47,7 +47,8 @@ var Surface=(()=>{
  function LanguageSettings({value='zh-CN',onChange,disabled}){return h('section',{className:'language-settings'},h('label',{className:'form-label'},'界面语言',h('select',{'aria-label':'界面语言',value,disabled,onChange:e=>onChange(e.target.value)},h('option',{value:'zh-CN'},'简体中文'),h('option',{value:'en'},'English'))));}
  function weekday(value){return active==='en'?({一:'Mon',二:'Tue',三:'Wed',四:'Thu',五:'Fri',六:'Sat',日:'Sun'}[value]??value):value;}
  function monthLabel(value){return active==='en'?['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][value-1]:String(value)+'月';}
- function Logo(){return h('img',{className:'company-logo',src:logo,alt:'ADISSEO · A Sinochem Company',width:210,height:74,decoding:'async'});}
+ function Logo(){return h('svg',{className:'workbench-mark',viewBox:'0 0 210 74',width:210,height:74,role:'img','aria-label':'工艺流程标识',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round'},h('path',{d:'M16 37h20V18h26M36 37v19h26',opacity:.6}),h('circle',{cx:11,cy:37,r:5,fill:'currentColor',stroke:'none'}),h('circle',{cx:36,cy:18,r:3,fill:'currentColor',stroke:'none'}),h('rect',{x:62,y:8,width:54,height:58,rx:15,fill:'currentColor',fillOpacity:.08,strokeOpacity:.4}),h('rect',{x:78,y:21,width:22,height:32,rx:6}),h('path',{d:'M84 30h10M84 37h10M84 44h10',strokeWidth:1.5}),h('path',{d:'M116 37h15l9 10 13-24 13 14 18-19h11',strokeWidth:2.5}),h('circle',{cx:195,cy:18,r:4,fill:'currentColor',stroke:'none'}));}
+
  function svgText(x,y,value,props={}){return h('text',{x,y,...props},t(String(value)));}
  function appendTitle(svg,title,x=24,y=23,size=16){const W=Number((svg.getAttribute('viewBox')??'0 0 900 400').split(/[ ,]+/)[2]),ns=svg.namespaceURI,text=svg.ownerDocument.createElementNS(ns,'text'),label=t(title),width=Math.max(200,W-x-24);text.setAttribute('x',x);text.setAttribute('y',y);text.setAttribute('font-size',size);text.setAttribute('text-anchor','start');text.setAttribute('fill','#243b31');let parts=[],part='',used=0;for(const char of label){const step=han.test(char)?size:size*.56;if(used+step>width&&part){parts.push(part);part='';used=0;}part+=char;used+=step;}if(part)parts.push(part);parts=parts.slice(0,2);parts.forEach((line,i)=>{const span=svg.ownerDocument.createElementNS(ns,'tspan');span.setAttribute('x',x);if(i)span.setAttribute('dy',size+3);span.textContent=line;text.appendChild(span);});svg.appendChild(text);return text;}
  // Only canvas/panel backgrounds become transparent. White text, markers and
