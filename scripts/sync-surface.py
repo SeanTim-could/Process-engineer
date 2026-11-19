@@ -223,6 +223,9 @@ PAIRS += [('(0,ge.jsx)("option",{value:"production",children:"\\u751F\\u4EA7\\u6
 # Analysis-only selections stay in analysis view preferences, not production view.
 PAIRS += [('y.current&&R1("view:"+e,async()=>{try{await Vo("PUT",{action:"view",view:G,scope:e})', 'y.current&&!PCAData.owns(G.sourceId)&&R1("view:"+e,async()=>{try{await Vo("PUT",{action:"view",view:G,scope:e})'), ('AnalysisMath.exactLocal(e.start).replace("T"," "),to:AnalysisMath.exactLocal(e.end).replace("T"," ")', 'AnalysisMath.exactLocal(e.start).slice(0,16).replace("T"," "),to:AnalysisMath.exactLocal(e.end).slice(0,16).replace("T"," ")')]
 
+# Unit editing mode is independent of the normalized measurement value.
+PAIRS += [('function C0({value:e,onChange:t,label:r}){let a=Vl(e);return(0,yl.jsxs)("div",{className:"unit-selector",children:[(0,yl.jsxs)("select",{"aria-label":r,value:A1.includes(a)?a:e?"custom":"",onChange:n=>t(n.target.value==="custom"?e||"\\u81EA\\u5B9A\\u4E49\\u5355\\u4F4D":n.target.value),children:[(0,yl.jsx)("option",{value:"",children:"\\u8BF7\\u9009\\u62E9\\u5355\\u4F4D"}),A1.map(n=>(0,yl.jsxs)("option",{value:n,children:[n,n==="kW/h"?" \\xB7 \\u529F\\u7387\\u53D8\\u5316\\u7387":""]},n)),(0,yl.jsx)("option",{value:"custom",children:"\\u81EA\\u5B9A\\u4E49\\u5355\\u4F4D"})]}),e&&!A1.includes(a)&&(0,yl.jsx)("input",{"aria-label":`${r}\\u81EA\\u5B9A\\u4E49`,value:e,placeholder:"\\u586B\\u5199\\u5355\\u4F4D",onChange:n=>t(n.target.value)})]})}', 'function C0(props){return(0,yl.jsx)(FormControls.UnitSelector,{...props,units:A1,normalize:Vl})}')]
+
 def prepare(js):
  js=js.replace('c==="overview"&&(0,B.jsx)(OEEView.Overview,{unitId:t.view.unitId,refreshKey:Sr}),','')
  js=js.replace('language:Surface.validLanguage(t.language)','language:["zh-CN","en"].includes(t.language)?t.language:(()=>{throw new Error("界面语言无效。")})()')

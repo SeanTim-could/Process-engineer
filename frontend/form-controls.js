@@ -45,6 +45,14 @@ var FormControls=(()=>{
   function key(e){if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();setOpen(true);const step=e.key==='ArrowDown'?1:-1;setActive(old=>{let next=old;for(let n=0;n<visible.length;n++){next=(next+step+visible.length)%visible.length;if(!visible[next].disabled)return next;}return old;});}else if(e.key==='Enter'&&open){e.preventDefault();if(visible[active])choose(visible[active],e);}else if(e.key==='Escape'&&open){e.preventDefault();e.stopPropagation();close();}else if(e.key==='Tab')close();p.onKeyDown?.(e);}
   return h('span',{ref:anchor,className:'floating-field field-autocomplete'+(label?' has-caption':''),'data-filled':String(open||!!selected?.label)},p.name?h('input',{'data-native-field':true,type:'hidden',name:p.name,value,disabled:p.disabled}):null,h('input',{'data-native-field':true,ref:forward,id,role:'combobox',type:'text',value:open?query:selected?.label??'',disabled:p.disabled,required:p.required,autoComplete:'off','aria-label':p['aria-label']??label,'data-choice-value':value,'aria-expanded':open,'aria-controls':menu,'aria-autocomplete':'list','aria-activedescendant':open&&visible[active]?menu+'-'+active:undefined,onFocus:()=>{setOpen(true);setQuery('');setActive(0);},onClick:()=>setOpen(true),onChange:e=>{setQuery(e.target.value);setActive(0);setOpen(true);},onKeyDown:key,onBlur:e=>{p.onBlur?.(e);close();}}),labelNode(id,label),h('span',{className:'field-choice-arrow','aria-hidden':true},'⌄'),open?h(SearchMenu,{anchor,id:menu,onClose:close},visible.length?visible.map((o,i)=>h('div',{id:menu+'-'+i,key:o.value,role:'option','data-value':o.value,'aria-selected':o.value===value,'aria-disabled':!!o.disabled,className:'field-search-option'+(i===active?' active':''),onPointerMove:()=>setActive(i),onClick:e=>{choose(o,e);input.current?.focus();}},highlight(o.label,query.trim()),o.group?h('small',null,o.group):null)):h('div',{className:'field-search-empty',role:'status'},'没有匹配选项'),filtered.length>80?h('small',{className:'field-search-empty'},'输入关键词查找更多选项'):null):null);
  });
+ // Choosing custom is an editing mode, not a unit value. Keep the stored
+ // value until the user edits it, including while it is empty or matches a preset.
+ function UnitSelector({value='',onChange,label,units,normalize}){
+  const unit=String(value??''),[custom,setCustom]=R.useState(()=>!!unit&&!units.includes(normalize(unit))),last=R.useRef(unit);
+  R.useEffect(()=>{if(last.current===unit)return;last.current=unit;setCustom(!!unit&&!units.includes(normalize(unit)));},[unit,units,normalize]);
+  function change(next){last.current=next;onChange(next);}
+  return h('div',{className:'unit-selector'},h('select',{'aria-label':label,value:custom?'custom':normalize(unit),onChange:event=>{const next=event.target.value;if(next==='custom')setCustom(true);else{setCustom(false);change(next);}}},h('option',{value:''},'请选择单位'),...units.map(next=>h('option',{key:next,value:next},next+(next==='kW/h'?' · 功率变化率':''))),h('option',{value:'custom'},'自定义单位')),custom&&h('input',{'aria-label':label+'自定义',value:unit,placeholder:'填写单位',onChange:event=>change(event.target.value)}));
+ }
  const controls=new Set([Field,Choice,DateField]);
  function adapt(type,props){
   if(!props||props['data-native-field'])return [type,props];
@@ -66,5 +74,5 @@ var FormControls=(()=>{
   }
   return [type,props];
  }
- return {adapt,Field,Choice,DateField};
+ return {adapt,Field,Choice,DateField,UnitSelector};
 })();

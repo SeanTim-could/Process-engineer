@@ -1283,5 +1283,8 @@
   "确认重叠样本处理": "Confirm overlap choice",
   "删除装置PCA数据": "Delete unit PCA data",
   "删除此装置全部PCA批次与数据？已有模型保留，生产和LIMS数据不受影响。": "Delete all independent PCA batches for this unit? Saved models, production and LIMS data are retained.",
-  "请选择重叠样本使用新数据还是旧数据。": "Choose whether overlapping samples use new or old data."
+  "请选择重叠样本使用新数据还是旧数据。": "Choose whether overlapping samples use new or old data.",
+  "自定义单位": "Custom unit",
+  "请选择单位": "Choose unit",
+  "填写单位": "Enter unit"
 }
