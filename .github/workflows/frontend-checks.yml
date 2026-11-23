@@ -58,6 +58,7 @@ on:
       - 'scripts/test-pca-import-formats.cjs'
       - 'scripts/test-pca-invalid-rows.cjs'
       - 'scripts/test-pca-unit-data.cjs'
+      - 'scripts/test-pca-continuous-time.cjs'
       - 'scripts/pca-test-data.cjs'
       - 'scripts/fixtures/pca-python-reference.json'
       - 'scripts/test-analysis-math.cjs'
@@ -155,6 +156,7 @@ on:
       - 'scripts/test-pca-import-formats.cjs'
       - 'scripts/test-pca-invalid-rows.cjs'
       - 'scripts/test-pca-unit-data.cjs'
+      - 'scripts/test-pca-continuous-time.cjs'
       - 'scripts/pca-test-data.cjs'
       - 'scripts/fixtures/pca-python-reference.json'
       - 'scripts/test-analysis-math.cjs'
@@ -325,6 +327,7 @@ jobs:
           node scripts/test-pca-import-formats.cjs
           node scripts/test-pca-invalid-rows.cjs
           node scripts/test-pca-unit-data.cjs
+          node scripts/test-pca-continuous-time.cjs
           node scripts/test-pca-workspace.cjs
           WORKBENCH_PCA_ENTRY=workbench-compatible.html node scripts/test-pca-workspace.cjs
           node scripts/test-bulk-metric-removal.cjs

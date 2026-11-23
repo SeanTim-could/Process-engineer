@@ -1287,5 +1287,10 @@
   "自定义单位": "Custom unit",
   "请选择单位": "Choose unit",
   "填写单位": "Enter unit",
-  "工艺流程标识": "Process flow mark"
+  "工艺流程标识": "Process flow mark",
+  "图表采样间隔（秒，留空自动）": "Chart sampling interval (seconds; blank for automatic)",
+  "当前间隔：": "Current interval:",
+  "按连续时间轴展示，时间间距按实际时长排列；缺失读数及超过采样间隔的缺测区段断线留空。拖动框选，灰色区域不参与分析；多变量使用0–1归一化显示，悬停查看原值。": "Continuous time axis with real elapsed spacing. Missing readings and sampling gaps break the lines. Drag to select; gray areas are excluded from analysis. Multiple variables use 0–1 normalization; hover to see original values.",
+  "该时间无采样数据": "No sample at this time",
+  "框选时段没有采样数据，筛选未更改。": "No samples in the selected time range. Selection is unchanged."
 }
